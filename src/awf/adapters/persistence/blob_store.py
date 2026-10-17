@@ -29,9 +29,9 @@ class FileBlobStore:
         path.parent.mkdir(parents=True, exist_ok=True)
         try:
             handle = path.open("xb")
-        except FileExistsError:
+        except FileExistsError as exc:
             if path.read_bytes() != raw:
-                raise BlobIntegrityError("existing blob has wrong content for its SHA-256")
+                raise BlobIntegrityError("existing blob has wrong content for its SHA-256") from exc
             return digest
 
         try:

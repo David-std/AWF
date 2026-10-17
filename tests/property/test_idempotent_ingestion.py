@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import hashlib
 
-from hypothesis import given, strategies as st
+from hypothesis import strategies as st
+from hypothesis import given
 
 from awf.adapters.document.markdown_adapter import MarkdownAdapter
 

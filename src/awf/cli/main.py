@@ -9,8 +9,8 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from awf import __version__
-from awf.adapters.document.markdown_adapter import MarkdownAdapter, MarkdownParseError
-from awf.adapters.persistence.blob_store import BlobIntegrityError, FileBlobStore
+from awf.adapters.document.markdown_adapter import MarkdownAdapter
+from awf.adapters.persistence.blob_store import FileBlobStore
 from awf.application.commands.ingest_document import ingest_document
 
 
