@@ -10,7 +10,12 @@ from hypothesis import strategies as st
 from awf.adapters.document.markdown_adapter import MarkdownAdapter
 
 
-@given(st.text(alphabet=st.characters(blacklist_categories=("Cs",), blacklist_characters="\x00"), max_size=300))
+@given(
+    st.text(
+        alphabet=st.characters(blacklist_categories=("Cs",), blacklist_characters="\x00"),
+        max_size=300,
+    )
+)
 def test_utf8_plain_text_is_idempotent(value: str) -> None:
     raw = value.encode("utf-8")
     parser = MarkdownAdapter()

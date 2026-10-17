@@ -47,7 +47,9 @@ class MarkdownAdapter:
         paragraph: list[str] = []
         paragraph_start = 0
 
-        def add(kind: BlockKind, value: str, start: int, end: int, level: int | None = None) -> None:
+        def add(
+            kind: BlockKind, value: str, start: int, end: int, level: int | None = None
+        ) -> None:
             counts[kind] += 1
             block_id = f"{kind.value}_{counts[kind]:04d}"
             blocks.append(DocumentBlock(block_id, kind, value, start, end, level))
