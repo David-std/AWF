@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Protocol
+
+from awf.application.dto import LoadedKnowledgeSource
 
 from awf.domain.document import DocumentIR
 
@@ -16,4 +19,20 @@ class DocumentParserPort(Protocol):
 class BlobStorePort(Protocol):
     def put(self, raw: bytes) -> str:
         """Store immutable bytes by content hash and return their SHA-256."""
+        ...
+
+
+class KnowledgeSourcePort(Protocol):
+    def load(
+        self, *, archive_path: Path, manifest_path: Path, source_id: str
+    ) -> LoadedKnowledgeSource:
+        """Read source metadata only after all origin-integrity checks."""
+        ...
+
+
+class KnowledgeReviewPort(Protocol):
+    def load(
+        self, path: Path, *, expected_source_sha256: str
+    ) -> dict[str, dict[str, object]]:
+        """Read explicit, hash-bound review attestations."""
         ...

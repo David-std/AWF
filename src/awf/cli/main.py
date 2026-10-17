@@ -10,6 +10,8 @@ from pathlib import Path
 
 from awf import __version__
 from awf.adapters.document.markdown_adapter import MarkdownAdapter
+from awf.adapters.knowledge.pinned_archive import PinnedAwsArchive
+from awf.adapters.knowledge.review_file import JsonReviewReader
 from awf.adapters.knowledge.zip_archive import checksum_file
 from awf.adapters.persistence.blob_store import FileBlobStore
 from awf.adapters.persistence.registry_store import save_registry
@@ -94,7 +96,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 registry = import_knowledge(
                     archive_path=args.archive,
                     manifest_path=args.manifest,
+                    archive_reader=PinnedAwsArchive(),
                     source_id=args.source_id,
+                    review_reader=JsonReviewReader(),
                     review_path=args.review,
                 )
                 report = registry.to_dict()

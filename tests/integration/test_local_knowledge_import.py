@@ -9,10 +9,24 @@ from pathlib import Path
 
 import pytest
 
+from awf.adapters.knowledge.pinned_archive import PinnedAwsArchive
+from awf.adapters.knowledge.review_file import JsonReviewReader
 from awf.adapters.knowledge.zip_archive import LEDGER_PATH
 from awf.application.commands.compile_knowledge import import_knowledge
 from awf.cli.main import main
 from awf.knowledge.audit import audit_registry
+
+
+def import_test_knowledge(
+    *, archive_path: Path, manifest_path: Path, review_path: Path | None = None
+):
+    return import_knowledge(
+        archive_path=archive_path,
+        manifest_path=manifest_path,
+        archive_reader=PinnedAwsArchive(),
+        review_path=review_path,
+        review_reader=JsonReviewReader(),
+    )
 
 
 @pytest.fixture
@@ -120,7 +134,7 @@ def test_output_cannot_overwrite_archive(local_source: tuple[Path, Path, str], c
 
 def test_import_does_not_change_original_archive(local_source: tuple[Path, Path, str]) -> None:
     archive, manifest, digest = local_source
-    _ = import_knowledge(archive_path=archive, manifest_path=manifest)
+    _ = import_test_knowledge(archive_path=archive, manifest_path=manifest)
     assert hashlib.sha256(archive.read_bytes()).hexdigest() == digest
 
 

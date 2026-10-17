@@ -9,3 +9,7 @@
 - **Persistencia:** JSON atómico local primero. **Se aplaza SQLite + SQLAlchemy/Alembic** hasta que existan consultas/ediciones transaccionales que lo requieran. Esto modifica el desglose de implementación del blueprint, pero mantiene el puerto de almacenamiento reemplazable y evita añadir ORM decorativo. La migración requerirá otro ADR y pruebas de compatibilidad de esquema.
 - **Fuera del alcance:** parser científico de reglas, recuperador RAG, clasificación automática de valor, uso como datos de SFT, detección automática de contradicciones semánticas, recopilación de textos de licencias inciertas. Ninguno puede anunciarse como resuelto por pasar el CI.
 - **Seguridad:** límites a ZIP y ledger descomprimido, path interno fijo, no extracción, coincidencia exacta de digest, salida privada y protección de inputs ante sobrescritura.
+
+## Dependencias hexagonales
+
+El caso de uso `application/commands/compile_knowledge.py` depende ahora de `KnowledgeSourcePort` y `KnowledgeReviewPort`, que devuelven un `LoadedKnowledgeSource` tipado. `PinnedAwsArchive` y `JsonReviewReader` implementan esos puertos en `adapters/knowledge/`; solo `cli/main.py` los instancia. Un test arquitectónico comprueba que ninguna unidad `application/` importa `awf.adapters`. Los adapters siguen pudiendo importar interfaces del núcleo, no a la inversa.
