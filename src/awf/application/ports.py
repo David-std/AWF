@@ -30,8 +30,6 @@ class KnowledgeSourcePort(Protocol):
 
 
 class KnowledgeReviewPort(Protocol):
-    def load(
-        self, path: Path, *, expected_source_sha256: str
-    ) -> dict[str, dict[str, object]]:
+    def load(self, path: Path, *, expected_source_sha256: str) -> dict[str, dict[str, object]]:
         """Read explicit, hash-bound review attestations."""
         ...
