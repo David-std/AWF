@@ -12,7 +12,10 @@
       "zip_entries": 1364,
       "repo_committed": false,
       "rights_status": "needs_redistribution_review",
-      "role": "source_evidence_not_training_by_default"
+      "role": "source_evidence_not_training_by_default",
+      "version": "3.19.1",
+      "requirements_count": 184,
+      "required_ledger_path": "academic_writing_suite/runtime/deep_spec_requirement_ledger.json"
     },
     {
       "id": "awf-blueprint-0.1",

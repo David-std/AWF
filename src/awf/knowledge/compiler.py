@@ -69,7 +69,9 @@ def compile_knowledge(
             reviewer = rv if isinstance(rv, str) else None
             reason = rs if isinstance(rs, str) else None
             validate_human_decision(target, reviewer=reviewer, reason=reason)
-            review_status = "HUMAN_REVIEWED"
+            if priority == "DEFERRED_LAB" and target != Disposition.EVAL_ONLY:
+                raise ValueError("lab-only evidence cannot be promoted to execution or training")
+            review_status = "REVIEW_ATTESTED"
         output.append(
             KnowledgeItem(
                 item_id=item_id,

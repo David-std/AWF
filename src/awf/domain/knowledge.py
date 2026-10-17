@@ -83,7 +83,7 @@ class KnowledgeRegistry:
             "requirements_count": len(self.records),
             "disposition_counts": self.counts(),
             "unreviewed_count": sum(
-                item.review_status != "HUMAN_REVIEWED" for item in self.records
+                item.review_status != "REVIEW_ATTESTED" for item in self.records
             ),
             "possible_duplicate_groups": [
                 list(group) for group in self.possible_duplicate_groups
