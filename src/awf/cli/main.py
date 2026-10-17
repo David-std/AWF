@@ -137,7 +137,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                     )
                     if not summary["archive_sha256_verified"]:
                         summary["valid"] = False
-                        summary["errors"].append("source archive hash mismatch")
+                        errors = summary.get("errors")
+                        if isinstance(errors, list):
+                            errors.append("source archive hash mismatch")
                 print(json.dumps(summary, ensure_ascii=False))
                 return 0 if summary["valid"] else 2
             except (OSError, ValueError, TypeError, RuntimeError) as exc:
