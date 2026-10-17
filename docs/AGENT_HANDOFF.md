@@ -1,15 +1,15 @@
-# AWF — handoff after Sprint 1 implementation branch
+# AWF — handoff de la implementación Sprint 2 (corte inicial)
 
-Updated 2026-10-17. Scope is `feat/s1-document-ir`, dependent on Sprint 0 PR #11 and architecture PR #10.
+Fecha: 2026-10-17. Rama `feat/s2-knowledge-compiler`, apilada sobre PR #12, #11 y #10. **Las PR continúan abiertas; no confundir rama con `main`.**
 
-- **Current sprint:** S1 implemented in PR #12; awaiting code review/merge. Latest *code* SHA tested: `cbd05e9ba242c40eb3de0f6477a313342286860d`.
-- **Issues:** [S0 #1](https://github.com/David-std/AWF/issues/1), [S1 #2](https://github.com/David-std/AWF/issues/2).
-- **Changed functionality:** `awf ingest file.md [--store private-dir] [--output output.json]`; typed immutable `DocumentIR`, Markdown parser, content-addressed storage and negative tests.
-- **Tests:** [PR workflow 39076453243](https://github.com/David-std/AWF/actions/runs/39076453243) and [push workflow 39076450574](https://github.com/David-std/AWF/actions/runs/39076450574) both concluded SUCCESS for SHA `cbd05e9ba242c40eb3de0f6477a313342286860d` (Ubuntu/Windows × Python 3.12/3.13, four successful matrix jobs). Any later documentation-only commit must still be checked separately.
-- **Contracts:** SHA-256 references original bytes including BOM/newlines; block locations are 1-based inclusive line numbers. No inference of citations, scientific meaning or revision acceptance.
-- **Known limitations:** parser only handles ATX headings, fenced code and generic paragraphs; not full CommonMark. Blob creation uses exclusive writes but does not implement production-grade multihost transaction/isolation.
-- **Not implemented:** AWS knowledge compiler, semantic/source gate, neural editor/model port, training or API. No GPU required for S1.
-- **Source governance:** AWS archive is local-only, not in Git.
-- **Next step:** verify checks on final documentation commit, integrate stacked PRs in order, then begin S2 via a source-licensed knowledge manifest and exhaustive historical rule-ID mapping.
+- **Sprint activo:** S2, fase de importación y clasificación conservadora. Issue [#3](https://github.com/David-std/AWF/issues/3); PR [#13](https://github.com/David-std/AWF/pull/13).
+- **S0–S1:** la CLI, `DocumentIR`, ingesta Markdown y tests previos están en PR #11 y #12; las últimas pruebas de S1 pasaron en Linux/Windows y Python 3.12/3.13.
+- **S2 código:** `domain/knowledge.py`, compilador, clasificador conservador, aplicabilidad, duplicados textuales, grafo explícito de dependencias, adaptador ZIP, importador, auditor, guardado JSON atómico local y comandos CLI.
+- **Fuente real:** `academic_writing_suite_v3_19_1_product(1).zip` NO SUBIDO; SHA-256 `ccff7d4f8c672a6ec1305faa128540893c44ee6c373941eece72a61880bb6d3c` y 184 requisitos (168 MUST + 16 DEFERRED_LAB) verificados al inspeccionar los bytes locales. La ejecución del importador sobre este ZIP se debe comprobar en entorno local autorizado; CI usa ZIP sintéticos para no publicar el corpus.
+- **Salida:** registro en `.awf/knowledge/`, sin enunciados originales. Inicialmente 168 `UNRESOLVED` y 16 `EVAL_ONLY`, 184 entradas sin silencios.
+- **Tests:** consultar el último job de PR #13. No declarar PASS si no concluyó satisfactoriamente; anotar SHA exacto del run. Los ensayos de permisos de ZIP, negativos y CI son por código sintético, no dataset real.
+- **No implementado:** revisión cualitativa de 168 requisitos, autoría/licencias por dataset, contradicciones semánticas verificadas, persistencia transaccional SQLite/ORM, evaluación de redacción, modelos, SFT/DPO o API.
+- **ADR:** `docs/adr/0008-local-knowledge-import.md`; difiere SQLite/ORM hasta tener una razón empírica. Imprescindible revisar ADR antes de incorporarlo.
+- **Siguiente tarea:** cerrar CI, probar `knowledge import` con el archivo privado sin subirlo, y diseñar lotes de revisión de reglas con criterios objetivos y estados conservadores; mantener S2 abierto hasta adjudicación completa.
 
-Changes in architecture must update ADR and tests; do not represent an unrun command as verified.
+**Regla de continuidad:** no considerar un registro importado como corpus listo para fine-tuning; registrar evidencia, permisos y validación antes de promoción.
