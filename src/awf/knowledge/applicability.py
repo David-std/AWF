@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from awf.domain.knowledge import Applicability, KnowledgeItem
+from awf.domain.knowledge import Applicability, Disposition, KnowledgeItem
 
 
 def applicability_for(item: KnowledgeItem, *, context_verified: bool) -> Applicability:
@@ -10,10 +10,10 @@ def applicability_for(item: KnowledgeItem, *, context_verified: bool) -> Applica
 
     This intentionally does NOT infer applicability from title/keyword similarity.
     """
-    if item.disposition in {item.disposition.EVAL_ONLY, item.disposition.REMOVE_FROM_ACTIVE}:
+    if item.disposition in {Disposition.EVAL_ONLY, Disposition.REMOVE_FROM_ACTIVE}:
         return Applicability.NOT_APPLICABLE
-    if item.review_status != "HUMAN_REVIEWED" or not context_verified:
+    if item.review_status != "REVIEW_ATTESTED" or not context_verified:
         return Applicability.UNKNOWN
-    if item.disposition == item.disposition.KEEP_AS_CODE:
+    if item.disposition == Disposition.KEEP_AS_CODE:
         return Applicability.APPLICABLE
     return Applicability.UNKNOWN
