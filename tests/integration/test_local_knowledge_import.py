@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from awf.adapters.knowledge.zip_archive import LEDGER_PATH, KnowledgeSourceError
+from awf.adapters.knowledge.zip_archive import LEDGER_PATH
 from awf.application.commands.compile_knowledge import import_knowledge
 from awf.cli.main import main
 from awf.knowledge.audit import audit_registry

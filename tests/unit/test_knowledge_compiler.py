@@ -42,7 +42,7 @@ def test_must_rules_are_not_automatically_executable() -> None:
 
 def test_known_source_text_hash_is_stable() -> None:
     record = _compile().records[0]
-    digest = hashlib.sha256("preserve original causal force.".encode()).hexdigest()
+    digest = hashlib.sha256(b"preserve original causal force.").hexdigest()
     assert record.source_text_sha256 == digest
 
 

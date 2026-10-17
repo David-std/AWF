@@ -14,8 +14,8 @@ from awf.adapters.knowledge.zip_archive import checksum_file
 from awf.adapters.persistence.blob_store import FileBlobStore
 from awf.adapters.persistence.registry_store import save_registry
 from awf.application.commands.compile_knowledge import import_knowledge
-from awf.knowledge.audit import audit_registry
 from awf.application.commands.ingest_document import ingest_document
+from awf.knowledge.audit import audit_registry
 
 
 def create_parser() -> argparse.ArgumentParser:
