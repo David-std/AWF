@@ -22,11 +22,16 @@ def local_source(tmp_path: Path) -> tuple[Path, Path, str]:
         "suite_version": "3.19.1",
         "requirements": [
             {
-                "id": "DSR-001", "domain": "structural", "priority": "MUST",
-                "requirement": "Preserve provenance.", "source_ids": ["deep-1"],
+                "id": "DSR-001",
+                "domain": "structural",
+                "priority": "MUST",
+                "requirement": "Preserve provenance.",
+                "source_ids": ["deep-1"],
             },
             {
-                "id": "DSR-002", "domain": "detector", "priority": "DEFERRED_LAB",
+                "id": "DSR-002",
+                "domain": "detector",
+                "priority": "DEFERRED_LAB",
                 "requirement": "Measure outcomes in a controlled study.",
                 "source_ids": ["deep-2"],
             },
@@ -36,19 +41,41 @@ def local_source(tmp_path: Path) -> tuple[Path, Path, str]:
         zf.writestr(LEDGER_PATH, json.dumps(ledger))
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     manifest = tmp_path / "manifest.json"
-    manifest.write_text(json.dumps({"artifacts": [{
-        "id": "aws-3.19.1", "sha256": digest, "version": "3.19.1",
-        "requirements_count": 2, "repo_committed": False,
-    }]}), encoding="utf-8")
+    manifest.write_text(
+        json.dumps(
+            {
+                "artifacts": [
+                    {
+                        "id": "aws-3.19.1",
+                        "sha256": digest,
+                        "version": "3.19.1",
+                        "requirements_count": 2,
+                        "repo_committed": False,
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
     return archive, manifest, digest
 
 
-def test_local_compilation_is_metadata_only(local_source: tuple[Path, Path, str],
-                                            tmp_path: Path, capsys) -> None:
+def test_local_compilation_is_metadata_only(
+    local_source: tuple[Path, Path, str], tmp_path: Path, capsys
+) -> None:
     archive, manifest, digest = local_source
     registry_path = tmp_path / "local.json"
-    code = main(["knowledge", "import", str(archive), "--manifest", str(manifest),
-                 "--output", str(registry_path)])
+    code = main(
+        [
+            "knowledge",
+            "import",
+            str(archive),
+            "--manifest",
+            str(manifest),
+            "--output",
+            str(registry_path),
+        ]
+    )
     assert code == 0
     report = json.loads(registry_path.read_text(encoding="utf-8"))
     assert report["archive_sha256"] == digest
@@ -63,20 +90,30 @@ def test_local_compilation_is_metadata_only(local_source: tuple[Path, Path, str]
     assert json.loads(capsys.readouterr().out)["valid"] is True
 
 
-def test_archive_hash_mismatch_rejected(local_source: tuple[Path, Path, str],
-                                        capsys) -> None:
+def test_archive_hash_mismatch_rejected(local_source: tuple[Path, Path, str], capsys) -> None:
     archive, manifest, _ = local_source
     archive.write_bytes(archive.read_bytes() + b"tampering")
     assert main(["knowledge", "import", str(archive), "--manifest", str(manifest)]) == 2
     assert "SHA-256" in capsys.readouterr().err
 
 
-def test_output_cannot_overwrite_archive(local_source: tuple[Path, Path, str],
-                                         capsys) -> None:
+def test_output_cannot_overwrite_archive(local_source: tuple[Path, Path, str], capsys) -> None:
     archive, manifest, _ = local_source
     original = archive.read_bytes()
-    assert main(["knowledge", "import", str(archive), "--manifest", str(manifest),
-                 "--output", str(archive)]) == 2
+    assert (
+        main(
+            [
+                "knowledge",
+                "import",
+                str(archive),
+                "--manifest",
+                str(manifest),
+                "--output",
+                str(archive),
+            ]
+        )
+        == 2
+    )
     assert archive.read_bytes() == original
     assert "SOURCE_PROTECTED" in capsys.readouterr().err
 
@@ -107,13 +144,22 @@ def test_review_overlay_fails_when_bound_to_wrong_archive(
 ) -> None:
     archive, manifest, _ = local_source
     overlay = tmp_path / "review.json"
-    overlay.write_text(json.dumps({
-        "source_sha256": "b" * 64, "decisions": [{
-            "id": "DSR-001", "disposition": "KEEP_AS_CODE",
-            "reviewer": "Researcher",
-            "reason": "The requirement is a deterministic byte integrity check.",
-        }],
-    }), encoding="utf-8")
+    overlay.write_text(
+        json.dumps(
+            {
+                "source_sha256": "b" * 64,
+                "decisions": [
+                    {
+                        "id": "DSR-001",
+                        "disposition": "KEEP_AS_CODE",
+                        "reviewer": "Researcher",
+                        "reason": "The requirement is a deterministic byte integrity check.",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
     with pytest.raises(ValueError, match="bound"):
         import_knowledge(archive_path=archive, manifest_path=manifest, review_path=overlay)
 

@@ -39,15 +39,15 @@ def create_parser() -> argparse.ArgumentParser:
     operations = knowledge.add_subparsers(dest="knowledge_action")
     importer = operations.add_parser("import", help="compile a pinned local archive to metadata")
     importer.add_argument("archive", type=Path, help="local AWS 3.19.1 ZIP, never uploaded")
-    importer.add_argument(
-        "--manifest", type=Path, default=Path("provenance/source-manifest.json")
-    )
+    importer.add_argument("--manifest", type=Path, default=Path("provenance/source-manifest.json"))
     importer.add_argument("--source-id", default="aws-3.19.1")
     importer.add_argument("--review", type=Path, help="optional private, SHA-bound review overlay")
     importer.add_argument("--output", type=Path, help="private JSON report destination")
     auditor = operations.add_parser("audit", help="validate a private registry's consistency")
     auditor.add_argument("registry", type=Path)
-    auditor.add_argument("--archive", type=Path, help="optionally compare actual local archive hash")
+    auditor.add_argument(
+        "--archive", type=Path, help="optionally compare actual local archive hash"
+    )
     return parser
 
 
@@ -86,7 +86,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             if args.review is not None:
                 protected.append(args.review)
             if output is not None and any(output.resolve() == p.resolve() for p in protected):
-                print("AWF_ERROR [SOURCE_PROTECTED] output conflicts with an input", file=sys.stderr)
+                print(
+                    "AWF_ERROR [SOURCE_PROTECTED] output conflicts with an input", file=sys.stderr
+                )
                 return 2
             try:
                 registry = import_knowledge(
@@ -100,16 +102,22 @@ def main(argv: Sequence[str] | None = None) -> int:
                     f".awf/knowledge/registry_{registry.archive_sha256[:12]}.json"
                 )
                 save_registry(destination, report)
-                print(json.dumps({
-                    "status": "IMPORTED_WITH_OPEN_REVIEWS"
-                    if report["unreviewed_count"] else "REVIEW_ATTESTED",
-                    "registry": str(destination),
-                    "source_id": registry.source_id,
-                    "source_sha256": registry.archive_sha256,
-                    "requirements_count": len(registry.records),
-                    "unreviewed_count": report["unreviewed_count"],
-                    "disposition_counts": registry.counts(),
-                }, ensure_ascii=False))
+                print(
+                    json.dumps(
+                        {
+                            "status": "IMPORTED_WITH_OPEN_REVIEWS"
+                            if report["unreviewed_count"]
+                            else "REVIEW_ATTESTED",
+                            "registry": str(destination),
+                            "source_id": registry.source_id,
+                            "source_sha256": registry.archive_sha256,
+                            "requirements_count": len(registry.records),
+                            "unreviewed_count": report["unreviewed_count"],
+                            "disposition_counts": registry.counts(),
+                        },
+                        ensure_ascii=False,
+                    )
+                )
                 return 0
             except (OSError, ValueError, RuntimeError, KeyError) as exc:
                 print(f"AWF_ERROR [KNOWLEDGE_IMPORT_FAILED] {exc}", file=sys.stderr)
@@ -124,8 +132,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                     raise ValueError("registry report must be a JSON object")
                 summary = audit_registry(report)
                 if args.archive is not None:
-                    summary["archive_sha256_verified"] = (
-                        checksum_file(args.archive) == report.get("archive_sha256")
+                    summary["archive_sha256_verified"] = checksum_file(args.archive) == report.get(
+                        "archive_sha256"
                     )
                     if not summary["archive_sha256_verified"]:
                         summary["valid"] = False

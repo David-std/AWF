@@ -14,19 +14,37 @@ from awf.knowledge.dependency_graph import KnowledgeDependencyError, dependency_
 
 def _rows() -> list[dict[str, object]]:
     return [
-        {"id": "DSR-001", "domain": "semantics", "priority": "MUST",
-         "requirement": "Preserve original causal force.", "source_ids": ["deep-01"]},
-        {"id": "DSR-002", "domain": "semantics", "priority": "MUST",
-         "requirement": "  Preserve original causal  force. ", "source_ids": ["deep-02"]},
-        {"id": "DSR-003", "domain": "detector", "priority": "DEFERRED_LAB",
-         "requirement": "Test detector transfer only in a future lab.", "source_ids": ["deep-03"]},
+        {
+            "id": "DSR-001",
+            "domain": "semantics",
+            "priority": "MUST",
+            "requirement": "Preserve original causal force.",
+            "source_ids": ["deep-01"],
+        },
+        {
+            "id": "DSR-002",
+            "domain": "semantics",
+            "priority": "MUST",
+            "requirement": "  Preserve original causal  force. ",
+            "source_ids": ["deep-02"],
+        },
+        {
+            "id": "DSR-003",
+            "domain": "detector",
+            "priority": "DEFERRED_LAB",
+            "requirement": "Test detector transfer only in a future lab.",
+            "source_ids": ["deep-03"],
+        },
     ]
 
 
 def _compile(*, reviews: dict[str, dict[str, object]] | None = None):
     return compile_knowledge(
-        _rows(), source_id="test", archive_sha256="a" * 64,
-        suite_version="3.19.1", review_decisions=reviews,
+        _rows(),
+        source_id="test",
+        archive_sha256="a" * 64,
+        suite_version="3.19.1",
+        review_decisions=reviews,
     )
 
 
@@ -48,16 +66,27 @@ def test_known_source_text_hash_is_stable() -> None:
 
 def test_review_requires_source_and_reason() -> None:
     with pytest.raises(ValueError, match="substantive"):
-        _compile(reviews={"DSR-001": {
-            "disposition": "KEEP_AS_CODE", "reviewer": "Researcher", "reason": "yes"
-        }})
+        _compile(
+            reviews={
+                "DSR-001": {
+                    "disposition": "KEEP_AS_CODE",
+                    "reviewer": "Researcher",
+                    "reason": "yes",
+                }
+            }
+        )
 
 
 def test_explicit_review_does_not_self_certify_applicability() -> None:
-    approved = _compile(reviews={"DSR-001": {
-        "disposition": "KEEP_AS_CODE", "reviewer": "HumanResearcher",
-        "reason": "This is a mechanical hash dependency with explicit tests.",
-    }})
+    approved = _compile(
+        reviews={
+            "DSR-001": {
+                "disposition": "KEEP_AS_CODE",
+                "reviewer": "HumanResearcher",
+                "reason": "This is a mechanical hash dependency with explicit tests.",
+            }
+        }
+    )
     item = approved.records[0]
     assert item.review_status == "REVIEW_ATTESTED"
     assert applicability_for(item, context_verified=False) == Applicability.UNKNOWN
@@ -66,26 +95,35 @@ def test_explicit_review_does_not_self_certify_applicability() -> None:
 
 def test_deferred_lab_cannot_be_promoted_to_training() -> None:
     with pytest.raises(ValueError, match="lab-only"):
-        _compile(reviews={"DSR-003": {
-            "disposition": "TRAIN", "reviewer": "Researcher",
-            "reason": "This proposed reward has not been independently tested.",
-        }})
+        _compile(
+            reviews={
+                "DSR-003": {
+                    "disposition": "TRAIN",
+                    "reviewer": "Researcher",
+                    "reason": "This proposed reward has not been independently tested.",
+                }
+            }
+        )
 
 
 def test_duplicate_identifier_fails_closed() -> None:
     rows = _rows()
     rows[1]["id"] = "DSR-001"
     with pytest.raises(ValueError, match="duplicate historic"):
-        compile_knowledge(rows, source_id="test", archive_sha256="a" * 64,
-                          suite_version="3.19.1")
+        compile_knowledge(rows, source_id="test", archive_sha256="a" * 64, suite_version="3.19.1")
 
 
 def test_unknown_review_identifier_fails() -> None:
     with pytest.raises(ValueError, match="missing IDs"):
-        _compile(reviews={"UNKNOWN-ID": {
-            "disposition": "EVAL_ONLY", "reviewer": "Researcher",
-            "reason": "No matching historical requirement is available here.",
-        }})
+        _compile(
+            reviews={
+                "UNKNOWN-ID": {
+                    "disposition": "EVAL_ONLY",
+                    "reviewer": "Researcher",
+                    "reason": "No matching historical requirement is available here.",
+                }
+            }
+        )
 
 
 def test_dependency_graph_is_ordered_and_rejects_cycle() -> None:

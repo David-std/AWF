@@ -7,9 +7,7 @@ class KnowledgeDependencyError(ValueError):
     """Dependency metadata is invalid; execution must stop."""
 
 
-def dependency_closure(
-    selected: set[str], dependencies: dict[str, set[str]]
-) -> tuple[str, ...]:
+def dependency_closure(selected: set[str], dependencies: dict[str, set[str]]) -> tuple[str, ...]:
     """Return prerequisites-before-dependents in deterministic sorted order.
 
     Dependencies are curated input; the engine must never guess edges from

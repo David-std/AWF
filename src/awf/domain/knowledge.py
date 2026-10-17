@@ -85,9 +85,7 @@ class KnowledgeRegistry:
             "unreviewed_count": sum(
                 item.review_status != "REVIEW_ATTESTED" for item in self.records
             ),
-            "possible_duplicate_groups": [
-                list(group) for group in self.possible_duplicate_groups
-            ],
+            "possible_duplicate_groups": [list(group) for group in self.possible_duplicate_groups],
             "records": [item.to_dict() for item in self.records],
             "guarantees": {
                 "source_text_not_exported": True,

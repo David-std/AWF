@@ -38,7 +38,9 @@ def read_source_manifest(path: Path, *, source_id: str) -> dict[str, Any]:
     artifacts = document.get("artifacts")
     if not isinstance(artifacts, list):
         raise KnowledgeSourceError("manifest requires an artifacts list")
-    found = [entry for entry in artifacts if isinstance(entry, dict) and entry.get("id") == source_id]
+    found = [
+        entry for entry in artifacts if isinstance(entry, dict) and entry.get("id") == source_id
+    ]
     if len(found) != 1:
         raise KnowledgeSourceError("source ID must resolve to exactly one manifest artifact")
     entry = found[0]

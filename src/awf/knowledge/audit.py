@@ -64,5 +64,10 @@ def audit_registry(report: Mapping[str, object]) -> dict[str, object]:
         errors.append("archive SHA-256 is invalid")
     if report.get("schema_version") != "1.0.0":
         errors.append("unsupported report schema version")
-    return {"valid": not errors, "errors": errors, "requirements_count": len(records),
-            "unreviewed_count": unreviewed, "disposition_counts": dict(counts)}
+    return {
+        "valid": not errors,
+        "errors": errors,
+        "requirements_count": len(records),
+        "unreviewed_count": unreviewed,
+        "disposition_counts": dict(counts),
+    }
