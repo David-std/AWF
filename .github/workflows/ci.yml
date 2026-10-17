@@ -1,0 +1,51 @@
+name: Python quality gates
+
+on:
+  push:
+    branches:
+      - main
+      - "feat/**"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  core:
+    name: core / ${{ matrix.os }} / py${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.12", "3.13"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Check project lock
+        run: uv lock --check
+      - name: Install AWF
+        run: uv sync --locked
+      - name: CLI smoke
+        run: uv run --no-sync awf --version
+      - name: Ruff lint
+        run: uvx --from ruff==0.14.0 ruff check .
+      - name: Ruff format
+        run: uvx --from ruff==0.14.0 ruff format --check .
+      - name: Type check
+        run: uvx --from pyright==1.1.406 pyright
+      - name: Pytest
+        run: uv run --with pytest==9.0.2 --with hypothesis==6.142.4 pytest -q
+      - name: Package build
+        run: uv build
