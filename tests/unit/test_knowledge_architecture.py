@@ -33,9 +33,7 @@ class FakeSource:
 
 
 class FakeReview:
-    def load(
-        self, path: Path, *, expected_source_sha256: str
-    ) -> dict[str, dict[str, object]]:
+    def load(self, path: Path, *, expected_source_sha256: str) -> dict[str, dict[str, object]]:
         assert path.name == "review.json"
         assert expected_source_sha256 == "a" * 64
         return {
@@ -67,6 +65,4 @@ def test_application_layer_never_imports_adapters() -> None:
             if isinstance(node, ast.ImportFrom):
                 assert not (node.module or "").startswith("awf.adapters"), str(path)
             if isinstance(node, ast.Import):
-                assert all(not a.name.startswith("awf.adapters") for a in node.names), str(
-                    path
-                )
+                assert all(not a.name.startswith("awf.adapters") for a in node.names), str(path)

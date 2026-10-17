@@ -10,9 +10,7 @@ from typing import Any
 class JsonReviewReader:
     """Read explicit review decisions without claiming independent verification."""
 
-    def load(
-        self, path: Path, *, expected_source_sha256: str
-    ) -> dict[str, dict[str, Any]]:
+    def load(self, path: Path, *, expected_source_sha256: str) -> dict[str, dict[str, Any]]:
         payload = json.loads(path.read_text(encoding="utf-8"))
         if not isinstance(payload, dict) or payload.get("source_sha256") != expected_source_sha256:
             raise ValueError("review overlay is not bound to the exact source archive hash")
