@@ -1,0 +1,61 @@
+# Python and build artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.pyright/
+.mypy_cache/
+.ruff_cache/
+.coverage*
+htmlcov/
+.venv/
+venv/
+
+# IDE and operating system
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Secrets and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+credentials/
+
+# Raw documents, datasets, and outputs: never commit without rights review
+/data/raw/
+/data/interim/
+/data/processed/
+/data/restricted/
+/data/holdout/
+!/data/README.md
+/models/
+/checkpoints/
+/artifacts/
+/reports/
+/runs/
+/mlruns/
+/wandb/
+/lightning_logs/
+/local_cache/
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.onnx
+*.bin
+
+# Notebook and dataset caches
+.ipynb_checkpoints/
+__pypackages__/
+.cache/
+
+# Keep separately authorized small public fixtures under tests/fixtures/
