@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Protocol
 
 from awf.application.dto import LoadedKnowledgeSource
-
 from awf.domain.document import DocumentIR
 
 
