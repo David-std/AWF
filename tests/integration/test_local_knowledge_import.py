@@ -142,7 +142,7 @@ def test_unreviewed_promotion_in_report_fails_audit(
     local_source: tuple[Path, Path, str],
 ) -> None:
     archive, manifest, _ = local_source
-    report = import_knowledge(archive_path=archive, manifest_path=manifest).to_dict()
+    report = import_test_knowledge(archive_path=archive, manifest_path=manifest).to_dict()
     records = report["records"]
     assert isinstance(records, list)
     records[0]["disposition"] = "TRAIN"
@@ -175,11 +175,11 @@ def test_review_overlay_fails_when_bound_to_wrong_archive(
         encoding="utf-8",
     )
     with pytest.raises(ValueError, match="bound"):
-        import_knowledge(archive_path=archive, manifest_path=manifest, review_path=overlay)
+        import_test_knowledge(archive_path=archive, manifest_path=manifest, review_path=overlay)
 
 
 def test_audit_detects_mismatched_report_totals(local_source: tuple[Path, Path, str]) -> None:
     archive, manifest, _ = local_source
-    report = import_knowledge(archive_path=archive, manifest_path=manifest).to_dict()
+    report = import_test_knowledge(archive_path=archive, manifest_path=manifest).to_dict()
     report["requirements_count"] = 184
     assert audit_registry(report)["valid"] is False
