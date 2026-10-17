@@ -12,7 +12,7 @@ Estados: `DESIGNED` (especificado), `OPEN` (requiere decisión), `IMPLEMENTED` (
 | AWF-R004 | Evaluar redundancia, obsolescencia y contradicción de fuentes | Pregunta sobre investigación acumulada | Disposition + duplicado + fuente/snapshot + contradicción | S2/S6 | DESIGNED |
 | AWF-R005 | Evitar que LLM se otorgue un PASS sin evidencia | Auditoría AWS | Inyección de falso recibo falla; verificación real sobre bytes | S3 | DESIGNED |
 | AWF-R006 | Preservar causalidad, certeza, alcance, tiempo, cifras, citas y atribución | GDText/Meaning Audit | Mutaciones adversariales + gold + medición de falsos negativos | S3 | DESIGNED |
-| AWF-R007 | Mantener originales inmutables con hash y rollback | Blueprint | Round-trip original bytes y diff reversible | S1 | DESIGNED |
+| AWF-R007 | Mantener originales inmutables con hash y rollback | Blueprint | Bytes originales intactos y SHA validado; rollback/diff aún pendiente | S1 | IMPLEMENTED_PARTIAL |
 | AWF-R008 | Editor neuronal especializado y baselines abiertos | Comparación Stealth/Phrasly/CoEdIT | Mismo benchmark sobre modelo base y modelo de edición | S4 | DESIGNED |
 | AWF-R009 | Entrenar adaptador propio SFT/LoRA/QLoRA, no de cero | Interés ML del usuario | Adapter versionado, dataset card y métricas vs baseline | S5 | DESIGNED |
 | AWF-R010 | DPO únicamente con preferencias verificadas y no contaminadas | Literatura sobre rewards | Auditoría de preferencias + ablation; decisión go/no-go | S6 | DESIGNED |
@@ -38,3 +38,10 @@ Cada cambio crea relación verificable: `AWF-Rxxx → ADR → código/archivo �
 ## Migración heredada AWS
 
 La suite AWS 3.19.1 documenta 184 requisitos normativos (168 MUST, 16 lab/deferred), 22 comprobaciones semánticas atómicas y 54 casos JSON según la auditoría previa. **Estas cifras son inventario inicial, no cobertura ejecutada en AWF**. La migración exige rastrear IDs/fuentes y escoger `POLICY`, `MODEL_TRAINING`, `RETRIEVAL`, `EVAL_ONLY`, `DEPRECATED_WITH_EVIDENCE` o `UNRESOLVED` sin borrar originales. Para elementos de alto impacto, exigir prueba negativa que demuestre si la regla funciona de verdad.
+
+## Estado verificado S0–S1 (rama de implementación)
+
+- S0: CLI `awf --version`, empaquetado, lint, formato, tipado, tests y build ejecutados en CI (PR #11).
+- S1: ingesta Markdown, IR inmutable, hashes, almacenamiento opcional e idempotencia comprobados en PR #12. No se ha implementado todavía la creación de revisiones ni un mecanismo de rollback de revisiones: el almacenamiento original permite conservar bytes, pero no demuestra un historial completo.
+- Evidencia: [run S1 39076453243](https://github.com/David-std/AWF/actions/runs/39076453243), SHA `cbd05e9ba242c40eb3de0f6477a313342286860d`.
+- Este progreso **no equivale a migrar los 184 requisitos históricos** ni a entrenar AWF. Mantenerlos como plan S2 en adelante.
