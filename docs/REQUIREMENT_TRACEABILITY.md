@@ -72,8 +72,10 @@ La suite AWS 3.19.1 documenta 184 requisitos normativos (168 MUST, 16 lab/deferr
 
 | Contrato propuesto | Implementación | Evidencia requerida | Estado |
 |---|---|---|---|
-| Bytes locales por SHA y evento atómico | `domain/evidence.py`, `adapters/persistence/sqlite_evidence.py` | Reabrir después de reinicio; fallos de escritura sin objeto huérfano | IMPLEMENTED_PENDING_TESTS |
-| Cadena y autenticidad relativa a checkpoint | `verify(expected_head)` | Tampering, borrado parcial y checkpoint externo divergente | IMPLEMENTED_PENDING_TESTS |
+| Bytes locales por SHA y evento atómico | `domain/evidence.py`, `adapters/persistence/sqlite_evidence.py` | Reabrir después de reinicio; fallos de escritura sin objeto huérfano | PROTOTYPED_TESTED |
+| Cadena y autenticidad relativa a checkpoint | `verify(expected_head)` | Tampering, borrado parcial y checkpoint externo divergente | PROTOTYPED_TESTED |
 | No equivaler recibo con prueba académica | `external_authenticity_proven=false` en CLI; ADR-0012 | Análisis de límites y tests | STRUCTURAL_BOUNDARY |
 
 Este corte no adjudica automáticamente ningún DSR de las 168 `MUST`; primero debe comprobarse la integración real con los controladores de revisión.
+
+**Evidencia de CI:** commit `e168f482b153ccb172293fd6d8ddfbf91ab780a1`, [run 39096421735](https://github.com/David-std/AWF/actions/runs/39096421735), matriz 4/4 aprobada con 116 tests por trabajo; ver también [ADR-0012](adr/0012-local-evidence-ledger.md). Estado `PROTOTYPED_TESTED` se refiere a integridad y recuperación del almacén, **no** al juicio del revisor ni a las 168 reglas del corpus.

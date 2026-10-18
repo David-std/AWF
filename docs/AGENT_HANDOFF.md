@@ -67,10 +67,13 @@ Auditar el dominio `stateful_runtime` (15 requisitos) desde los lotes privados; 
 - **Limitaciones:** referencias `evidence_ref` y dictámenes de calibración aún son declarativos, sin firmas ni verificadores independientes; no hay demostración de verdadera lectura/comprensión, veracidad científica, licencias, aislamiento fuerte del holdout ni aprendizaje neuronal.
 - **Siguiente hito:** almacenamiento de evidencias inmutable y comprobación real del registro de fragmentos, identificación de corpus autorizado y revisión científica de calibración antes de conectar esta puerta al editor neuronal.
 
-## S2 — evidencia durable (trabajo en curso)
+## S2 — evidencia durable (primer corte probado)
 
 - Nueva rama `feat/s2-evidence-ledger`, apilada sobre PR #16, fuente de trabajo `src/awf/domain/evidence.py` y adaptador `src/awf/adapters/persistence/sqlite_evidence.py`.
 - Puerto `EvidenceStorePort` y CLI `awf evidence append/verify` para registros sintéticos privados; original y ZIP histórico no enviados.
 - [ADR-0012](adr/0012-local-evidence-ledger.md) documenta por qué usar SQLite ahora es distinto del caso exportador JSON de ADR-0008.
 - Garantía: atomicidad y hashes comprobados; **no firmas, identidad externa ni pruebas de conocimiento real**. Las etapas anteriores aún no consumen automáticamente el ledger.
-- **No afirmar PASS ni sincronización local** hasta finalizar CI, tests de interrupciones y ejecución efectiva en PC. Revisar el último commit de la rama.
+- **Implementación verificada:** [PR #17](https://github.com/David-std/AWF/pull/17), commit de código `e168f482b153ccb172293fd6d8ddfbf91ab780a1`; CI [push run 39096421735](https://github.com/David-std/AWF/actions/runs/39096421735) y [PR run 39096425185](https://github.com/David-std/AWF/actions/runs/39096425185) con matriz Linux/Windows y Python 3.12/3.13, **116 tests aprobados por trabajo**, Pyright 0 errores, Ruff y build aprobados.
+- **Pruebas preliminares reales en PC:** antes de la corrección final de tipos, suite específica SQLite/CLI con 19 PASS y un SKIP de permisos POSIX bajo Windows. Repetir prueba sobre el commit final y registrar el resultado en este handoff.
+- **Alcance:** la evidencia guardada queda vinculada a un hash y evento en la base local. **No se conecta automáticamente** con la comprobación semántica de `revision_audit` ni la calibración de `knowledge_integrity`; nadie debe interpretarlo como independencia externa o conocimiento demostrado.
+- **Siguiente fase:** integrar un verificador externo de evidencias/identidad y recibos tipados del controlador, más ensayo de recuperación desde backup con checkpoint separado; ningún dato histórico privado se sube al repositorio.

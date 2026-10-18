@@ -7,15 +7,18 @@ El módulo `awf.domain.evidence` define los tipos de evento y el hash canónico.
 ## Prueba reproducible, con contenido sintético
 
 ```powershell
-# Dentro de la raíz del repositorio (la carpeta .awf se ignora en Git)
+# Dentro de la raíz del repositorio; Python 3.12+ y el código fuente local
+$env:PYTHONPATH = (Resolve-Path ./src).Path
+# La carpeta .awf se ignora en Git
+New-Item -ItemType Directory -Force .awf/evidence | Out-Null
 "evidence for a synthetic audit" | Set-Content -Encoding utf8 .awf/evidence/example.txt
 
-awf evidence append .awf/evidence/example.txt `
+python -m awf.cli.main evidence append .awf/evidence/example.txt `
   --kind AUDIT_RECEIPT --run-id run-001 --subject-id DSR-019 `
   --database .awf/evidence/ledger.sqlite
 
-awf evidence verify --database .awf/evidence/ledger.sqlite `
-  --expected-head <HASH_REGISTRADO_APARTE>
+python -m awf.cli.main evidence verify --database .awf/evidence/ledger.sqlite `
+  --expected-head "SHA256_HEAD_64_CARACTERES_GUARDADO_APARTE"
 ```
 
 La salida `append` muestra `evidence_sha256` y `head_digest`. Para detectar restauraciones a un estado anterior, guarda `head_digest` fuera del propio archivo SQLite (por ejemplo en un registro de auditoría autorizado con acceso independiente). Si se pasa un hash incorrecto, `verify` devuelve error y código de salida 2.
