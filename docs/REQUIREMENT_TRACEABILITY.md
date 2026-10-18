@@ -91,3 +91,15 @@ Este corte no adjudica automáticamente ningún DSR de las 168 `MUST`; primero d
 | Independencia, autoría, comprensión y calidad científica | **Fuera del alcance del verificador local** | Exigir juez externo, revisión humana y derechos de datos | UNRESOLVED |
 
 **Pruebas:** código `10352f0369060ba5c08d4b363f8dd2c7f878afd1`; [CI push 39098241783](https://github.com/David-std/AWF/actions/runs/39098241783) y [CI PR 39098245104](https://github.com/David-std/AWF/actions/runs/39098245104), 128 PASS × 4 entornos; PC Windows Python 3.12, 126 PASS, 1 SKIP con pruebas unitarias/integración. Estos resultados no constituyen cumplimiento de las 168 reglas históricas ni evaluación de modelo. [ADR-0013](adr/0013-evidence-bound-receipts.md).
+
+## Persistencia coordinada de estado y evidencia (incremento S2 posterior a PR #18)
+
+| Contrato | Implementación | Evidencia necesaria | Estado |
+|---|---|---|---|
+| Evidencia de auditoría y snapshot se confirman o revierten juntos | `SQLiteRevisionJournal.record_audit` sobre `SQLiteEvidenceLedger` | Trigger de error y terminación del proceso antes del COMMIT; sin evento huérfano | PROTOTYPED_TESTED_LOCAL |
+| Reintento seguro por operación | `operation_id`, huella de solicitud e índice único | Replay tras pérdida de respuesta; misma clave con otros parámetros | PROTOTYPED_TESTED_LOCAL |
+| Conflictos de dos escritores | Versiones monotónicas, `BEGIN IMMEDIATE` | Dos escritores con la misma versión; solo un commit | PROTOTYPED_TESTED_LOCAL |
+| Recuperación y comprobación del historial | Instantáneas inmutables vinculadas a `REVISION_TRANSITION` | Reinicio, alteración de bytes, trigger ausente o snapshot borrado | PROTOTYPED_TESTED_LOCAL |
+| Edición, findings, barridos y juicio académico durable | **No implementados en este corte** | Diseñar comandos independientes y verificar sus dependencias | UNRESOLVED |
+
+No se promocionan DSR-001..032 ni otras reglas a `REVIEW_ATTESTED`. Véanse [ADR-0014](adr/0014-atomic-revision-journal.md) y [contrato de recuperación](DURABLE_REVISION_S2.md). La validación CI del incremento debe registrarse con su commit final antes de cambiar el estado de `PROTOTYPED_TESTED_LOCAL`.

@@ -84,3 +84,9 @@ The prototype does **not** establish semantic correctness, genuine independent c
 [PR #18](https://github.com/David-std/AWF/pull/18) extends the local evidence ledger with exact event-bound receipt verification for document audits, source chunks, required coverage and knowledge stages. The [ADR-0013](docs/adr/0013-evidence-bound-receipts.md) explains event identity, expected-run/subject checks, carried-audit constraints and adversarial tests; [evidence binding guide](docs/EVIDENCE_BINDING_S2.md) lists application APIs.
 
 **Important:** `local_integrity_passed` is not equivalent to a trustworthy assessment of the manuscript, the sources, reviewer independence or actual model comprehension; `independent_adjudication_proven` remains `false`. This slice has no production editor or neural training and is stacked on unmerged PRs #10–#17. Historical AWS 3.19.1 files remain private.
+
+## Atomic revision journal — Sprint 2 incremental prototype
+
+The `SQLiteRevisionJournal` Python API persists versioned `RevisionState` snapshots and their evidence events together in **one local SQLite transaction**. A stable operation ID supports idempotent retry; stale writers fail closed, and recovery checks the event/snapshot chain. This currently covers revision creation and audit recording only; other revision transitions are not yet durable. See [ADR-0014](docs/adr/0014-atomic-revision-journal.md) and [the API/recovery guide](docs/DURABLE_REVISION_S2.md).
+
+No historical requirement is automatically adjudicated by this infrastructure, and no locally stored audit is independent proof of academic accuracy or evaluator authority. The original AWS archive stays private.

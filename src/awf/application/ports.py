@@ -5,9 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Protocol
 
-from awf.application.dto import LoadedKnowledgeSource
+from awf.application.dto import LoadedKnowledgeSource, PersistedRevision
 from awf.domain.document import DocumentIR
 from awf.domain.evidence import EvidenceKind, EvidenceRecord, LedgerAudit
+from awf.domain.revision_audit import AuditSlot, AuditStatus
 
 
 class DocumentParserPort(Protocol):
@@ -58,3 +59,35 @@ class EvidenceStorePort(Protocol):
     ) -> tuple[EvidenceRecord, bytes]:
         """Verify the entire chain and resolve exactly one event and its bytes."""
         ...
+
+
+class RevisionJournalPort(Protocol):
+    """Atomic revision/evidence commits; never authorizes final scholarly acceptance."""
+
+    def initialize(self) -> None: ...
+
+    def create(
+        self,
+        *,
+        revision_id: str,
+        operation_id: str,
+        run_id: str,
+        document: DocumentIR,
+        slots: tuple[AuditSlot, ...],
+    ) -> PersistedRevision: ...
+
+    def record_audit(
+        self,
+        *,
+        revision_id: str,
+        operation_id: str,
+        run_id: str,
+        document: DocumentIR,
+        expected_version: int,
+        slot_key: str,
+        status: AuditStatus,
+        checks_executed: int,
+        observation_ref: str,
+    ) -> PersistedRevision: ...
+
+    def load(self, *, revision_id: str, expected_head: str | None = None) -> PersistedRevision: ...
