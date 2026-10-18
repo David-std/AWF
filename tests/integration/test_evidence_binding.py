@@ -488,3 +488,32 @@ def test_failed_store_append_does_not_mutate_pure_state(tmp_path: Path) -> None:
         )
     assert len(state.receipts) == 0
     assert store.verify().events_checked == 0
+
+
+def test_read_stage_rejects_complete_coverage_of_another_reference(tmp_path: Path) -> None:
+    store = ledger(tmp_path)
+    unrelated = build_manifest(
+        (SourceInput("other", b"some", "private:other"),),
+        version="irrelevant", expected_axes=("fidelity",), chunk_bytes=4,
+    )
+    chunk = record_evidenced_chunk(
+        store=store, run_id="session-1", reader_ref="synthetic-reader",
+        reference_id="other", chunk_id="C0001", chunk_bytes=b"some",
+    )
+    axis = store.append(
+        kind=EvidenceKind.AUDIT_RECEIPT, run_id="session-1",
+        subject_id="axis:fidelity", content=b"synthetic-axis",
+    )
+    progress = record_stage_claim(
+        KnowledgeProgress("ref-1"), store=store,
+        stage=KnowledgeStage.AVAILABLE, context_ref="session-1",
+    )
+    with pytest.raises(EvidenceIntegrityError, match="reference missing"):
+        record_stage_claim(
+            progress, store=store, stage=KnowledgeStage.READ,
+            context_ref="session-1", manifest=unrelated,
+            chunks=(chunk,), axes=(AxisReceipt("fidelity", event_reference(axis)),),
+        )
+    assert not verify_progress_claims(
+        progress, store=store, manifest=unrelated,
+    ).independent_adjudication_proven
