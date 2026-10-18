@@ -38,9 +38,9 @@ _EVENT_PREFIX = "event:"
 
 
 def _canonical(payload: dict[str, object]) -> bytes:
-    return (json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":")) + "\n").encode(
-        "utf-8"
-    )
+    return (
+        json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":")) + "\n"
+    ).encode("utf-8")
 
 
 def event_reference(record: EvidenceRecord) -> str:
@@ -195,8 +195,13 @@ def verify_audit_receipts(
 
 
 def record_evidenced_chunk(
-    *, store: EvidenceStorePort, run_id: str, reader_ref: str,
-    reference_id: str, chunk_id: str, chunk_bytes: bytes,
+    *,
+    store: EvidenceStorePort,
+    run_id: str,
+    reader_ref: str,
+    reference_id: str,
+    chunk_id: str,
+    chunk_bytes: bytes,
 ) -> ChunkReceipt:
     """Store exact chunk bytes; identity is checked against the canonical manifest later."""
     if not reader_ref.strip():
@@ -235,8 +240,10 @@ def verify_chunk_coverage(
     for item in chunks:
         try:
             payload = _get_event(
-                store, item.observation_ref,
-                kind=EvidenceKind.SOURCE_CHUNK, run_id=run_id,
+                store,
+                item.observation_ref,
+                kind=EvidenceKind.SOURCE_CHUNK,
+                run_id=run_id,
                 subject_id=f"{item.reference_id}:{item.chunk_id}",
                 expected_head=expected_head,
             )
@@ -247,8 +254,10 @@ def verify_chunk_coverage(
     for axis in axes:
         try:
             payload = _get_event(
-                store, axis.evidence_ref,
-                kind=EvidenceKind.AUDIT_RECEIPT, run_id=run_id,
+                store,
+                axis.evidence_ref,
+                kind=EvidenceKind.AUDIT_RECEIPT,
+                run_id=run_id,
                 subject_id=f"axis:{axis.axis_id}",
                 expected_head=expected_head,
             )
@@ -271,9 +280,7 @@ def _coverage_refs(
     chunks: tuple[ChunkReceipt, ...], axes: tuple[AxisReceipt, ...]
 ) -> dict[str, object]:
     return {
-        "chunk_refs": sorted(
-            (r.reference_id, r.chunk_id, r.observation_ref) for r in chunks
-        ),
+        "chunk_refs": sorted((r.reference_id, r.chunk_id, r.observation_ref) for r in chunks),
         "axis_refs": sorted((r.axis_id, r.evidence_ref) for r in axes),
     }
 
@@ -301,8 +308,10 @@ def verify_progress_claims(
             ):
                 raise EvidenceIntegrityError("missing or reordered knowledge stage")
             payload = _get_event(
-                store, claim.evidence_ref,
-                kind=_stage_kind(claim.stage), run_id=claim.context_ref,
+                store,
+                claim.evidence_ref,
+                kind=_stage_kind(claim.stage),
+                run_id=claim.context_ref,
                 subject_id=f"{claim.reference_id}:{claim.stage.value}",
                 expected_head=expected_head,
             )
@@ -313,9 +322,15 @@ def verify_progress_claims(
             if claim.stage == KnowledgeStage.READ:
                 if manifest is None:
                     raise EvidenceIntegrityError("READ needs original manifest to reverify")
+                if progress.reference_id not in {ref.reference_id for ref in manifest.sources}:
+                    raise EvidenceIntegrityError("stage reference missing from canonical manifest")
                 coverage = verify_chunk_coverage(
-                    manifest, chunks, axes, store=store,
-                    run_id=claim.context_ref, expected_head=expected_head,
+                    manifest,
+                    chunks,
+                    axes,
+                    store=store,
+                    run_id=claim.context_ref,
+                    expected_head=expected_head,
                 )
                 if not coverage.complete:
                     raise EvidenceIntegrityError("stored chunk coverage is incomplete")
@@ -331,24 +346,33 @@ def verify_progress_claims(
                     else f"{claim.reference_id}:applicability"
                 )
                 external_payload = _get_event(
-                    store, proof_ref, kind=kind, run_id=claim.context_ref,
-                    subject_id=subject, expected_head=expected_head,
+                    store,
+                    proof_ref,
+                    kind=kind,
+                    run_id=claim.context_ref,
+                    subject_id=subject,
+                    expected_head=expected_head,
                 )
                 if not external_payload:
                     raise EvidenceIntegrityError("empty adjudication evidence")
                 extras = {"adjudication_ref": proof_ref}
-            expected = _canonical({
-                "schema": 1, "type": "knowledge_stage",
-                "reference_id": claim.reference_id,
-                "stage": claim.stage.value, "context_ref": claim.context_ref,
-                **extras,
-            })
+            expected = _canonical(
+                {
+                    "schema": 1,
+                    "type": "knowledge_stage",
+                    "reference_id": claim.reference_id,
+                    "stage": claim.stage.value,
+                    "context_ref": claim.context_ref,
+                    **extras,
+                }
+            )
             if payload != expected:
                 raise EvidenceIntegrityError("stage payload does not match its provenance")
         except (EvidenceIntegrityError, ValueError, TypeError):
             missing.append(claim.stage.value)
     return EvidenceGateResult(
-        checked=len(progress.claims), unverified=tuple(sorted(missing)),
+        checked=len(progress.claims),
+        unverified=tuple(sorted(missing)),
         local_integrity_passed=not missing,
     )
 
@@ -377,8 +401,14 @@ def record_stage_claim(
     if stage == KnowledgeStage.READ:
         if manifest is None:
             raise EvidenceIntegrityError("READ needs pinned canonical manifest")
+        if progress.reference_id not in {ref.reference_id for ref in manifest.sources}:
+            raise EvidenceIntegrityError("stage reference missing from canonical manifest")
         checked_coverage = verify_chunk_coverage(
-            manifest, chunks, axes, store=store, run_id=context_ref,
+            manifest,
+            chunks,
+            axes,
+            store=store,
+            run_id=context_ref,
             expected_head=expected_head,
         )
     adjudicated = False
@@ -393,8 +423,12 @@ def record_stage_claim(
         )
         adjudicated = bool(
             _get_event(
-                store, adjudication_ref, kind=kind, run_id=context_ref,
-                subject_id=subject, expected_head=expected_head,
+                store,
+                adjudication_ref,
+                kind=kind,
+                run_id=context_ref,
+                subject_id=subject,
+                expected_head=expected_head,
             )
         )
     provisional = advance_stage(
@@ -412,13 +446,16 @@ def record_stage_claim(
         extras = {"manifest_version": manifest.version, **_coverage_refs(chunks, axes)}
     elif stage in (KnowledgeStage.UNDERSTOOD, KnowledgeStage.APPLICABLE):
         extras = {"adjudication_ref": adjudication_ref}
-    payload = _canonical({
-        "schema": 1, "type": "knowledge_stage",
-        "reference_id": progress.reference_id,
-        "stage": stage.value,
-        "context_ref": context_ref,
-        **extras,
-    })
+    payload = _canonical(
+        {
+            "schema": 1,
+            "type": "knowledge_stage",
+            "reference_id": progress.reference_id,
+            "stage": stage.value,
+            "context_ref": context_ref,
+            **extras,
+        }
+    )
     event = store.append(
         kind=_stage_kind(stage),
         run_id=context_ref,
