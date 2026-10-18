@@ -1,24 +1,44 @@
-# AWF — handoff de la implementación Sprint 2 (corte inicial)
+# AWF — transferencia de Sprint 2
 
-Fecha: 2026-10-17. Rama `feat/s2-knowledge-compiler`, apilada sobre PR #12, #11 y #10. **Las PR continúan abiertas; no confundir rama con `main`.**
+Fecha de validación: 2026-10-17 (Lima). Estado: **Sprint 2 parcial; revisión técnica de reglas todavía abierta**.
 
-- **Sprint activo:** S2, fase de importación y clasificación conservadora. Issue [#3](https://github.com/David-std/AWF/issues/3); PR [#13](https://github.com/David-std/AWF/pull/13).
-- **S0–S1:** la CLI, `DocumentIR`, ingesta Markdown y tests previos están en PR #11 y #12; las últimas pruebas de S1 pasaron en Linux/Windows y Python 3.12/3.13.
-- **S2 código:** `domain/knowledge.py`, compilador, clasificador conservador, aplicabilidad, duplicados textuales, grafo explícito de dependencias, adaptador ZIP, importador, auditor, guardado JSON atómico local y comandos CLI.
-- **Fuente real:** `academic_writing_suite_v3_19_1_product(1).zip` NO SUBIDO; SHA-256 `ccff7d4f8c672a6ec1305faa128540893c44ee6c373941eece72a61880bb6d3c` y 184 requisitos (168 MUST + 16 DEFERRED_LAB) verificados al inspeccionar los bytes locales. La ejecución del importador sobre este ZIP se debe comprobar en entorno local autorizado; CI usa ZIP sintéticos para no publicar el corpus.
-- **Salida:** registro en `.awf/knowledge/`, sin enunciados originales. Inicialmente 168 `UNRESOLVED` y 16 `EVAL_ONLY`, 184 entradas sin silencios.
-- **Tests:** consultar el último job de PR #13. No declarar PASS si no concluyó satisfactoriamente; anotar SHA exacto del run. Los ensayos de permisos de ZIP, negativos y CI son por código sintético, no dataset real.
-- **No implementado:** revisión cualitativa de 168 requisitos, autoría/licencias por dataset, contradicciones semánticas verificadas, persistencia transaccional SQLite/ORM, evaluación de redacción, modelos, SFT/DPO o API.
-- **ADR:** `docs/adr/0008-local-knowledge-import.md`; difiere SQLite/ORM hasta tener una razón empírica. Imprescindible revisar ADR antes de incorporarlo.
-- **Siguiente tarea:** cerrar CI, probar `knowledge import` con el archivo privado sin subirlo, y diseñar lotes de revisión de reglas con criterios objetivos y estados conservadores; mantener S2 abierto hasta adjudicación completa.
+## Estado exacto del repositorio
 
-**Regla de continuidad:** no considerar un registro importado como corpus listo para fine-tuning; registrar evidencia, permisos y validación antes de promoción.
+- Repositorio: `David-std/AWF`. Rama operativa local: `feat/s2-review-workbench`.
+- Cadena de PRs **sin fusionar**: #10 (arquitectura) → #11 (S0) → #12 (S1) → #13 (importador S2) → [#14 (workbench S2)](https://github.com/David-std/AWF/pull/14).
+- Último commit con código y tests CI verificados: `9c65157243f15f689fde325157679bf35882753c`.
+- Verificaciones externas de ese commit: [PR CI 39082696174](https://github.com/David-std/AWF/actions/runs/39082696174) y [push CI 39082693013](https://github.com/David-std/AWF/actions/runs/39082693013); ambas `SUCCESS`, matriz Ubuntu/Windows × Python 3.12/3.13, **45 tests pasados por job** (Ruff, Pyright, pytest y build).
+- No existen todavía editor neuronal, entrenamiento, verificador semántico de documentos, UI/API ni inferencia de producción.
 
+## Fuente histórica local: no publicar
 
-## Continuación S2 — workbench local
+- ZIP existente en la carpeta Descargas del equipo autorizado: `academic_writing_suite_v3_19_1_product.zip` (mismo contenido del artefacto histórico suministrado previamente con el nombre `...(1).zip`).
+- SHA-256 verificado: `ccff7d4f8c672a6ec1305faa128540893c44ee6c373941eece72a61880bb6d3c`.
+- Ledger original: `academic_writing_suite/runtime/deep_spec_requirement_ledger.json`; versión 3.19.1; 184 requisitos (168 `MUST` + 16 `DEFERRED_LAB`).
+- Ruta de evidencia real: 770 referencias a implementaciones históricas; 681 archivos y 89 directorios localizados dentro del ZIP, cero faltantes. Esto prueba localización, **no correcto funcionamiento ni portabilidad a AWF**.
+- No subir ZIP, corpus, borradores privados, casos internos ni salida textual de las fichas a GitHub.
 
-- Rama propuesta: `feat/s2-review-workbench`, base `feat/s2-knowledge-compiler`.
-- Añadido `awf knowledge plan-review` y evaluación de cobertura de todas las fichas sin resolución automática.
-- Las fichas privadas se crean en `.awf/knowledge/review-<hash>-bNN/` con texto original, referencias, criterios de aceptación, métricas de evidencia y campos vacíos para dictamen.
-- Registro de revisión inicial: 0 revisadas; ninguna regla de AWS se promociona a ejecución/entrenamiento por pasar una prueba sintética.
-- Revisar CI y ejecución local contra ZIP auténtico antes de declarar el workbench verificado.
+## Código y ejecución verificados
+
+- `awf knowledge import`: importación desde archivo local validado por SHA; crea `.awf/knowledge/registry.json` con metadatos únicamente. Auditoría local devolvió `valid: true`, `archive_sha256_verified: true`; reimportación byte-identical.
+- `awf knowledge plan-review`: prepara fichas completas por dominio sin aprobarlas. Comando validado:
+
+```powershell
+awf knowledge plan-review "RUTA_LOCAL_AL_ZIP_3_19_1.zip" --batch-size 12
+```
+
+- Carpeta generada: `.awf/knowledge/review-ccff7d4f8c67-b12/`, con **20 lotes + manifest**.
+- Comprobaciones locales: 184 fichas y 184 IDs únicos; 149 con contrato histórico mecánico, 19 estructuralmente acotados y 16 laboratorios diferidos; campos de procedencia, métrica de aceptación y prueba negativa presentes para todas; contenido textual ausente del `manifest.json`; 0 propuestas marcadas como revisadas; `.awf` ignorado por Git; working tree limpio.
+- Dominios: 9 dominios de `MUST` y 2 de `DEFERRED_LAB`.
+
+## Pendientes reales y límites
+
+1. **Revisión sustantiva de las 168 MUST:** contraste del código/test histórico, evidencia científica y aplicabilidad al diseño AWF. Estado actual: **168 UNRESOLVED**, no 168 implementadas en AWF.
+2. Decidir con justificación por regla: `KEEP_AS_CODE`, `KEEP_AS_CONTEXT`, `EVAL_ONLY`, `TRAIN`, `REMOVE_FROM_ACTIVE` o `UNRESOLVED`; 16 `DEFERRED_LAB` siguen solo `EVAL_ONLY`.
+3. No es suficiente marcar un campo `review_template` como aprobado. Faltan reglas de adjudicación con pruebas falsables, licencias y permisos de entrenamiento, resolución documentada de contradicciones y evaluación independiente de calidad.
+4. La cuenta Git local no puede hacer `git push` al repositorio `David-std/AWF` (403: credencial `David-std2`); se publica vía **conector de GitHub**. No modificar credenciales del usuario.
+5. Las PR están apiladas, no fusionadas en `main`. Su integración requiere rebasar/ajustar las bases en orden.
+
+## Próxima unidad de trabajo
+
+Auditar el dominio `stateful_runtime` (15 requisitos) desde los lotes privados; para cada ID recuperar la prueba histórica correspondiente, clasificar su transferibilidad a AWF y definir casos negativos nuevos. Registrar **propuestas asistidas**, no `REVIEW_ATTESTED` sin una decisión de revisión documentada. Después continuar por dominios, no por cuotas de palabras o reglas arbitrarias.
