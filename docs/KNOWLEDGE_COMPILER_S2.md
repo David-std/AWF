@@ -45,3 +45,22 @@ La justificación debe ser concreta. Las disposiciones disponibles son `KEEP_AS_
 ## Pendientes del Sprint 2
 
 Integrar revisión basada en casos, clasificar/justificar los 168 `MUST` uno por uno, inventariar licencias del corpus, detectar conflictos con evidencia, cerrar dependencias explícitas, construir dataset card y decidir almacenamiento transaccional por necesidades reales. Deben mantenerse visibles como pendientes incluso cuando la CI esté verde.
+
+
+## Workbench privado de revisión por lotes (S2)
+
+El nuevo comando `awf knowledge plan-review` prepara las **184 fichas completas**, pero no aprueba ninguna. Lee el ZIP local verificado, coteja el hash de cada enunciado con el registro compilado y organiza los requisitos por dominio y lotes pequeños. No utiliza un LLM para adjudicar automáticamente.
+
+```powershell
+awf knowledge plan-review "C:\\Users\\david\\Downloads\\academic_writing_suite_v3_19_1_product.zip" --batch-size 12
+```
+
+La salida estándar es únicamente un resumen. El texto de los requisitos, referencias a implementaciones previas, pruebas históricas, métrica de aceptación, incertidumbre residual y preguntas de revisión se conservan exclusivamente en `.awf/knowledge/review-<hash>-b12/batch-NNN.json`. El `manifest.json` dentro de esa carpeta enumera todas las fichas, sin su texto.
+
+Cada entrada conserva explícitamente la diferencia entre `legacy_status_claim: IMPLEMENTED` (de AWS) y `review_status: OPEN` (de AWF). Las clases `ROBUST_MECHANICAL_CONTRACT` y `STRUCTURAL_ENFORCED_BOUNDED` **describen reclamos y tipos de verificación históricos**, no adjudicaciones nuevas de AWF. Los requisitos `DEFERRED_LAB` permanecen en cuarentena experimental.
+
+### Criterios de cierre de una ficha
+
+Revisar evidencia primaria y fecha/versiones; resolver si la política pertenece a código, contexto, entrenamiento, evaluación exclusiva, eliminación justificada o queda sin resolver; documentar dependencia, posibles conflictos, casos negativos, derechos/licencias y una prueba falsable. El workbench es una **cola de revisión** y no un detector de contradicciones semánticas.
+
+No subir `.awf/`, ni reutilizar el texto de las fichas como dataset por el mero hecho de haber sido importado. La revisión debe registrar el juicio humano y evidencia independiente cuando corresponda.

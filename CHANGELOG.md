@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — Sprint 2 private review workbench
+
+- Add complete private review packets grouped by domain and deterministic batch number; read original rules only from pinned local ZIP.
+- Preserve historical implementation claims, verification surfaces, acceptance metrics and residual uncertainty as evidence pointers without treating them as AWF passes.
+- Add coverage/hash checks, fail-closed unsupported boundaries, synthetic positive/negative regression tests, and source-text-free CLI summaries.
+- All 184 remain OPEN pending justified review; source archive stays local-only.
+
+
 ## Unreleased — AWF 0.1.0 (Sprint 2 knowledge-import branch)
 
 - Add `awf knowledge import` and `knowledge audit` for a SHA-pinned, local-only AWS 3.19.1 archive; export metadata without text or source ZIP.

@@ -13,3 +13,12 @@ Fecha: 2026-10-17. Rama `feat/s2-knowledge-compiler`, apilada sobre PR #12, #11 
 - **Siguiente tarea:** cerrar CI, probar `knowledge import` con el archivo privado sin subirlo, y diseñar lotes de revisión de reglas con criterios objetivos y estados conservadores; mantener S2 abierto hasta adjudicación completa.
 
 **Regla de continuidad:** no considerar un registro importado como corpus listo para fine-tuning; registrar evidencia, permisos y validación antes de promoción.
+
+
+## Continuación S2 — workbench local
+
+- Rama propuesta: `feat/s2-review-workbench`, base `feat/s2-knowledge-compiler`.
+- Añadido `awf knowledge plan-review` y evaluación de cobertura de todas las fichas sin resolución automática.
+- Las fichas privadas se crean en `.awf/knowledge/review-<hash>-bNN/` con texto original, referencias, criterios de aceptación, métricas de evidencia y campos vacíos para dictamen.
+- Registro de revisión inicial: 0 revisadas; ninguna regla de AWS se promociona a ejecución/entrenamiento por pasar una prueba sintética.
+- Revisar CI y ejecución local contra ZIP auténtico antes de declarar el workbench verificado.
