@@ -52,3 +52,9 @@ class EvidenceStorePort(Protocol):
     def verify(self, *, expected_head: str | None = None) -> LedgerAudit:
         """Verify chain, metadata and payloads; optionally check a trusted prior head."""
         ...
+
+    def resolve_event(
+        self, *, event_digest: str, expected_head: str | None = None
+    ) -> tuple[EvidenceRecord, bytes]:
+        """Verify the entire chain and resolve exactly one event and its bytes."""
+        ...

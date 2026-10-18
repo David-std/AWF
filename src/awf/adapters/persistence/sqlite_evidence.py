@@ -248,6 +248,50 @@ class SQLiteEvidenceLedger:
                     conn.execute("ROLLBACK")
                 raise
 
+    def resolve_event(
+        self, *, event_digest: str, expected_head: str | None = None
+    ) -> tuple[EvidenceRecord, bytes]:
+        """Resolve an event *and its payload* within one verified read transaction.
+
+        Content SHA alone is insufficient: the same bytes may be attached to
+        different subjects, runs, or kinds. The event digest binds those facts.
+        An external expected_head additionally detects internally valid truncation.
+        """
+        if len(event_digest) != 64 or any(c not in "0123456789abcdef" for c in event_digest):
+            raise ValueError("event digest must be lowercase SHA-256")
+        if not self.database.is_file():
+            raise FileNotFoundError("evidence ledger does not exist")
+        with self._open() as conn:
+            self._check_schema(conn)
+            conn.execute("BEGIN")
+            try:
+                report = self._audit_transaction(conn)
+                if expected_head is not None and report.head_digest != expected_head:
+                    raise EvidenceIntegrityError("trusted head digest does not match ledger")
+                row = conn.execute(
+                    f"SELECT {_COLUMNS} FROM events WHERE digest=?", (event_digest,)
+                ).fetchone()
+                if row is None:
+                    raise EvidenceIntegrityError("unknown evidence event")
+                record = self._row_to_record(row)
+                if record.digest != event_digest:
+                    raise EvidenceIntegrityError("evidence event identity mismatch")
+                payload_row = conn.execute(
+                    "SELECT payload FROM evidence_objects WHERE sha256=?",
+                    (record.evidence_sha256,),
+                ).fetchone()
+                if payload_row is None or not isinstance(payload_row[0], bytes):
+                    raise EvidenceIntegrityError("missing evidence payload")
+                raw = payload_row[0]
+                if sha256_bytes(raw) != record.evidence_sha256 or len(raw) != record.evidence_bytes:
+                    raise EvidenceIntegrityError("evidence bytes no longer match event")
+                conn.execute("COMMIT")
+                return record, raw
+            except (sqlite3.Error, ValueError):
+                if conn.in_transaction:
+                    conn.execute("ROLLBACK")
+                raise
+
     def append(
         self, *, kind: EvidenceKind, run_id: str, subject_id: str, content: bytes
     ) -> EvidenceRecord:
