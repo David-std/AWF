@@ -1,8 +1,7 @@
 """Atomic local revision snapshots coordinated with the existing evidence ledger.
 
-This is an intentionally narrow S2 implementation: START and AUDIT are the
-only durable transitions. Findings, edits and critic sweeps have no durable
-command yet and therefore cannot be recovered or certified by this adapter.
+START, AUDIT, EDIT, FINDING_OPEN and FINDING_RESOLVE are durable. Critic sweeps
+and external iterations remain in memory; no journal result certifies a critic.
 """
 
 from __future__ import annotations
@@ -29,7 +28,13 @@ from awf.domain.evidence import (
 from awf.domain.revision_audit import (
     AuditSlot,
     AuditStatus,
+    RevisionPolicy,
     RevisionState,
+    _accept_edit_scopes,
+    accept_edit,
+    open_finding,
+    resolve_finding,
+    scope_fingerprint,
     start_revision,
 )
 from awf.domain.revision_audit import (
@@ -62,6 +67,7 @@ _SELECT = (
     "version, operation_id, run_id, request_sha256, previous_state_sha256, "
     "state_sha256, state_bytes, transition_digest"
 )
+_DURABLE_KINDS = frozenset({"EDIT", "FINDING_OPEN", "FINDING_RESOLVE"})
 
 
 class RevisionConflictError(ValueError):
@@ -88,6 +94,34 @@ def _event_payload(conn: sqlite3.Connection, digest: str) -> tuple[str, str, str
     if row is None or not isinstance(row[3], bytes):
         raise EvidenceIntegrityError("revision references a missing evidence event")
     return str(row[0]), str(row[1]), str(row[2]), row[3]
+
+
+def _after_event(report: LedgerAudit, digest: str) -> LedgerAudit:
+    return LedgerAudit(
+        events_checked=report.events_checked + 1,
+        evidence_objects_checked=report.evidence_objects_checked,
+        head_digest=digest,
+    )
+
+
+def _revision_request(
+    kind: str, revision_id: str, run_id: str, expected_version: int, details: dict[str, object]
+) -> str:
+    # EDIT scope digests derive from the frozen inventory inside the write lock.
+    request_details = (
+        {key: value for key, value in details.items() if key not in {"old_scopes", "new_scopes"}}
+        if kind == "EDIT"
+        else details
+    )
+    return _request_hash(
+        {
+            "operation": kind,
+            "revision_id": revision_id,
+            "run_id": run_id,
+            "expected_version": expected_version,
+            "details": request_details,
+        }
+    )
 
 
 class SQLiteRevisionJournal:
@@ -150,6 +184,7 @@ class SQLiteRevisionJournal:
             (revision_id,),
         ).fetchall()
         revision_event_digests: set[str] = set()
+        intent_event_digests: set[str] = set()
         for digest, raw in conn.execute(
             """SELECT e.digest, o.payload FROM events e
                JOIN evidence_objects o ON e.evidence_sha256=o.sha256
@@ -163,11 +198,15 @@ class SQLiteRevisionJournal:
                     raise EvidenceIntegrityError("malformed revision transition") from exc
                 if isinstance(body, dict) and body.get("type") == "revision_commit":
                     revision_event_digests.add(str(digest))
+                elif isinstance(body, dict) and body.get("type") == "revision_intent":
+                    intent_event_digests.add(str(digest))
         if revision_event_digests != {str(row[7]) for row in rows}:
             raise EvidenceIntegrityError("committed transition lacks a matching revision snapshot")
         snapshots: list[PersistedRevision] = []
         previous_digest = GENESIS_DIGEST
         previous_run: str | None = None
+        previous_state: RevisionState | None = None
+        claimed_intents: set[str] = set()
         for index, row in enumerate(rows):
             version, op_id, run_id, req_sha, prev_sha, state_sha, raw, transition = row
             if (
@@ -193,8 +232,7 @@ class SQLiteRevisionJournal:
                 raise EvidenceIntegrityError("malformed revision transition") from exc
             if not isinstance(body, dict):
                 raise EvidenceIntegrityError("revision transition must be an object")
-            expected = {
-                "schema": 1,
+            shared = {
                 "type": "revision_commit",
                 "revision_id": revision_id,
                 "run_id": run_id,
@@ -203,14 +241,29 @@ class SQLiteRevisionJournal:
                 "request_sha256": req_sha,
                 "previous_state_sha256": prev_sha,
                 "state_sha256": state_sha,
-                "audit_event_ref": body.get("audit_event_ref"),
-                "audit_slot_key": body.get("audit_slot_key"),
             }
+            if body.get("schema") == 1:
+                expected = {
+                    "schema": 1,
+                    **shared,
+                    "audit_event_ref": body.get("audit_event_ref"),
+                    "audit_slot_key": body.get("audit_slot_key"),
+                }
+            elif body.get("schema") == 2:
+                expected = {
+                    "schema": 2,
+                    **shared,
+                    "operation_kind": body.get("operation_kind"),
+                    "intent_event_ref": body.get("intent_event_ref"),
+                }
+            else:
+                raise EvidenceIntegrityError("unknown revision transition schema")
             if _canonical(expected) != content:
                 raise EvidenceIntegrityError("revision transition differs from snapshot metadata")
             if index == 0:
                 if (
-                    expected["audit_event_ref"] is not None
+                    body.get("schema") != 1
+                    or expected["audit_event_ref"] is not None
                     or expected["audit_slot_key"] is not None
                     or state.receipts
                     or state.findings
@@ -219,7 +272,7 @@ class SQLiteRevisionJournal:
                     or state.event_log != (f"START:{state.artifact_sha256}",)
                 ):
                     raise EvidenceIntegrityError("invalid initial revision snapshot")
-            else:
+            elif body.get("schema") == 1:
                 self._check_audit_link(
                     conn,
                     state,
@@ -227,12 +280,166 @@ class SQLiteRevisionJournal:
                     expected["audit_slot_key"],
                     expected["audit_event_ref"],
                 )
+            else:
+                intent_ref = expected["intent_event_ref"]
+                if not isinstance(intent_ref, str) or not intent_ref.startswith("event:"):
+                    raise EvidenceIntegrityError("revision transition lacks its intent event")
+                claimed_intents.add(intent_ref[6:])
+                if previous_state is None:
+                    raise EvidenceIntegrityError("revision intent cannot be initial commit")
+                self._check_intent_link(
+                    conn,
+                    previous_state,
+                    state,
+                    revision_id=revision_id,
+                    run_id=str(run_id),
+                    operation_id=str(op_id),
+                    request_sha256=str(req_sha),
+                    expected_version=index - 1,
+                    kind=expected["operation_kind"],
+                    intent_ref=intent_ref,
+                )
             snapshots.append(
                 PersistedRevision(revision_id, str(run_id), version, state, str(op_id), head)
             )
             previous_digest = str(state_sha)
             previous_run = str(run_id)
+            previous_state = state
+        if intent_event_digests != claimed_intents:
+            raise EvidenceIntegrityError("revision intent lacks a matching committed snapshot")
         return snapshots
+
+    @staticmethod
+    def _check_intent_link(
+        conn: sqlite3.Connection,
+        previous: RevisionState,
+        state: RevisionState,
+        *,
+        revision_id: str,
+        run_id: str,
+        operation_id: str,
+        request_sha256: str,
+        expected_version: int,
+        kind: object,
+        intent_ref: str,
+    ) -> None:
+        if not isinstance(kind, str) or kind not in _DURABLE_KINDS:
+            raise EvidenceIntegrityError("unsupported durable revision operation")
+        event_kind, event_run, subject, raw = _event_payload(conn, intent_ref[6:])
+        if (event_kind, event_run, subject) != (
+            EvidenceKind.REVISION_TRANSITION.value,
+            run_id,
+            revision_id,
+        ):
+            raise EvidenceIntegrityError("revision intent event identity mismatch")
+        try:
+            body = json.loads(raw)
+            if not isinstance(body, dict) or not isinstance(body.get("details"), dict):
+                raise ValueError("missing revision intent details")
+            details = body["details"]
+            expected = {
+                "schema": 1,
+                "type": "revision_intent",
+                "revision_id": revision_id,
+                "run_id": run_id,
+                "operation_id": operation_id,
+                "request_sha256": request_sha256,
+                "operation_kind": kind,
+                "details": details,
+            }
+            if (
+                _canonical(expected) != raw
+                or _revision_request(kind, revision_id, run_id, expected_version, details)
+                != request_sha256
+            ):
+                raise ValueError("revision intent metadata differs from recorded request")
+            if kind == "EDIT":
+                if set(details) != {
+                    "old_sha256",
+                    "new_sha256",
+                    "old_ir_sha256",
+                    "new_ir_sha256",
+                    "policy",
+                    "observation_ref",
+                    "old_scopes",
+                    "new_scopes",
+                }:
+                    raise ValueError("unknown or missing edit metadata")
+                if not all(
+                    isinstance(details[name], str)
+                    and len(details[name]) == 64
+                    and all(char in "0123456789abcdef" for char in details[name])
+                    for name in ("old_sha256", "new_sha256", "old_ir_sha256", "new_ir_sha256")
+                ):
+                    raise ValueError("invalid edit document fingerprint")
+                policy_raw = details["policy"]
+                if (
+                    not isinstance(policy_raw, dict)
+                    or any(type(value) is not int for value in policy_raw.values())
+                    or set(policy_raw)
+                    != {"max_revision_cycles", "max_external_iterations", "clean_sweeps_required"}
+                ):
+                    raise ValueError("invalid persisted edit policy")
+                old_scopes = details["old_scopes"]
+                new_scopes = details["new_scopes"]
+                if not isinstance(old_scopes, dict) or not isinstance(new_scopes, dict):
+                    raise ValueError("invalid persisted edit scopes")
+                if not all(
+                    isinstance(value, str)
+                    and len(value) == 64
+                    and all(char in "0123456789abcdef" for char in value)
+                    for value in (*old_scopes.values(), *new_scopes.values())
+                ):
+                    raise ValueError("invalid scope fingerprint")
+                expected_state = _accept_edit_scopes(
+                    previous,
+                    old_sha256=details["old_sha256"],
+                    new_sha256=details["new_sha256"],
+                    old_scopes=old_scopes,
+                    new_scopes=new_scopes,
+                    policy=RevisionPolicy(**policy_raw),
+                    operation_ref=intent_ref,
+                )
+                if (
+                    not isinstance(details["observation_ref"], str)
+                    or not details["observation_ref"].strip()
+                ):
+                    raise ValueError("missing edit observation")
+            elif kind == "FINDING_OPEN":
+                if set(details) != {"finding_id", "material", "observation_ref"}:
+                    raise ValueError("unknown or missing finding metadata")
+                if type(details["material"]) is not bool:
+                    raise ValueError("material flag must be boolean")
+                expected_state = open_finding(
+                    previous,
+                    finding_id=details["finding_id"],
+                    material=details["material"],
+                    evidence_ref=intent_ref,
+                )
+                if (
+                    not isinstance(details["observation_ref"], str)
+                    or not details["observation_ref"].strip()
+                ):
+                    raise ValueError("missing finding observation")
+            else:
+                if set(details) != {"finding_id", "observation_ref"}:
+                    raise ValueError("unknown or missing resolution metadata")
+                expected_state = resolve_finding(
+                    previous,
+                    finding_id=details["finding_id"],
+                    resolution_evidence_ref=intent_ref,
+                )
+                if (
+                    not isinstance(details["observation_ref"], str)
+                    or not details["observation_ref"].strip()
+                ):
+                    raise ValueError("missing resolution observation")
+        except (KeyError, TypeError, ValueError, AttributeError) as exc:
+            raise EvidenceIntegrityError("invalid committed revision intent") from exc
+        if expected_state != state:
+            raise EvidenceIntegrityError(
+                "recovered revision differs from committed domain transition"
+            )
 
     @staticmethod
     def _check_audit_link(
@@ -303,24 +510,26 @@ class SQLiteRevisionJournal:
         state: RevisionState,
         audit_ref: str | None = None,
         audit_slot: str | None = None,
+        operation_kind: str | None = None,
+        intent_ref: str | None = None,
     ) -> PersistedRevision:
         raw = encode_revision_state(state)
         state_sha = sha256_bytes(raw)
-        content = _canonical(
-            {
-                "schema": 1,
-                "type": "revision_commit",
-                "revision_id": revision_id,
-                "run_id": run_id,
-                "version": version,
-                "operation_id": operation_id,
-                "request_sha256": request_sha256,
-                "previous_state_sha256": previous_sha256,
-                "state_sha256": state_sha,
-                "audit_event_ref": audit_ref,
-                "audit_slot_key": audit_slot,
-            }
-        )
+        payload: dict[str, object] = {
+            "type": "revision_commit",
+            "revision_id": revision_id,
+            "run_id": run_id,
+            "version": version,
+            "operation_id": operation_id,
+            "request_sha256": request_sha256,
+            "previous_state_sha256": previous_sha256,
+            "state_sha256": state_sha,
+        }
+        if operation_kind is None:
+            payload.update(schema=1, audit_event_ref=audit_ref, audit_slot_key=audit_slot)
+        else:
+            payload.update(schema=2, operation_kind=operation_kind, intent_event_ref=intent_ref)
+        content = _canonical(payload)
         event = self.ledger._append_in_transaction(
             conn,
             report,
@@ -356,9 +565,14 @@ class SQLiteRevisionJournal:
         request_sha256: str,
         expected_version: int,
         build: Callable[
-            [sqlite3.Connection, LedgerAudit, RevisionState | None],
+            [sqlite3.Connection, LedgerAudit, RevisionState | None, str | None],
             tuple[RevisionState, LedgerAudit, str | None, str | None],
         ],
+        *,
+        operation_kind: str | None = None,
+        details: (
+            dict[str, object] | Callable[[RevisionState | None], dict[str, object]] | None
+        ) = None,
     ) -> PersistedRevision:
         validate_metadata(EvidenceKind.REVISION_TRANSITION, run_id, revision_id, 1)
         validate_metadata(EvidenceKind.REVISION_TRANSITION, run_id, operation_id, 1)
@@ -385,8 +599,47 @@ class SQLiteRevisionJournal:
                     raise RevisionConflictError("stale revision version; reload before writing")
                 if last is not None and last.run_id != run_id:
                     raise RevisionConflictError("revision belongs to a different run")
+                intent_ref: str | None = None
+                if operation_kind is not None:
+                    if operation_kind not in _DURABLE_KINDS or details is None:
+                        raise ValueError("unsupported durable revision intent")
+                    intent_details = (
+                        details(last.state if last is not None else None)
+                        if callable(details)
+                        else details
+                    )
+                    if (
+                        _revision_request(
+                            operation_kind, revision_id, run_id, expected_version, intent_details
+                        )
+                        != request_sha256
+                    ):
+                        raise EvidenceIntegrityError(
+                            "durable intent differs from request fingerprint"
+                        )
+                    intent = self.ledger._append_in_transaction(
+                        conn,
+                        report,
+                        kind=EvidenceKind.REVISION_TRANSITION,
+                        run_id=run_id,
+                        subject_id=revision_id,
+                        content=_canonical(
+                            {
+                                "schema": 1,
+                                "type": "revision_intent",
+                                "revision_id": revision_id,
+                                "run_id": run_id,
+                                "operation_id": operation_id,
+                                "request_sha256": request_sha256,
+                                "operation_kind": operation_kind,
+                                "details": intent_details,
+                            }
+                        ),
+                    )
+                    intent_ref = event_reference(intent)
+                    report = _after_event(report, intent.digest)
                 state, updated_report, audit_ref, audit_slot = build(
-                    conn, report, last.state if last is not None else None
+                    conn, report, last.state if last is not None else None, intent_ref
                 )
                 previous_sha = (
                     sha256_bytes(encode_revision_state(last.state))
@@ -405,6 +658,8 @@ class SQLiteRevisionJournal:
                     state=state,
                     audit_ref=audit_ref,
                     audit_slot=audit_slot,
+                    operation_kind=operation_kind,
+                    intent_ref=intent_ref,
                 )
                 conn.execute("COMMIT")
                 return result
@@ -434,7 +689,10 @@ class SQLiteRevisionJournal:
         )
 
         def build(
-            _conn: sqlite3.Connection, report: LedgerAudit, previous: RevisionState | None
+            _conn: sqlite3.Connection,
+            report: LedgerAudit,
+            previous: RevisionState | None,
+            _intent_ref: str | None,
         ) -> tuple[RevisionState, LedgerAudit, str | None, str | None]:
             if previous is not None:
                 raise RevisionConflictError("revision already exists")
@@ -475,7 +733,10 @@ class SQLiteRevisionJournal:
         )
 
         def build(
-            conn: sqlite3.Connection, report: LedgerAudit, previous: RevisionState | None
+            conn: sqlite3.Connection,
+            report: LedgerAudit,
+            previous: RevisionState | None,
+            _intent_ref: str | None,
         ) -> tuple[RevisionState, LedgerAudit, str | None, str | None]:
             if previous is None:
                 raise RevisionConflictError("revision must be created before auditing")
@@ -504,11 +765,184 @@ class SQLiteRevisionJournal:
                     recorded if r.slot_key == slot_key else r for r in provisional.receipts
                 ),
             )
-            next_report = LedgerAudit(
-                events_checked=event.sequence,
-                evidence_objects_checked=report.evidence_objects_checked,
-                head_digest=event.digest,
-            )
+            next_report = _after_event(report, event.digest)
             return next_state, next_report, ref, slot_key
 
         return self._write(revision_id, operation_id, run_id, request_sha, expected_version, build)
+
+    def accept_edit(
+        self,
+        *,
+        revision_id: str,
+        operation_id: str,
+        run_id: str,
+        old_document: DocumentIR,
+        new_document: DocumentIR,
+        expected_version: int,
+        policy: RevisionPolicy,
+        observation_ref: str,
+    ) -> PersistedRevision:
+        """Atomically invalidate checks for an edited artifact; no academic approval."""
+        if not observation_ref.strip():
+            raise ValueError("edit requires a nonempty observation reference")
+        policy_data: dict[str, object] = {
+            "max_revision_cycles": policy.max_revision_cycles,
+            "max_external_iterations": policy.max_external_iterations,
+            "clean_sweeps_required": policy.clean_sweeps_required,
+        }
+        input_data: dict[str, object] = {
+            "old_sha256": old_document.sha256,
+            "new_sha256": new_document.sha256,
+            "old_ir_sha256": sha256_bytes(_canonical(old_document.to_dict())),
+            "new_ir_sha256": sha256_bytes(_canonical(new_document.to_dict())),
+            "policy": policy_data,
+            "observation_ref": observation_ref,
+        }
+        request_sha = _revision_request("EDIT", revision_id, run_id, expected_version, input_data)
+
+        def details(previous: RevisionState | None) -> dict[str, object]:
+            if previous is None:
+                raise RevisionConflictError("revision must exist before editing")
+            return {
+                **input_data,
+                "old_scopes": {
+                    slot.key: scope_fingerprint(old_document, slot) for slot in previous.slots
+                },
+                "new_scopes": {
+                    slot.key: scope_fingerprint(new_document, slot) for slot in previous.slots
+                },
+            }
+
+        def build(
+            _conn: sqlite3.Connection,
+            report: LedgerAudit,
+            previous: RevisionState | None,
+            intent_ref: str | None,
+        ) -> tuple[RevisionState, LedgerAudit, str | None, str | None]:
+            if previous is None or intent_ref is None:
+                raise RevisionConflictError("revision must exist before editing")
+            return (
+                accept_edit(
+                    previous,
+                    old_document,
+                    new_document,
+                    policy=policy,
+                    operation_ref=intent_ref,
+                ),
+                report,
+                None,
+                None,
+            )
+
+        return self._write(
+            revision_id,
+            operation_id,
+            run_id,
+            request_sha,
+            expected_version,
+            build,
+            operation_kind="EDIT",
+            details=details,
+        )
+
+    def open_finding(
+        self,
+        *,
+        revision_id: str,
+        operation_id: str,
+        run_id: str,
+        expected_version: int,
+        finding_id: str,
+        material: bool,
+        observation_ref: str,
+    ) -> PersistedRevision:
+        """Persist a finding and event-bound local observation in one transaction."""
+        if type(material) is not bool or not observation_ref.strip():
+            raise ValueError("finding requires a boolean material flag and an observation")
+        details: dict[str, object] = {
+            "finding_id": finding_id,
+            "material": material,
+            "observation_ref": observation_ref,
+        }
+        request_sha = _revision_request(
+            "FINDING_OPEN", revision_id, run_id, expected_version, details
+        )
+
+        def build(
+            _conn: sqlite3.Connection,
+            report: LedgerAudit,
+            previous: RevisionState | None,
+            intent_ref: str | None,
+        ) -> tuple[RevisionState, LedgerAudit, str | None, str | None]:
+            if previous is None or intent_ref is None:
+                raise RevisionConflictError("revision must exist before recording a finding")
+            return (
+                open_finding(
+                    previous,
+                    finding_id=finding_id,
+                    material=material,
+                    evidence_ref=intent_ref,
+                ),
+                report,
+                None,
+                None,
+            )
+
+        return self._write(
+            revision_id,
+            operation_id,
+            run_id,
+            request_sha,
+            expected_version,
+            build,
+            operation_kind="FINDING_OPEN",
+            details=details,
+        )
+
+    def resolve_finding(
+        self,
+        *,
+        revision_id: str,
+        operation_id: str,
+        run_id: str,
+        expected_version: int,
+        finding_id: str,
+        observation_ref: str,
+    ) -> PersistedRevision:
+        """Resolve an existing OPEN finding, retaining its original event reference."""
+        if not observation_ref.strip():
+            raise ValueError("finding resolution requires an observation")
+        details: dict[str, object] = {"finding_id": finding_id, "observation_ref": observation_ref}
+        request_sha = _revision_request(
+            "FINDING_RESOLVE", revision_id, run_id, expected_version, details
+        )
+
+        def build(
+            _conn: sqlite3.Connection,
+            report: LedgerAudit,
+            previous: RevisionState | None,
+            intent_ref: str | None,
+        ) -> tuple[RevisionState, LedgerAudit, str | None, str | None]:
+            if previous is None or intent_ref is None:
+                raise RevisionConflictError("revision must exist before resolving a finding")
+            return (
+                resolve_finding(
+                    previous,
+                    finding_id=finding_id,
+                    resolution_evidence_ref=intent_ref,
+                ),
+                report,
+                None,
+                None,
+            )
+
+        return self._write(
+            revision_id,
+            operation_id,
+            run_id,
+            request_sha,
+            expected_version,
+            build,
+            operation_kind="FINDING_RESOLVE",
+            details=details,
+        )
