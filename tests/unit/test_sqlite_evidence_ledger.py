@@ -78,7 +78,9 @@ def test_empty_oversize_invalid_identity_and_kind_fail_closed(tmp_path: Path) ->
     with pytest.raises(ValueError, match="unknown evidence kind"):
         ledger.append(
             kind="SOURCE_CHUNK",  # type: ignore[arg-type]
-            run_id="test", subject_id="chunk", content=b"x",
+            run_id="test",
+            subject_id="chunk",
+            content=b"x",
         )
     assert ledger.verify().events_checked == 0
 
@@ -252,9 +254,13 @@ def test_existing_parent_permissions_not_mutated(tmp_path: Path) -> None:
 def test_event_digest_binds_metadata_and_length() -> None:
     raw = b"proof"
     values = dict(
-        sequence=1, kind=EvidenceKind.REVIEW_DECISION, run_id="run",
-        subject_id="DSR-001", evidence_sha256=sha256_bytes(raw),
-        evidence_bytes=len(raw), recorded_at="2026-10-17T12:00:00+00:00",
+        sequence=1,
+        kind=EvidenceKind.REVIEW_DECISION,
+        run_id="run",
+        subject_id="DSR-001",
+        evidence_sha256=sha256_bytes(raw),
+        evidence_bytes=len(raw),
+        recorded_at="2026-10-17T12:00:00+00:00",
         previous_digest=GENESIS_DIGEST,
     )
     first = event_digest(**values)

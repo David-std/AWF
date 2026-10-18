@@ -9,10 +9,10 @@ from __future__ import annotations
 
 import os
 import sqlite3
+from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Iterator
 
 from awf.domain.evidence import (
     GENESIS_DIGEST,
@@ -240,7 +240,7 @@ class SQLiteEvidenceLedger:
                 elif int(old[0]) != len(content) or old[1] != content:
                     raise EvidenceIntegrityError("content-addressed object collision or corruption")
                 sequence = report.events_checked + 1
-                time_stamp = datetime.now(timezone.utc).isoformat()
+                time_stamp = datetime.now(UTC).isoformat()
                 row_digest = event_digest(
                     sequence=sequence,
                     kind=kind,
@@ -252,17 +252,30 @@ class SQLiteEvidenceLedger:
                     previous_digest=report.head_digest,
                 )
                 conn.execute(
-                    "INSERT INTO events("
-                    f"{_COLUMNS}) VALUES(?,?,?,?,?,?,?,?,?)",
+                    f"INSERT INTO events({_COLUMNS}) VALUES(?,?,?,?,?,?,?,?,?)",
                     (
-                        sequence, kind.value, run_id, subject_id, digest,
-                        len(content), time_stamp, report.head_digest, row_digest,
+                        sequence,
+                        kind.value,
+                        run_id,
+                        subject_id,
+                        digest,
+                        len(content),
+                        time_stamp,
+                        report.head_digest,
+                        row_digest,
                     ),
                 )
                 conn.execute("COMMIT")
                 return EvidenceRecord(
-                    sequence, kind, run_id, subject_id, digest,
-                    len(content), time_stamp, report.head_digest, row_digest,
+                    sequence,
+                    kind,
+                    run_id,
+                    subject_id,
+                    digest,
+                    len(content),
+                    time_stamp,
+                    report.head_digest,
+                    row_digest,
                 )
             except (sqlite3.Error, ValueError):
                 if conn.in_transaction:

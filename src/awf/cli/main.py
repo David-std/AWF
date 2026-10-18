@@ -67,18 +67,12 @@ def create_parser() -> argparse.ArgumentParser:
     actions = evidence.add_subparsers(dest="evidence_action")
     writer = actions.add_parser("append", help="store evidence locally and bind an event")
     writer.add_argument("source", type=Path, help="local evidence file (max 512 KiB)")
-    writer.add_argument(
-        "--kind", required=True, choices=[k.value for k in EvidenceKind]
-    )
+    writer.add_argument("--kind", required=True, choices=[k.value for k in EvidenceKind])
     writer.add_argument("--run-id", required=True)
     writer.add_argument("--subject-id", required=True)
-    writer.add_argument(
-        "--database", type=Path, default=Path(".awf/evidence/ledger.sqlite")
-    )
+    writer.add_argument("--database", type=Path, default=Path(".awf/evidence/ledger.sqlite"))
     audit = actions.add_parser("verify", help="verify evidence chain and all stored bytes")
-    audit.add_argument(
-        "--database", type=Path, default=Path(".awf/evidence/ledger.sqlite")
-    )
+    audit.add_argument("--database", type=Path, default=Path(".awf/evidence/ledger.sqlite"))
     audit.add_argument(
         "--expected-head", help="head digest retained independently from this database"
     )
@@ -249,14 +243,18 @@ def main(argv: Sequence[str] | None = None) -> int:
                     subject_id=args.subject_id,
                     content=raw,
                 )
-                print(json.dumps({
-                    "status": "EVIDENCE_RECORDED",
-                    "sequence": result.sequence,
-                    "evidence_sha256": result.evidence_sha256,
-                    "head_digest": result.digest,
-                    "database": str(args.database),
-                    "claims_independently_verified": False,
-                }))
+                print(
+                    json.dumps(
+                        {
+                            "status": "EVIDENCE_RECORDED",
+                            "sequence": result.sequence,
+                            "evidence_sha256": result.evidence_sha256,
+                            "head_digest": result.digest,
+                            "database": str(args.database),
+                            "claims_independently_verified": False,
+                        }
+                    )
+                )
                 return 0
             except (OSError, ValueError, RuntimeError, sqlite3.Error) as exc:
                 print(f"AWF_ERROR [EVIDENCE_APPEND_FAILED] {exc}", file=sys.stderr)
@@ -266,13 +264,17 @@ def main(argv: Sequence[str] | None = None) -> int:
             try:
                 store = SQLiteEvidenceLedger(args.database)
                 report = store.verify(expected_head=args.expected_head)
-                print(json.dumps({
-                    "status": "LEDGER_INTEGRITY_VALID",
-                    "events_checked": report.events_checked,
-                    "objects_checked": report.evidence_objects_checked,
-                    "head_digest": report.head_digest,
-                    "external_authenticity_proven": False,
-                }))
+                print(
+                    json.dumps(
+                        {
+                            "status": "LEDGER_INTEGRITY_VALID",
+                            "events_checked": report.events_checked,
+                            "objects_checked": report.evidence_objects_checked,
+                            "head_digest": report.head_digest,
+                            "external_authenticity_proven": False,
+                        }
+                    )
+                )
                 return 0
             except (OSError, ValueError, RuntimeError, sqlite3.Error) as exc:
                 print(f"AWF_ERROR [EVIDENCE_VERIFY_FAILED] {exc}", file=sys.stderr)
