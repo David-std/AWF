@@ -50,7 +50,8 @@ def _audited(doc, slots):
     state = start_revision(doc, slots)
     for slot in slots:
         state = record_audit(
-            state, doc,
+            state,
+            doc,
             slot_key=slot.key,
             status=AuditStatus.CLEAN,
             checks_executed=slot.required_checks,
@@ -74,7 +75,10 @@ def test_missing_current_receipts_prevent_convergence() -> None:
     assert decision(state, doc) == RevisionVerdict.AUDIT_REQUIRED
     with pytest.raises(ValueError, match="complete current audits"):
         add_clean_sweep(
-            state, doc, critic_id="A", evidence_ref="receipt-1",
+            state,
+            doc,
+            critic_id="A",
+            evidence_ref="receipt-1",
             isolated_context_ref="fresh-isolation-1",
         )
 
@@ -85,18 +89,30 @@ def test_clean_requires_all_work_and_evidence() -> None:
     state = start_revision(doc, (slot,))
     with pytest.raises(ValueError, match="every declared"):
         record_audit(
-            state, doc, slot_key=slot.key, status=AuditStatus.CLEAN,
-            checks_executed=1, evidence_ref="test-receipt",
+            state,
+            doc,
+            slot_key=slot.key,
+            status=AuditStatus.CLEAN,
+            checks_executed=1,
+            evidence_ref="test-receipt",
         )
     with pytest.raises(ValueError, match="invalid evidence"):
         record_audit(
-            state, doc, slot_key=slot.key, status=AuditStatus.CLEAN,
-            checks_executed=2, evidence_ref="",
+            state,
+            doc,
+            slot_key=slot.key,
+            status=AuditStatus.CLEAN,
+            checks_executed=2,
+            evidence_ref="",
         )
     with pytest.raises(ValueError, match="unregistered"):
         record_audit(
-            state, doc, slot_key="unknown",
-            status=AuditStatus.CLEAN, checks_executed=2, evidence_ref="evidence",
+            state,
+            doc,
+            slot_key="unknown",
+            status=AuditStatus.CLEAN,
+            checks_executed=2,
+            evidence_ref="evidence",
         )
 
 
@@ -105,8 +121,12 @@ def test_partial_work_with_open_status_does_not_count_as_pass() -> None:
     slot = _slot("paragraph_0001", "claim_force")
     state = start_revision(doc, (slot,))
     state = record_audit(
-        state, doc, slot_key=slot.key, status=AuditStatus.OPEN,
-        checks_executed=1, evidence_ref="review-needs-second-check",
+        state,
+        doc,
+        slot_key=slot.key,
+        status=AuditStatus.OPEN,
+        checks_executed=1,
+        evidence_ref="review-needs-second-check",
     )
     assert state.dirty_keys == {slot.key}
     assert coverage(state, doc) == 0.0
@@ -159,8 +179,12 @@ def test_findings_survive_narrative_and_edits_until_explicit_resolution() -> Non
     )
     assert changed.findings[0].status == "OPEN"
     changed = record_audit(
-        changed, updated, slot_key=slot.key, status=AuditStatus.CLEAN,
-        checks_executed=2, evidence_ref="new-audit",
+        changed,
+        updated,
+        slot_key=slot.key,
+        status=AuditStatus.CLEAN,
+        checks_executed=2,
+        evidence_ref="new-audit",
     )
     assert decision(changed, updated) == RevisionVerdict.EDIT_REVIEW_REQUIRED
     with pytest.raises(ValueError, match="explicit evidence"):
@@ -176,28 +200,44 @@ def test_two_distinct_clean_critics_bound_to_current_hash() -> None:
     doc = _doc("Paragraph.")
     state = _audited(doc, (_slot("paragraph_0001", "syntax"),))
     state = add_clean_sweep(
-        state, doc, critic_id="critic-A", evidence_ref="sweep-A",
+        state,
+        doc,
+        critic_id="critic-A",
+        evidence_ref="sweep-A",
         isolated_context_ref="context-A",
     )
     assert decision(state, doc) == RevisionVerdict.FRESH_CRITIC_REQUIRED
     with pytest.raises(ValueError, match="duplicate critic identity"):
         add_clean_sweep(
-            state, doc, critic_id="critic-A", evidence_ref="again",
+            state,
+            doc,
+            critic_id="critic-A",
+            evidence_ref="again",
             isolated_context_ref="context-A2",
         )
     with pytest.raises(ValueError, match="isolated"):
         add_clean_sweep(
-            state, doc, critic_id="critic-B", evidence_ref="sweep-B",
-            isolated_context_ref="context-B", inherited_diagnosis=True,
+            state,
+            doc,
+            critic_id="critic-B",
+            evidence_ref="sweep-B",
+            isolated_context_ref="context-B",
+            inherited_diagnosis=True,
         )
     state = add_clean_sweep(
-        state, doc, critic_id="critic-B", evidence_ref="sweep-B",
+        state,
+        doc,
+        critic_id="critic-B",
+        evidence_ref="sweep-B",
         isolated_context_ref="context-B",
     )
     assert decision(state, doc) == RevisionVerdict.CONVERGED
     with pytest.raises(ValueError, match="complete current audits"):
         add_clean_sweep(
-            state, doc, critic_id="critic-C", evidence_ref="sweep-C",
+            state,
+            doc,
+            critic_id="critic-C",
+            evidence_ref="sweep-C",
             isolated_context_ref="context-C",
         )
 
@@ -214,8 +254,12 @@ def test_new_audit_or_accepted_edit_resets_clean_streak() -> None:
     )
     assert changed.clean_sweeps == ()
     changed = record_audit(
-        changed, updated, slot_key=slot.key,
-        status=AuditStatus.CLEAN, checks_executed=2, evidence_ref="new-proof",
+        changed,
+        updated,
+        slot_key=slot.key,
+        status=AuditStatus.CLEAN,
+        checks_executed=2,
+        evidence_ref="new-proof",
     )
     assert decision(changed, updated) == RevisionVerdict.FRESH_CRITIC_REQUIRED
 
@@ -243,8 +287,11 @@ def test_budget_exhaustion_never_grants_pass() -> None:
     assert decision(exhausted, original) == RevisionVerdict.BUDGET_EXHAUSTED
     with pytest.raises(ValueError, match="budget exhausted"):
         accept_edit(
-            exhausted, original, updated,
-            policy=RevisionPolicy(), operation_ref="unauthorized-extra-edit",
+            exhausted,
+            original,
+            updated,
+            policy=RevisionPolicy(),
+            operation_ref="unauthorized-extra-edit",
         )
 
 
@@ -252,9 +299,7 @@ def test_source_and_target_must_have_real_changed_bytes() -> None:
     doc = _doc("Paragraph.")
     state = start_revision(doc, (_slot("paragraph_0001", "syntax"),))
     with pytest.raises(ValueError, match="changed bytes"):
-        accept_edit(
-            state, doc, doc, policy=RevisionPolicy(), operation_ref="fake-change"
-        )
+        accept_edit(state, doc, doc, policy=RevisionPolicy(), operation_ref="fake-change")
 
 
 def test_local_fingerprint_is_not_a_global_semantic_certification() -> None:

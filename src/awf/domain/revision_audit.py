@@ -63,11 +63,14 @@ class RevisionPolicy:
     clean_sweeps_required: int = 2
 
     def __post_init__(self) -> None:
-        if min(
-            self.max_revision_cycles,
-            self.max_external_iterations,
-            self.clean_sweeps_required,
-        ) < 1:
+        if (
+            min(
+                self.max_revision_cycles,
+                self.max_external_iterations,
+                self.clean_sweeps_required,
+            )
+            < 1
+        ):
             raise ValueError("revision limits must be positive")
 
 
@@ -197,7 +200,11 @@ def record_audit(
         evidence_ref=evidence_ref,
     )
     receipts = tuple(r for r in state.receipts if r.slot_key != slot_key) + (receipt,)
-    dirty = state.dirty_keys - {slot_key} if status == AuditStatus.CLEAN else state.dirty_keys | {slot_key}
+    dirty = (
+        state.dirty_keys - {slot_key}
+        if status == AuditStatus.CLEAN
+        else state.dirty_keys | {slot_key}
+    )
     return replace(
         state,
         receipts=receipts,
@@ -240,9 +247,7 @@ def accept_edit(
             and old_receipt.artifact_sha256 == old.sha256
         ):
             carried.append(
-                replace(
-                    old_receipt, artifact_sha256=new.sha256, carried_from=old.sha256
-                )
+                replace(old_receipt, artifact_sha256=new.sha256, carried_from=old.sha256)
             )
         else:
             dirty.add(slot.key)
@@ -253,8 +258,7 @@ def accept_edit(
         dirty_keys=frozenset(dirty),
         clean_sweeps=(),
         revision_cycles=state.revision_cycles + 1,
-        event_log=state.event_log
-        + (f"ACCEPT_EDIT:{old.sha256}:{new.sha256}:{operation_ref}",),
+        event_log=state.event_log + (f"ACCEPT_EDIT:{old.sha256}:{new.sha256}:{operation_ref}",),
     )
 
 
@@ -349,13 +353,17 @@ def decision(
     _assert_document(state, doc)
     selected = policy or RevisionPolicy()
     receipts = {r.slot_key: r for r in state.receipts}
-    all_clean = bool(state.slots) and not state.dirty_keys and all(
-        (r := receipts.get(slot.key)) is not None
-        and r.status == AuditStatus.CLEAN
-        and r.checks_executed == slot.required_checks
-        and r.artifact_sha256 == doc.sha256
-        and r.scope_sha256 == scope_fingerprint(doc, slot)
-        for slot in state.slots
+    all_clean = (
+        bool(state.slots)
+        and not state.dirty_keys
+        and all(
+            (r := receipts.get(slot.key)) is not None
+            and r.status == AuditStatus.CLEAN
+            and r.checks_executed == slot.required_checks
+            and r.artifact_sha256 == doc.sha256
+            and r.scope_sha256 == scope_fingerprint(doc, slot)
+            for slot in state.slots
+        )
     )
     if not all_clean:
         result = RevisionVerdict.AUDIT_REQUIRED
