@@ -75,8 +75,9 @@ class SQLiteEvidenceLedger:
             raise ValueError("symlinked evidence database paths are not accepted")
         if database.suffix.lower() not in {".sqlite", ".sqlite3", ".db"}:
             raise ValueError("use a dedicated SQLite database file")
+        parent_existed = self.database.parent.exists()
         self.database.parent.mkdir(parents=True, exist_ok=True)
-        if os.name != "nt":
+        if os.name != "nt" and not parent_existed:
             os.chmod(self.database.parent, 0o700)
 
     @contextmanager
@@ -191,21 +192,25 @@ class SQLiteEvidenceLedger:
             if sha256_bytes(raw) != digest or len(raw) != byte_length:
                 raise EvidenceIntegrityError("evidence bytes/hash mismatch")
             found_objects.add(str(digest))
-        if not expected_objects.issubset(found_objects):
-            raise EvidenceIntegrityError("missing evidence payload")
+        if expected_objects != found_objects:
+            raise EvidenceIntegrityError("missing or unreferenced evidence payload")
         return LedgerAudit(
             events_checked=seq,
             evidence_objects_checked=objects_checked,
             head_digest=previous,
         )
 
-    def verify(self) -> LedgerAudit:
-        """Inspect all events and all stored payloads in one read transaction."""
+    def verify(self, *, expected_head: str | None = None) -> LedgerAudit:
+        """Audit entire store; a trusted external checkpoint detects truncation."""
+        if not self.database.is_file():
+            raise FileNotFoundError("evidence ledger does not exist")
         with self._open() as conn:
             self._check_schema(conn)
             conn.execute("BEGIN")
             try:
                 report = self._audit_transaction(conn)
+                if expected_head is not None and expected_head != report.head_digest:
+                    raise EvidenceIntegrityError("trusted head digest does not match ledger")
                 conn.execute("COMMIT")
                 return report
             except (sqlite3.Error, EvidenceIntegrityError):
@@ -266,6 +271,8 @@ class SQLiteEvidenceLedger:
 
     def retrieve(self, evidence_sha256: str) -> bytes:
         """Retrieve only verified content. Requires a valid complete chain first."""
+        if not self.database.is_file():
+            raise FileNotFoundError("evidence ledger does not exist")
         with self._open() as conn:
             self._check_schema(conn)
             conn.execute("BEGIN")
