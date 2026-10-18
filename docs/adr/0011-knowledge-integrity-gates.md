@@ -12,3 +12,7 @@
 - **Alternativas descartadas:** copiar los hashes en una lista etiquetada `covered`; promover `UNDERSTOOD` con un resumen; usar ejemplos como moldes textuales; excluir excepciones infrecuentes por costo; inferir conformidad a partir de ahorro de tokens.
 - **Seguridad:** corpus y respuestas de holdout continúan solo en local; el Git público contiene contratos, tests con datos sintéticos y análisis sin reproducir textos originales.
 - **Pendiente:** autenticidad/firmas, persistencia, verificadores de comprensión/fidelidad, cumplimiento de licencias, integración con datos reales y evaluación de fuentes.
+
+## Segunda pasada de arquitectura
+
+Se trasladó el cierre de dependencias a `awf.domain.dependencies` y se dejó un reexport compatible en `awf.knowledge.dependency_graph`; la capa de dominio ya no importa conocimiento de aplicación ni adaptadores. La transición `READ` exige ahora un `CoverageAssessment` tipado y completo, no un booleano declarado por el llamante; un cambio de `context_ref` invalida la continuidad de las etapas ya registradas. Estas mejoras eliminan dos vías de falso cumplimiento estructural, pero siguen sin autenticar criptográficamente los recibos.
