@@ -7,6 +7,7 @@ from typing import Protocol
 
 from awf.application.dto import LoadedKnowledgeSource
 from awf.domain.document import DocumentIR
+from awf.domain.evidence import EvidenceKind, EvidenceRecord, LedgerAudit
 
 
 class DocumentParserPort(Protocol):
@@ -32,4 +33,22 @@ class KnowledgeSourcePort(Protocol):
 class KnowledgeReviewPort(Protocol):
     def load(self, path: Path, *, expected_source_sha256: str) -> dict[str, dict[str, object]]:
         """Read explicit, hash-bound review attestations."""
+        ...
+
+
+class EvidenceStorePort(Protocol):
+    """Port for a durable, locally verifiable evidence repository."""
+
+    def initialize(self) -> None:
+        """Create a new local evidence store."""
+        ...
+
+    def append(
+        self, *, kind: EvidenceKind, run_id: str, subject_id: str, content: bytes
+    ) -> EvidenceRecord:
+        """Persist bytes and event in one transaction, returning a source-bound receipt."""
+        ...
+
+    def verify(self, *, expected_head: str | None = None) -> LedgerAudit:
+        """Verify chain, metadata and payloads; optionally check a trusted prior head."""
         ...
