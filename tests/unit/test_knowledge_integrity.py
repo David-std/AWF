@@ -176,7 +176,7 @@ def test_claim_stages_cannot_be_conflated_or_skipped() -> None:
         stage=KnowledgeStage.READ,
         evidence_ref="full-receipt",
         context_ref="run-1",
-        complete_chunk_coverage=True,
+        coverage=assess_coverage(manifest(), receipts(manifest()), axes()),
     )
     with pytest.raises(ValueError, match="UNDERSTOOD requires"):
         advance_stage(
@@ -255,3 +255,53 @@ def test_missing_source_pointer_refused() -> None:
             version="v",
             expected_axes=("x",),
         )
+
+
+def test_false_boolean_cannot_forge_read_coverage() -> None:
+    progress = advance_stage(
+        KnowledgeProgress("core"),
+        stage=KnowledgeStage.AVAILABLE,
+        evidence_ref="manifest",
+        context_ref="run-1",
+    )
+    with pytest.raises(ValueError, match="READ requires"):
+        advance_stage(
+            progress,
+            stage=KnowledgeStage.READ,
+            evidence_ref="incorrect-boolean",
+            context_ref="run-1",
+            coverage=True,  # type: ignore[arg-type]
+        )
+
+
+def test_stage_claim_is_not_portable_across_context_without_revalidation() -> None:
+    progress = advance_stage(
+        KnowledgeProgress("core"),
+        stage=KnowledgeStage.AVAILABLE,
+        evidence_ref="manifest",
+        context_ref="run-original",
+    )
+    with pytest.raises(ValueError, match="context change"):
+        advance_stage(
+            progress,
+            stage=KnowledgeStage.READ,
+            evidence_ref="read-result",
+            context_ref="unrelated-run",
+            coverage=assess_coverage(manifest(), receipts(manifest()), axes()),
+        )
+
+
+def test_domain_layer_does_not_import_knowledge_or_adapters() -> None:
+    import ast
+    from pathlib import Path
+
+    directory = Path(__file__).resolve().parents[2] / "src" / "awf" / "domain"
+    for source in directory.glob("*.py"):
+        tree = ast.parse(source.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom):
+                assert not (node.module or "").startswith("awf.knowledge"), str(source)
+                assert not (node.module or "").startswith("awf.adapters"), str(source)
+            elif isinstance(node, ast.Import):
+                assert all(not v.name.startswith("awf.knowledge") for v in node.names)
+                assert all(not v.name.startswith("awf.adapters") for v in node.names)

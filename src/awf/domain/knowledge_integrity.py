@@ -12,7 +12,7 @@ import re
 from dataclasses import dataclass, replace
 from enum import StrEnum
 
-from awf.knowledge.dependency_graph import dependency_closure
+from awf.domain.dependencies import dependency_closure
 
 
 def _sha(raw: bytes) -> str:
@@ -243,7 +243,7 @@ def advance_stage(
     stage: KnowledgeStage,
     evidence_ref: str,
     context_ref: str,
-    complete_chunk_coverage: bool = False,
+    coverage: CoverageAssessment | None = None,
     challenge_adjudicated: bool = False,
     applicability_adjudicated: bool = False,
 ) -> KnowledgeProgress:
@@ -252,12 +252,16 @@ def advance_stage(
         raise ValueError("unrecognized stage")
     if not evidence_ref.strip() or not context_ref.strip():
         raise ValueError("stage claims need evidence and execution context")
+    if any(c.context_ref != context_ref for c in progress.claims):
+        raise ValueError("context change requires re-validation of knowledge claims")
     old_stages = [c.stage for c in progress.claims]
     ordered = list(KnowledgeStage)
     expected = ordered[len(old_stages)] if len(old_stages) < len(ordered) else None
     if stage != expected:
         raise ValueError("knowledge stages cannot be skipped or duplicated")
-    if stage == KnowledgeStage.READ and not complete_chunk_coverage:
+    if stage == KnowledgeStage.READ and (
+        not isinstance(coverage, CoverageAssessment) or not coverage.complete
+    ):
         raise ValueError("READ requires complete source chunk coverage")
     if stage == KnowledgeStage.UNDERSTOOD and not challenge_adjudicated:
         raise ValueError("UNDERSTOOD requires external comprehension adjudication")
