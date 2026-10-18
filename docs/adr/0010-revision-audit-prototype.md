@@ -10,3 +10,7 @@
 - **Limitaciones deliberadas:** la evidencia se introduce como identificadores de recibos, **no como pruebas criptográficas o juicios de calidad independientes**. La independencia real del crítico, persistencia de eventos, roles edit/audit, totalidad de dependencias, extracción robusta DOCX/PDF y verificación semántica siguen pendientes.
 - **Extensión prevista:** conectar almacenamiento transaccional de eventos, generación real y verificación de fuentes solo cuando existan tests de integración y amenaza de privacidad. Mantener este componente como núcleo puro.
 - **Pruebas adversariales:** inventario vacío, firma inválida, auditoría incompleta, cambios de contexto, reutilización injustificada, hallazgos sin resolución, críticos duplicados, crítica con diagnóstico heredado, presupuesto agotado y edición sin bytes nuevos.
+
+## Segunda pasada: coherencia de política
+
+Se identificó una inconsistencia de un prototipo inicial: el registrador de barridos consultaba el límite por defecto incluso si el veredicto utilizaba una política personalizada. Se corrigió haciendo pasar la misma `RevisionPolicy` a ambas decisiones, impidiendo la reutilización de recibos de aislamiento y ejecutando explícitamente el límite de iteraciones externas. Nuevos tests prueban la política de 3 críticos, presupuesto externo de 2 iteraciones y rechazo de strings no tipadas como disposiciones de auditoría.

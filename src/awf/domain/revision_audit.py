@@ -189,7 +189,7 @@ def record_audit(
         raise ValueError("invalid evidence or executed-check count")
     if status == AuditStatus.CLEAN and checks_executed != slot.required_checks:
         raise ValueError("CLEAN requires every declared check to execute")
-    if status not in AuditStatus:
+    if not isinstance(status, AuditStatus):
         raise ValueError("unsupported audit disposition")
     receipt = AuditReceipt(
         slot_key=slot_key,
@@ -327,10 +327,11 @@ def add_clean_sweep(
     evidence_ref: str,
     isolated_context_ref: str,
     inherited_diagnosis: bool = False,
+    policy: RevisionPolicy | None = None,
 ) -> RevisionState:
-    """Two independently identified critic receipts; no claim of model independence."""
+    """Distinct critic receipts; identities do not prove actual independence."""
     _assert_document(state, doc)
-    if decision(state, doc) != RevisionVerdict.FRESH_CRITIC_REQUIRED:
+    if decision(state, doc, policy) != RevisionVerdict.FRESH_CRITIC_REQUIRED:
         raise ValueError("a clean sweep requires complete current audits and zero open findings")
     if inherited_diagnosis or not all(
         value.strip() for value in (critic_id, evidence_ref, isolated_context_ref)
@@ -338,11 +339,31 @@ def add_clean_sweep(
         raise ValueError("critic sweep requires isolated context and documented evidence")
     if any(s.critic_id == critic_id for s in state.clean_sweeps):
         raise ValueError("duplicate critic identity is not an independent clean sweep")
+    if any(s.isolated_context_ref == isolated_context_ref for s in state.clean_sweeps):
+        raise ValueError("reused isolation receipt cannot support independent sweep")
     return replace(
         state,
         clean_sweeps=state.clean_sweeps
         + (CleanSweep(critic_id, doc.sha256, evidence_ref, isolated_context_ref),),
         event_log=state.event_log + (f"CLEAN_SWEEP:{critic_id}:{doc.sha256}",),
+    )
+
+
+def record_external_iteration(
+    state: RevisionState,
+    *,
+    policy: RevisionPolicy,
+    evidence_ref: str,
+) -> RevisionState:
+    """Record one explicitly evidenced external cycle without granting PASS."""
+    if not evidence_ref.strip():
+        raise ValueError("external iteration requires evidence")
+    if state.external_iterations >= policy.max_external_iterations:
+        raise ValueError("external iteration budget exhausted")
+    return replace(
+        state,
+        external_iterations=state.external_iterations + 1,
+        event_log=state.event_log + (f"EXTERNAL_ITERATION:{evidence_ref}",),
     )
 
 
@@ -377,6 +398,9 @@ def decision(
         return RevisionVerdict.CONVERGED
     else:
         result = RevisionVerdict.FRESH_CRITIC_REQUIRED
-    if state.revision_cycles >= selected.max_revision_cycles:
+    if (
+        state.revision_cycles >= selected.max_revision_cycles
+        or state.external_iterations >= selected.max_external_iterations
+    ):
         return RevisionVerdict.BUDGET_EXHAUSTED
     return result

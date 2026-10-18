@@ -49,3 +49,7 @@ Una edición invalida los recibos globales; un recibo local solo se conserva si 
 - Historial duradero y verificación independiente de evidencia cuando el prototipo se convierta en componente de producción.
 
 No confundir la tasa de pruebas automatizadas aprobadas con validez de la revisión lingüística, de un detector o de sus fuentes.
+
+## Endurecimiento del prototipo (segunda pasada)
+
+El control de `max_external_iterations` ahora tiene una transición tipada que incrementa el contador y bloquea nuevas iteraciones cuando se agota la cuota. El número de barridos independientes es configurable a través de una sola política; la inserción de un tercer barrido no queda bloqueada indebidamente por los valores por defecto. Se rechazan explícitamente recibos con identidad de crítico repetida, referencia de aislamiento reutilizada y estados de auditoría entregados como cadenas sin tipar. Estas barreras **no** prueban independencia real, calidad lingüística ni cumplimiento de todo el corpus.

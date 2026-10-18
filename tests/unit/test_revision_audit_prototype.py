@@ -22,6 +22,7 @@ from awf.domain.revision_audit import (
     decision,
     open_finding,
     record_audit,
+    record_external_iteration,
     resolve_finding,
     scope_fingerprint,
     start_revision,
@@ -308,3 +309,56 @@ def test_local_fingerprint_is_not_a_global_semantic_certification() -> None:
     global_scope = _slot("paragraph_0001", "evidence", AuditScope.DOCUMENT)
     assert scope_fingerprint(original, scope) == scope_fingerprint(updated, scope)
     assert scope_fingerprint(original, global_scope) != scope_fingerprint(updated, global_scope)
+
+
+def test_external_iteration_budget_fails_closed() -> None:
+    doc = _doc("A paragraph.")
+    state = start_revision(doc, (_slot("paragraph_0001", "syntax"),))
+    policy = RevisionPolicy(max_external_iterations=2)
+    first = record_external_iteration(state, policy=policy, evidence_ref="session-1")
+    assert first.external_iterations == 1
+    second = record_external_iteration(first, policy=policy, evidence_ref="session-2")
+    assert second.external_iterations == 2
+    assert decision(second, doc, policy) == RevisionVerdict.BUDGET_EXHAUSTED
+    with pytest.raises(ValueError, match="budget exhausted"):
+        record_external_iteration(second, policy=policy, evidence_ref="over-limit")
+    with pytest.raises(ValueError, match="requires evidence"):
+        record_external_iteration(state, policy=policy, evidence_ref="")
+
+
+def test_three_critic_policy_requires_three_distinct_isolated_sweeps() -> None:
+    doc = _doc("A paragraph.")
+    policy = RevisionPolicy(clean_sweeps_required=3)
+    state = _audited(doc, (_slot("paragraph_0001", "grammar"),))
+    for critic in ("A", "B"):
+        state = add_clean_sweep(
+            state, doc, critic_id=critic,
+            evidence_ref=f"evidence-{critic}",
+            isolated_context_ref=f"context-{critic}",
+            policy=policy,
+        )
+        assert decision(state, doc, policy) == RevisionVerdict.FRESH_CRITIC_REQUIRED
+    with pytest.raises(ValueError, match="reused isolation"):
+        add_clean_sweep(
+            state, doc, critic_id="C", evidence_ref="evidence-C",
+            isolated_context_ref="context-A", policy=policy,
+        )
+    third = add_clean_sweep(
+        state, doc, critic_id="C", evidence_ref="evidence-C",
+        isolated_context_ref="context-C", policy=policy,
+    )
+    assert decision(third, doc, policy) == RevisionVerdict.CONVERGED
+
+
+def test_invalid_audit_enum_string_is_rejected_not_treated_as_clean() -> None:
+    doc = _doc("A paragraph.")
+    state = start_revision(doc, (_slot("paragraph_0001", "scope"),))
+    with pytest.raises(ValueError, match="unsupported"):
+        record_audit(
+            state,
+            doc,
+            slot_key="paragraph_0001:scope",
+            status="CLEAN",  # type: ignore[arg-type]
+            checks_executed=2,
+            evidence_ref="string-status-must-not-pass",
+        )
