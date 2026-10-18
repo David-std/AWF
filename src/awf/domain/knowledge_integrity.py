@@ -265,13 +265,12 @@ def advance_stage(
         raise ValueError("APPLICABLE requires reviewed scope applicability")
     return replace(
         progress,
-        claims=progress.claims + (StageClaim(progress.reference_id, stage, evidence_ref, context_ref),),
+        claims=progress.claims
+        + (StageClaim(progress.reference_id, stage, evidence_ref, context_ref),),
     )
 
 
-def preservation_debt(
-    old: CanonicalManifest, new: CanonicalManifest
-) -> tuple[str, ...]:
+def preservation_debt(old: CanonicalManifest, new: CanonicalManifest) -> tuple[str, ...]:
     """Fail closed on disappearing or changed sources, including negative knowledge."""
     previous = {ref.reference_id: ref for ref in old.sources}
     current = {ref.reference_id: ref for ref in new.sources}
@@ -285,9 +284,7 @@ def preservation_debt(
     return tuple(sorted(debt))
 
 
-def retrieval_closure(
-    manifest: CanonicalManifest, selected: set[str]
-) -> tuple[str, ...]:
+def retrieval_closure(manifest: CanonicalManifest, selected: set[str]) -> tuple[str, ...]:
     """Preserve transitive dependencies and critical exceptions.
 
     The caller must establish applicability separately. All critical sources

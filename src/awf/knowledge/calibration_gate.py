@@ -40,9 +40,7 @@ class CalibrationJudgment:
     evidence_ref: str
 
 
-def challenge_packet(
-    cases: tuple[CalibrationCase, ...], *, operation_id: str
-) -> dict[str, object]:
+def challenge_packet(cases: tuple[CalibrationCase, ...], *, operation_id: str) -> dict[str, object]:
     """Return challenge metadata without reference answers or evaluator decisions."""
     selected = [case for case in cases if case.operation_id == operation_id]
     if not selected:

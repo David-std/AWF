@@ -17,8 +17,11 @@ from awf.knowledge.calibration_gate import (
 def cases():
     return tuple(
         CalibrationCase(
-            f"K-{index}", "preserve_causality", kind,
-            f"private-prompt-{index}", f"private-answer-{index}",
+            f"K-{index}",
+            "preserve_causality",
+            kind,
+            f"private-prompt-{index}",
+            f"private-answer-{index}",
         )
         for index, kind in enumerate(CaseKind)
     )
@@ -49,7 +52,8 @@ def test_missing_families_cannot_be_marked_calibrated() -> None:
 def test_positive_is_not_sufficient_without_hard_negative_and_holdout() -> None:
     c = cases()
     errors = calibration_debt(
-        c, (CalibrationJudgment(c[0].case_id, Verdict.PASSED, "reviewer", "proof"),),
+        c,
+        (CalibrationJudgment(c[0].case_id, Verdict.PASSED, "reviewer", "proof"),),
         operation_id="preserve_causality",
     )
     assert len(errors) == 3

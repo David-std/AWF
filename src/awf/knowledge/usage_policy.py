@@ -113,9 +113,8 @@ def assess_release_metrics(values: ReleaseEvidence) -> dict[str, object]:
     missing = sorted(set(values.required_invariants) - set(values.verified_invariants))
     unexpected = sorted(set(values.verified_invariants) - set(values.required_invariants))
     return {
-        "token_savings_fraction": (
-            values.baseline_tokens - values.runtime_tokens
-        ) / values.baseline_tokens,
+        "token_savings_fraction": (values.baseline_tokens - values.runtime_tokens)
+        / values.baseline_tokens,
         "execution_fidelity_coverage": (
             len(set(values.verified_invariants) & set(values.required_invariants))
             / len(values.required_invariants)

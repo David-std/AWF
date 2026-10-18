@@ -27,7 +27,9 @@ def sources():
     return (
         SourceInput("core", b"ABCDEFGH", "private:core", dependencies=("foundation",)),
         SourceInput(
-            "foundation", b"foundation source", "private:foundation",
+            "foundation",
+            b"foundation source",
+            "private:foundation",
             negative_knowledge=True,
         ),
         SourceInput("rare", b"critical exception", "private:rare", critical=True),
@@ -35,7 +37,9 @@ def sources():
 
 
 def manifest():
-    return build_manifest(sources(), version="3.19.1", expected_axes=("truth", "structure"), chunk_bytes=4)
+    return build_manifest(
+        sources(), version="3.19.1", expected_axes=("truth", "structure"), chunk_bytes=4
+    )
 
 
 def receipts(m):
@@ -62,7 +66,8 @@ def test_manifest_real_bytes_and_eof_chunk_boundaries() -> None:
 def test_empty_document_still_has_one_explicit_chunk() -> None:
     m = build_manifest(
         (SourceInput("empty", b"", "private:empty"),),
-        version="one", expected_axes=("truth",),
+        version="one",
+        expected_axes=("truth",),
     )
     assert m.sources[0].chunks[0].offset_start == 0
     assert m.sources[0].chunks[0].offset_end == 0
@@ -82,7 +87,8 @@ def test_missing_unknown_and_cyclic_dependencies_rejected() -> None:
     with pytest.raises(ValueError, match="unknown"):
         build_manifest(
             (SourceInput("a", b"a", "ptr", dependencies=("missing",)),),
-            version="v", expected_axes=("x",),
+            version="v",
+            expected_axes=("x",),
         )
     with pytest.raises(ValueError, match="cyclic"):
         build_manifest(
@@ -90,7 +96,8 @@ def test_missing_unknown_and_cyclic_dependencies_rejected() -> None:
                 SourceInput("a", b"a", "p1", dependencies=("b",)),
                 SourceInput("b", b"b", "p2", dependencies=("a",)),
             ),
-            version="v", expected_axes=("x",),
+            version="v",
+            expected_axes=("x",),
         )
 
 
@@ -135,11 +142,14 @@ def test_mismatched_source_bytes_invalidate_all_old_receipts() -> None:
     old = manifest()
     updated_sources = (
         replace(sources()[0], original_bytes=b"ABCDEFGX"),
-        sources()[1], sources()[2],
+        sources()[1],
+        sources()[2],
     )
     changed = build_manifest(
-        updated_sources, version="3.19.2",
-        expected_axes=old.expected_axes, chunk_bytes=4,
+        updated_sources,
+        version="3.19.2",
+        expected_axes=old.expected_axes,
+        chunk_bytes=4,
     )
     assessed = assess_coverage(changed, receipts(old), axes())
     assert not assessed.complete
@@ -149,52 +159,72 @@ def test_mismatched_source_bytes_invalidate_all_old_receipts() -> None:
 def test_claim_stages_cannot_be_conflated_or_skipped() -> None:
     current = KnowledgeProgress(reference_id="core")
     current = advance_stage(
-        current, stage=KnowledgeStage.AVAILABLE,
-        evidence_ref="manifest-source", context_ref="run-1",
+        current,
+        stage=KnowledgeStage.AVAILABLE,
+        evidence_ref="manifest-source",
+        context_ref="run-1",
     )
     with pytest.raises(ValueError, match="READ requires"):
         advance_stage(
-            current, stage=KnowledgeStage.READ,
-            evidence_ref="just-a-summary", context_ref="run-1",
+            current,
+            stage=KnowledgeStage.READ,
+            evidence_ref="just-a-summary",
+            context_ref="run-1",
         )
     current = advance_stage(
-        current, stage=KnowledgeStage.READ,
-        evidence_ref="full-receipt", context_ref="run-1",
+        current,
+        stage=KnowledgeStage.READ,
+        evidence_ref="full-receipt",
+        context_ref="run-1",
         complete_chunk_coverage=True,
     )
     with pytest.raises(ValueError, match="UNDERSTOOD requires"):
         advance_stage(
-            current, stage=KnowledgeStage.UNDERSTOOD,
-            evidence_ref="summary", context_ref="run-1",
+            current,
+            stage=KnowledgeStage.UNDERSTOOD,
+            evidence_ref="summary",
+            context_ref="run-1",
         )
     current = advance_stage(
-        current, stage=KnowledgeStage.UNDERSTOOD,
-        evidence_ref="calibration:reviewed", context_ref="run-1",
+        current,
+        stage=KnowledgeStage.UNDERSTOOD,
+        evidence_ref="calibration:reviewed",
+        context_ref="run-1",
         challenge_adjudicated=True,
     )
     with pytest.raises(ValueError, match="scope applicability"):
         advance_stage(
-            current, stage=KnowledgeStage.APPLICABLE,
-            evidence_ref="keyword-match", context_ref="run-1",
+            current,
+            stage=KnowledgeStage.APPLICABLE,
+            evidence_ref="keyword-match",
+            context_ref="run-1",
         )
     current = advance_stage(
-        current, stage=KnowledgeStage.APPLICABLE,
-        evidence_ref="scope-assessment", context_ref="run-1",
+        current,
+        stage=KnowledgeStage.APPLICABLE,
+        evidence_ref="scope-assessment",
+        context_ref="run-1",
         applicability_adjudicated=True,
     )
     current = advance_stage(
-        current, stage=KnowledgeStage.APPLIED,
-        evidence_ref="applied-operation", context_ref="run-1",
+        current,
+        stage=KnowledgeStage.APPLIED,
+        evidence_ref="applied-operation",
+        context_ref="run-1",
     )
     current = advance_stage(
-        current, stage=KnowledgeStage.VERIFIED,
-        evidence_ref="external-verifier", context_ref="run-1",
+        current,
+        stage=KnowledgeStage.VERIFIED,
+        evidence_ref="external-verifier",
+        context_ref="run-1",
     )
     assert [claim.stage for claim in current.claims] == list(KnowledgeStage)
     with pytest.raises(ValueError, match="skipped"):
         advance_stage(
-            current, stage=KnowledgeStage.VERIFIED,
-            evidence_ref="repeat", context_ref="run-1",
+            current,
+            stage=KnowledgeStage.VERIFIED,
+            evidence_ref="repeat",
+            context_ref="run-1",
         )
 
 
@@ -202,7 +232,9 @@ def test_preservation_detects_removed_and_changed_negative_knowledge() -> None:
     initial = manifest()
     new = build_manifest(
         (sources()[0], replace(sources()[1], original_bytes=b"edited")),
-        version="new", expected_axes=initial.expected_axes, chunk_bytes=4,
+        version="new",
+        expected_axes=initial.expected_axes,
+        chunk_bytes=4,
     )
     assert preservation_debt(initial, new) == ("changed:foundation", "removed:rare")
     assert preservation_debt(initial, initial) == ()
@@ -220,5 +252,6 @@ def test_missing_source_pointer_refused() -> None:
     with pytest.raises(ValueError, match="pointer"):
         build_manifest(
             (SourceInput("core", b"x", ""),),
-            version="v", expected_axes=("x",),
+            version="v",
+            expected_axes=("x",),
         )
