@@ -31,6 +31,7 @@ from awf.domain.revision_audit import (
     AuditStatus,
     RevisionState,
     record_audit,
+    scope_fingerprint,
 )
 
 _EVENT_PREFIX = "event:"
@@ -146,9 +147,22 @@ def verify_audit_receipts(
     if state.artifact_sha256 != document.sha256:
         raise EvidenceIntegrityError("audit state bound to different artifact")
     missing: list[str] = []
+    slots = {slot.key: slot for slot in state.slots}
+    receipts = {receipt.slot_key for receipt in state.receipts}
+    missing.extend(sorted(slots.keys() - receipts))
     for receipt in state.receipts:
         original = receipt.carried_from or receipt.artifact_sha256
         try:
+            slot = slots.get(receipt.slot_key)
+            if (
+                slot is None
+                or receipt.artifact_sha256 != document.sha256
+                or receipt.slot_key in state.dirty_keys
+                or receipt.status != AuditStatus.CLEAN
+                or receipt.checks_executed != slot.required_checks
+                or receipt.scope_sha256 != scope_fingerprint(document, slot)
+            ):
+                raise EvidenceIntegrityError("stale, unclean or unknown audit receipt")
             payload = _get_event(
                 store,
                 receipt.evidence_ref,
@@ -176,7 +190,7 @@ def verify_audit_receipts(
     return EvidenceGateResult(
         checked=len(state.receipts),
         unverified=tuple(sorted(missing)),
-        local_integrity_passed=bool(state.receipts) and not missing,
+        local_integrity_passed=bool(slots) and not missing,
     )
 
 
@@ -245,42 +259,96 @@ def verify_chunk_coverage(
     return replace(baseline, invalid_receipts=tuple(sorted(set(unexpected))))
 
 
+def _stage_kind(stage: KnowledgeStage) -> EvidenceKind:
+    if stage == KnowledgeStage.UNDERSTOOD:
+        return EvidenceKind.CALIBRATION_JUDGMENT
+    if stage == KnowledgeStage.APPLICABLE:
+        return EvidenceKind.REVIEW_DECISION
+    return EvidenceKind.REVISION_TRANSITION
+
+
+def _coverage_refs(
+    chunks: tuple[ChunkReceipt, ...], axes: tuple[AxisReceipt, ...]
+) -> dict[str, object]:
+    return {
+        "chunk_refs": sorted(
+            (r.reference_id, r.chunk_id, r.observation_ref) for r in chunks
+        ),
+        "axis_refs": sorted((r.axis_id, r.evidence_ref) for r in axes),
+    }
+
+
 def verify_progress_claims(
     progress: KnowledgeProgress,
     *,
     store: EvidenceStorePort,
+    manifest: CanonicalManifest | None = None,
+    chunks: tuple[ChunkReceipt, ...] = (),
+    axes: tuple[AxisReceipt, ...] = (),
     expected_head: str | None = None,
 ) -> EvidenceGateResult:
-    """Verify typed ledger link of each epistemic-stage receipt, not its truth."""
+    """Check stage receipts and recheck any READ claim against the live manifest."""
     if not progress.claims:
         return EvidenceGateResult(0, ("no_claims",), False)
     missing: list[str] = []
-    for claim in progress.claims:
-        kind = (
-            EvidenceKind.CALIBRATION_JUDGMENT
-            if claim.stage == KnowledgeStage.UNDERSTOOD
-            else EvidenceKind.REVIEW_DECISION
-            if claim.stage == KnowledgeStage.APPLICABLE
-            else EvidenceKind.REVISION_TRANSITION
-        )
+    order = list(KnowledgeStage)
+    for index, claim in enumerate(progress.claims):
         try:
+            if (
+                claim.reference_id != progress.reference_id
+                or index >= len(order)
+                or order[index] != claim.stage
+            ):
+                raise EvidenceIntegrityError("missing or reordered knowledge stage")
             payload = _get_event(
                 store, claim.evidence_ref,
-                kind=kind, run_id=claim.context_ref,
+                kind=_stage_kind(claim.stage), run_id=claim.context_ref,
                 subject_id=f"{claim.reference_id}:{claim.stage.value}",
                 expected_head=expected_head,
             )
-            expected = _canonical(
-                {"schema": 1, "type": "knowledge_stage", "reference_id": claim.reference_id,
-                 "stage": claim.stage.value, "context_ref": claim.context_ref}
-            )
+            decoded = json.loads(payload)
+            if not isinstance(decoded, dict):
+                raise EvidenceIntegrityError("stage payload must be JSON object")
+            extras: dict[str, object] = {}
+            if claim.stage == KnowledgeStage.READ:
+                if manifest is None:
+                    raise EvidenceIntegrityError("READ needs original manifest to reverify")
+                coverage = verify_chunk_coverage(
+                    manifest, chunks, axes, store=store,
+                    run_id=claim.context_ref, expected_head=expected_head,
+                )
+                if not coverage.complete:
+                    raise EvidenceIntegrityError("stored chunk coverage is incomplete")
+                extras = {"manifest_version": manifest.version, **_coverage_refs(chunks, axes)}
+            if claim.stage in (KnowledgeStage.UNDERSTOOD, KnowledgeStage.APPLICABLE):
+                proof_ref = decoded.get("adjudication_ref")
+                if not isinstance(proof_ref, str):
+                    raise EvidenceIntegrityError("stage lacks adjudication source event")
+                kind = _stage_kind(claim.stage)
+                subject = (
+                    f"{claim.reference_id}:calibration"
+                    if claim.stage == KnowledgeStage.UNDERSTOOD
+                    else f"{claim.reference_id}:applicability"
+                )
+                external_payload = _get_event(
+                    store, proof_ref, kind=kind, run_id=claim.context_ref,
+                    subject_id=subject, expected_head=expected_head,
+                )
+                if not external_payload:
+                    raise EvidenceIntegrityError("empty adjudication evidence")
+                extras = {"adjudication_ref": proof_ref}
+            expected = _canonical({
+                "schema": 1, "type": "knowledge_stage",
+                "reference_id": claim.reference_id,
+                "stage": claim.stage.value, "context_ref": claim.context_ref,
+                **extras,
+            })
             if payload != expected:
-                raise EvidenceIntegrityError("stage evidence payload differs from claim")
-        except (EvidenceIntegrityError, ValueError):
+                raise EvidenceIntegrityError("stage payload does not match its provenance")
+        except (EvidenceIntegrityError, ValueError, TypeError):
             missing.append(claim.stage.value)
     return EvidenceGateResult(
-        checked=len(progress.claims),
-        unverified=tuple(sorted(missing)),
+        checked=len(progress.claims), unverified=tuple(sorted(missing)),
         local_integrity_passed=not missing,
     )
 
@@ -291,33 +359,68 @@ def record_stage_claim(
     store: EvidenceStorePort,
     stage: KnowledgeStage,
     context_ref: str,
-    coverage: CoverageAssessment | None = None,
-    challenge_adjudicated: bool = False,
-    applicability_adjudicated: bool = False,
+    manifest: CanonicalManifest | None = None,
+    chunks: tuple[ChunkReceipt, ...] = (),
+    axes: tuple[AxisReceipt, ...] = (),
+    adjudication_ref: str | None = None,
+    expected_head: str | None = None,
 ) -> KnowledgeProgress:
-    """Persist claim and then use the same pure transition contract as before."""
+    """No caller-supplied boolean can convert declarations into stage evidence.
+
+    READ rechecks stored source bytes; understanding/applicability require a
+    separate ledger-bound adjudication record. These are local integrity
+    conditions, not independently proven scientific or cognitive results.
+    """
     from awf.domain.knowledge_integrity import advance_stage
 
+    checked_coverage: CoverageAssessment | None = None
+    if stage == KnowledgeStage.READ:
+        if manifest is None:
+            raise EvidenceIntegrityError("READ needs pinned canonical manifest")
+        checked_coverage = verify_chunk_coverage(
+            manifest, chunks, axes, store=store, run_id=context_ref,
+            expected_head=expected_head,
+        )
+    adjudicated = False
+    if stage in (KnowledgeStage.UNDERSTOOD, KnowledgeStage.APPLICABLE):
+        if adjudication_ref is None:
+            raise EvidenceIntegrityError("stage requires separately stored adjudication")
+        kind = _stage_kind(stage)
+        subject = (
+            f"{progress.reference_id}:calibration"
+            if stage == KnowledgeStage.UNDERSTOOD
+            else f"{progress.reference_id}:applicability"
+        )
+        adjudicated = bool(
+            _get_event(
+                store, adjudication_ref, kind=kind, run_id=context_ref,
+                subject_id=subject, expected_head=expected_head,
+            )
+        )
     provisional = advance_stage(
         progress,
         stage=stage,
         evidence_ref="uncommitted-observation",
         context_ref=context_ref,
-        coverage=coverage,
-        challenge_adjudicated=challenge_adjudicated,
-        applicability_adjudicated=applicability_adjudicated,
+        coverage=checked_coverage,
+        challenge_adjudicated=adjudicated,
+        applicability_adjudicated=adjudicated,
     )
-    kind = (
-        EvidenceKind.CALIBRATION_JUDGMENT if stage == KnowledgeStage.UNDERSTOOD
-        else EvidenceKind.REVIEW_DECISION if stage == KnowledgeStage.APPLICABLE
-        else EvidenceKind.REVISION_TRANSITION
-    )
-    payload = _canonical(
-        {"schema": 1, "type": "knowledge_stage", "reference_id": progress.reference_id,
-         "stage": stage.value, "context_ref": context_ref}
-    )
+    extras: dict[str, object] = {}
+    if stage == KnowledgeStage.READ:
+        assert manifest is not None
+        extras = {"manifest_version": manifest.version, **_coverage_refs(chunks, axes)}
+    elif stage in (KnowledgeStage.UNDERSTOOD, KnowledgeStage.APPLICABLE):
+        extras = {"adjudication_ref": adjudication_ref}
+    payload = _canonical({
+        "schema": 1, "type": "knowledge_stage",
+        "reference_id": progress.reference_id,
+        "stage": stage.value,
+        "context_ref": context_ref,
+        **extras,
+    })
     event = store.append(
-        kind=kind,
+        kind=_stage_kind(stage),
         run_id=context_ref,
         subject_id=f"{progress.reference_id}:{stage.value}",
         content=payload,

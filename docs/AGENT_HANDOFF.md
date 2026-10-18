@@ -78,3 +78,10 @@ Auditar el dominio `stateful_runtime` (15 requisitos) desde los lotes privados; 
 - **Smoke local de CLI:** `awf evidence append` con texto sintético generó un evento y `awf evidence verify` confirmó 1 evento y 1 objeto. `claims_independently_verified=false` y `external_authenticity_proven=false`; `.awf/evidence/smoke.sqlite` ignorado por Git, árbol limpio. No se usó el ZIP histórico.
 - **Alcance:** la evidencia guardada queda vinculada a un hash y evento en la base local. **No se conecta automáticamente** con la comprobación semántica de `revision_audit` ni la calibración de `knowledge_integrity`; nadie debe interpretarlo como independencia externa o conocimiento demostrado.
 - **Siguiente fase:** integrar un verificador externo de evidencias/identidad y recibos tipados del controlador, más ensayo de recuperación desde backup con checkpoint separado; ningún dato histórico privado se sube al repositorio.
+
+## S2 — binding a evidencias (PR apilada, en validación)
+
+- Rama `feat/s2-evidence-binding`, derivada de PR #17. Nuevas funciones `application/commands/bind_evidence.py` y `EvidenceStorePort.resolve_event` con adaptador SQLite. Contratos descritos en [ADR-0013](adr/0013-evidence-bound-receipts.md).
+- Los resultados son verificaciones locales de integridad; `independent_adjudication_proven=False` de forma explícita. Ninguna de las 168 MUST históricas queda adjudicada por esta prueba.
+- Tests sintéticos de replay/swap/subject/run/stage, lectura de bytes, recibos locales, reinicio y rollback en `tests/integration/test_evidence_binding.py`.
+- **Pendiente de completar esta PR:** resultados CI, ejecución local contra el commit final y registro del hash de despliegue. Si se interrumpe, no afirmar PASS ni merge.
