@@ -105,8 +105,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 parent = args.manifest.resolve().parent
                 repo_root = parent.parent if parent.name == "provenance" else parent
                 privacy_root = repo_root / ".awf"
-                output_dir = privacy_root / "knowledge" / (
-                    f"review-{overview['archive_sha256'][:12]}-b{args.batch_size:02d}"
+                output_dir = (
+                    privacy_root
+                    / "knowledge"
+                    / (f"review-{overview['archive_sha256'][:12]}-b{args.batch_size:02d}")
                 )
                 for path in (privacy_root, privacy_root / "knowledge", output_dir):
                     if path.is_symlink():

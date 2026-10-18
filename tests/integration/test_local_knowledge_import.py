@@ -189,10 +189,16 @@ def test_private_review_plan_has_complete_coverage_and_no_stdout_source_text(
     local_source: tuple[Path, Path, str], tmp_path: Path, capsys
 ) -> None:
     archive, manifest, digest = local_source
-    assert main([
-        "knowledge", "plan-review", str(archive), "--manifest", str(manifest),
-        "--batch-size", "1",
-    ]) == 0
+    args = [
+        "knowledge",
+        "plan-review",
+        str(archive),
+        "--manifest",
+        str(manifest),
+        "--batch-size",
+        "1",
+    ]
+    assert main(args) == 0
     printed = capsys.readouterr().out
     assert "Preserve provenance" not in printed
     summary = json.loads(printed)
@@ -213,10 +219,16 @@ def test_private_review_plan_has_complete_coverage_and_no_stdout_source_text(
 
     # Repeat import must produce the same private, SHA-bound bytes.
     before = {p.name: p.read_bytes() for p in path.parent.glob("*.json")}
-    assert main([
-        "knowledge", "plan-review", str(archive), "--manifest", str(manifest),
-        "--batch-size", "1",
-    ]) == 0
+    args = [
+        "knowledge",
+        "plan-review",
+        str(archive),
+        "--manifest",
+        str(manifest),
+        "--batch-size",
+        "1",
+    ]
+    assert main(args) == 0
     assert before == {p.name: p.read_bytes() for p in path.parent.glob("*.json")}
 
 
@@ -224,8 +236,14 @@ def test_review_plan_rejects_invalid_batch_size(
     local_source: tuple[Path, Path, str], capsys
 ) -> None:
     archive, manifest, _ = local_source
-    assert main([
-        "knowledge", "plan-review", str(archive), "--manifest", str(manifest),
-        "--batch-size", "0",
-    ]) == 2
+    args = [
+        "knowledge",
+        "plan-review",
+        str(archive),
+        "--manifest",
+        str(manifest),
+        "--batch-size",
+        "0",
+    ]
+    assert main(args) == 2
     assert "batch_size" in capsys.readouterr().err
