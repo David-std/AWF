@@ -2,8 +2,9 @@
 
 `SQLiteRevisionJournal` coordina dos clases de información bajo una transacción
 SQLite: los eventos de evidencia y los estados inmutables `RevisionState`.
-**Su alcance es únicamente `START` y `AUDIT`**; no reemplaza la API previa
-en memoria ni habilita convergencia autónoma.
+Su alcance incluye `START`, `AUDIT`, `EDIT`, `FINDING_OPEN` y
+`FINDING_RESOLVE`; no reemplaza la API previa en memoria ni habilita
+convergencia autónoma.
 
 ## Uso del contrato Python
 
@@ -53,6 +54,45 @@ de la base de datos**; utilizar como head externo uno copiado de la base
 potencialmente comprometida no proporciona independencia. La aplicación debe
 conservar dicho valor de modo seguro. Este prototipo no firma ni publica heads.
 
+## Edición y hallazgos durables
+
+Tras crear y auditar una revisión con los comandos anteriores:
+
+```python
+from awf.domain.revision_audit import RevisionPolicy
+
+revised = MarkdownAdapter().parse(b"A changed synthetic claim.", source_name="demo-v2.md")
+edited = journal.accept_edit(
+    revision_id="revision-1", operation_id="request-edit-1", run_id="run-1",
+    old_document=document, new_document=revised, expected_version=committed.version,
+    policy=RevisionPolicy(), observation_ref="review-note:edit-1",
+)
+finding = journal.open_finding(
+    revision_id="revision-1", operation_id="request-find-1", run_id="run-1",
+    expected_version=edited.version, finding_id="finding-1", material=True,
+    observation_ref="review-note:observation-1",
+)
+resolved = journal.resolve_finding(
+    revision_id="revision-1", operation_id="request-resolve-1", run_id="run-1",
+    expected_version=finding.version, finding_id="finding-1",
+    observation_ref="review-note:resolution-1",
+)
+assert journal.load(revision_id="revision-1").state == resolved.state
+```
+
+Una transición nueva registra dos eventos `REVISION_TRANSITION` y un snapshot
+en una transacción: intención y commit, enlazados por identidad de evento.
+La recuperación reproduce las reglas de invalidación y resolución contra
+el snapshot precedente. Los commits `START/AUDIT` de esquema 1 se leen sin
+conversión; los nuevos usan esquema 2.
+
+Ambos `DocumentIR` deben obtenerse de ingesta cotejada contra los bytes
+inmutables. El journal almacena hashes, huellas de IR y fingerprints de
+scope, no texto del manuscrito ni prueba de consentimiento humano.
+`observation_ref` es una declaración trazable pero no autenticada.
+La referencia `event:<digest>` demuestra que quedó registrada, no que sea
+científicamente correcta.
+
 ## Restricciones deliberadas
 
 - Los snapshots guardan metadatos, hashes, referencias y hallazgos, no el texto
@@ -60,14 +100,14 @@ conservar dicho valor de modo seguro. Este prototipo no firma ni publica heads.
 - `record_evidenced_audit` de PR #18 sigue existiendo para prototipos en memoria;
   no promete coordinación transaccional de estado. El camino durable es
   `SQLiteRevisionJournal.record_audit`.
-- Aún no hay comandos durables para edición, findings, barridos de críticos ni
-  cambios de política. No continuar una de esas operaciones como si estuviera
-  confirmada a través de este journal.
+- No hay comandos durables para barridos de críticos, iteraciones externas ni
+  aprobación académica. El estado `CONVERGED` no se autoriza por integridad SQLite.
 - Una comprobación positiva de la cadena y de los recibos no prueba competencia,
   identidad, independencia o corrección de los juicios académicos.
 - Coste actual O(historial) para integridad; faltan benchmark, backup/restore,
   checkpoint externo firmado, permisos de evaluadores y pruebas de cortes de
   energía sobre el equipo y almacenamiento reales.
 
-Consulta [ADR-0014](adr/0014-atomic-revision-journal.md) para la decisión y
-sus alternativas.
+Consulta [ADR-0014](adr/0014-atomic-revision-journal.md) para la transacción
+original y [ADR-0015](adr/0015-durable-edit-and-finding-transitions.md) para
+la extensión y sus límites.
