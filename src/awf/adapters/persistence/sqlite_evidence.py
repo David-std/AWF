@@ -155,8 +155,13 @@ class SQLiteEvidenceLedger:
             or not all(
                 isinstance(value, str)
                 for value in (
-                    raw_kind, run_id, subject_id, evidence_sha256,
-                    recorded_at, previous_digest, digest,
+                    raw_kind,
+                    run_id,
+                    subject_id,
+                    evidence_sha256,
+                    recorded_at,
+                    previous_digest,
+                    digest,
                 )
             )
         ):
