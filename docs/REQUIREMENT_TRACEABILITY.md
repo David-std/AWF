@@ -96,10 +96,10 @@ Este corte no adjudica automáticamente ningún DSR de las 168 `MUST`; primero d
 
 | Contrato | Implementación | Evidencia necesaria | Estado |
 |---|---|---|---|
-| Evidencia de auditoría y snapshot se confirman o revierten juntos | `SQLiteRevisionJournal.record_audit` sobre `SQLiteEvidenceLedger` | Trigger de error y terminación del proceso antes del COMMIT; sin evento huérfano | PROTOTYPED_TESTED_LOCAL |
-| Reintento seguro por operación | `operation_id`, huella de solicitud e índice único | Replay tras pérdida de respuesta; misma clave con otros parámetros | PROTOTYPED_TESTED_LOCAL |
-| Conflictos de dos escritores | Versiones monotónicas, `BEGIN IMMEDIATE` | Dos escritores con la misma versión; solo un commit | PROTOTYPED_TESTED_LOCAL |
-| Recuperación y comprobación del historial | Instantáneas inmutables vinculadas a `REVISION_TRANSITION` | Reinicio, alteración de bytes, trigger ausente o snapshot borrado | PROTOTYPED_TESTED_LOCAL |
+| Evidencia de auditoría y snapshot se confirman o revierten juntos | `SQLiteRevisionJournal.record_audit` sobre `SQLiteEvidenceLedger` | Trigger de error y terminación del proceso antes del COMMIT; sin evento huérfano | PROTOTYPED_TESTED_CI |
+| Reintento seguro por operación | `operation_id`, huella de solicitud e índice único | Replay tras pérdida de respuesta; misma clave con otros parámetros | PROTOTYPED_TESTED_CI |
+| Conflictos de dos escritores | Versiones monotónicas, `BEGIN IMMEDIATE` | Dos escritores con la misma versión; solo un commit | PROTOTYPED_TESTED_CI |
+| Recuperación y comprobación del historial | Instantáneas inmutables vinculadas a `REVISION_TRANSITION` | Reinicio, alteración de bytes, trigger ausente o snapshot borrado | PROTOTYPED_TESTED_CI |
 | Edición, findings, barridos y juicio académico durable | **No implementados en este corte** | Diseñar comandos independientes y verificar sus dependencias | UNRESOLVED |
 
-No se promocionan DSR-001..032 ni otras reglas a `REVIEW_ATTESTED`. Véanse [ADR-0014](adr/0014-atomic-revision-journal.md) y [contrato de recuperación](DURABLE_REVISION_S2.md). La validación CI del incremento debe registrarse con su commit final antes de cambiar el estado de `PROTOTYPED_TESTED_LOCAL`.
+No se promocionan DSR-001..032 ni otras reglas a `REVIEW_ATTESTED`. Véanse [ADR-0014](adr/0014-atomic-revision-journal.md) y [contrato de recuperación](DURABLE_REVISION_S2.md). Evidencia: código `88bd75bbfdc218225176dfcc64c4e77a93cf12a8`, [CI 39169111258](https://github.com/David-std/AWF/actions/runs/39169111258), 4/4 entornos, 139 PASS en Ubuntu y 138 PASS + 1 SKIP POSIX en Windows.
