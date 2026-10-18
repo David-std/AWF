@@ -108,9 +108,9 @@ No se promocionan DSR-001..032 ni otras reglas a `REVIEW_ATTESTED`. Véanse [ADR
 
 | Contrato | Implementación | Caso adversarial | Estado |
 |---|---|---|---|
-| Ediciones invalidan recibos globales y scopes locales afectados | `SQLiteRevisionJournal.accept_edit` y rutina pura de fingerprints | Vecino alterado, documento obsoleto, presupuesto agotado | PROTOTYPED_LOCAL |
-| Hallazgos permanecen abiertos hasta resolución explícita | `open_finding` y `resolve_finding` | ID duplicado, resolución inexistente, distinto run | PROTOTYPED_LOCAL |
-| Intención, commit y estado tienen destino transaccional único | `revision_intent` y `revision_commit` schema 2 | Crash, trigger de fallo, replay, concurrencia, intención huérfana | PROTOTYPED_LOCAL |
+| Ediciones invalidan recibos globales y scopes locales afectados | `SQLiteRevisionJournal.accept_edit` y rutina pura de fingerprints | Vecino alterado, documento obsoleto, presupuesto agotado | PROTOTYPED_TESTED_CI |
+| Hallazgos permanecen abiertos hasta resolución explícita | `open_finding` y `resolve_finding` | ID duplicado, resolución inexistente, distinto run | PROTOTYPED_TESTED_CI |
+| Intención, commit y estado tienen destino transaccional único | `revision_intent` y `revision_commit` schema 2 | Crash, trigger de fallo, replay, concurrencia, intención huérfana | PROTOTYPED_TESTED_CI |
 | Veracidad académica, identidad/roles y sweep independiente | Fuera del corte | Exige firma, permisos, juzgado externo | UNRESOLVED |
 
 Véanse [ADR-0015](adr/0015-durable-edit-and-finding-transitions.md) y

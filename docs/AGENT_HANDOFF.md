@@ -107,14 +107,21 @@ Auditar el dominio `stateful_runtime` (15 requisitos) desde los lotes privados; 
 - Base exacta PR #19 `feat/s2-atomic-revision-journal`, HEAD
   `69768493f91aef4fa9d8ad5b6bddc9c8123bbfa3`, abierta sobre #18;
   la cadena de PRs #10–#19 continúa sin fusionar.
-- Rama nueva `feat/s2-durable-edit-findings`, commit de código inicial
+- [PR #20](https://github.com/David-std/AWF/pull/20), rama
+  `feat/s2-durable-edit-findings`, commit de código inicial
   `139247cddf2e5365569bac66528d8c1c1dc49c6b`. Se amplía el journal
   con transiciones de edición y hallazgos y replay de esquema 2 sin migración
   destructiva del esquema 1. Intención, commit y snapshot son atómicos.
 - `tests/integration/test_revision_transitions.py` usa solo documentos
-  sintéticos. Primera validación completa tras restauración del entorno:
-  **154 tests PASS en Linux**, Ruff check/format PASS. Registrar por separado
-  la CI Linux/Windows tras publicarse y no presuponer éxito.
+  sintéticos. Verificación scratch Linux Python 3.12: **154 pytest PASS**,
+  Ruff check/format PASS, Pyright 0 errores, `uv lock --check`, `uv build`
+  y `git diff --check` PASS.
+- GitHub Actions de `53fdb7f2bf73d5cc9bf4562f3504a48ecf0b4e4d`:
+  [run 39174723908](https://github.com/David-std/AWF/actions/runs/39174723908)
+  **SUCCESS (4/4)**. Ubuntu Python 3.12/3.13: 154 PASS cada uno; Windows
+  Python 3.12/3.13: **153 PASS, 1 SKIP** cada uno (prueba de permisos POSIX).
+  Ruff, Pyright, lockfile, CLI smoke y build aprobados en los cuatro entornos.
+  No se ejecutó una prueba adicional en la PC ASUS durante este corte.
 - [ADR-0015](adr/0015-durable-edit-and-finding-transitions.md) y
   [guía durable](DURABLE_REVISION_S2.md) precisan los límites: evidencia
   registrada no equivale a autorización humana, veracidad académica ni
