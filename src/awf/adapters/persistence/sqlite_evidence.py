@@ -136,19 +136,44 @@ class SQLiteEvidenceLedger:
 
     @staticmethod
     def _row_to_record(row: tuple[object, ...]) -> EvidenceRecord:
+        if len(row) != 9:
+            raise EvidenceIntegrityError("invalid evidence event field count")
+        (
+            sequence,
+            raw_kind,
+            run_id,
+            subject_id,
+            evidence_sha256,
+            evidence_bytes,
+            recorded_at,
+            previous_digest,
+            digest,
+        ) = row
+        if (
+            not isinstance(sequence, int)
+            or not isinstance(evidence_bytes, int)
+            or not all(
+                isinstance(value, str)
+                for value in (
+                    raw_kind, run_id, subject_id, evidence_sha256,
+                    recorded_at, previous_digest, digest,
+                )
+            )
+        ):
+            raise EvidenceIntegrityError("invalid evidence event field types")
         try:
             return EvidenceRecord(
-                sequence=int(row[0]),
-                kind=EvidenceKind(str(row[1])),
-                run_id=str(row[2]),
-                subject_id=str(row[3]),
-                evidence_sha256=str(row[4]),
-                evidence_bytes=int(row[5]),
-                recorded_at=str(row[6]),
-                previous_digest=str(row[7]),
-                digest=str(row[8]),
+                sequence=sequence,
+                kind=EvidenceKind(str(raw_kind)),
+                run_id=str(run_id),
+                subject_id=str(subject_id),
+                evidence_sha256=str(evidence_sha256),
+                evidence_bytes=evidence_bytes,
+                recorded_at=str(recorded_at),
+                previous_digest=str(previous_digest),
+                digest=str(digest),
             )
-        except (ValueError, IndexError, TypeError) as exc:
+        except ValueError as exc:
             raise EvidenceIntegrityError("invalid evidence event record") from exc
 
     @classmethod
