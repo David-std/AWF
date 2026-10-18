@@ -79,3 +79,15 @@ La suite AWS 3.19.1 documenta 184 requisitos normativos (168 MUST, 16 lab/deferr
 Este corte no adjudica automáticamente ningún DSR de las 168 `MUST`; primero debe comprobarse la integración real con los controladores de revisión.
 
 **Evidencia de CI:** commit `e168f482b153ccb172293fd6d8ddfbf91ab780a1`, [run 39096421735](https://github.com/David-std/AWF/actions/runs/39096421735), matriz 4/4 aprobada con 116 tests por trabajo; ver también [ADR-0012](adr/0012-local-evidence-ledger.md). Estado `PROTOTYPED_TESTED` se refiere a integridad y recuperación del almacén, **no** al juicio del revisor ni a las 168 reglas del corpus.
+
+## Enlace a evidencias: recibos de revisión y conocimiento (PR #18)
+
+| Contrato | Código | Evidencia del corte | Estado |
+|---|---|---|---|
+| Identificar evento completo, no solo checksum de bytes | `EvidenceStorePort.resolve_event`, `SQLiteEvidenceLedger.resolve_event` | Rechazo por run, subject, kind, hash o checkpoint divergente | PROTOTYPED_TESTED |
+| Recibos de auditoría no intercambiables ni obsoletos | `record_evidenced_audit`, `verify_audit_receipts` | Slot/alcance, edición conservadora, falta de checks, fallo de persistencia | PROTOTYPED_TESTED |
+| Fuentes y fragmentos enlazados a eventos privados reales | `record_evidenced_chunk`, `verify_chunk_coverage` | Inventario completo, source/run/fragment, swap y bare hash | PROTOTYPED_TESTED |
+| Etapas `READ` y adjudicaciones con referencias verificables | `record_stage_claim`, `verify_progress_claims` | READ sin inventario, fuente ajena, adjudicación ausente, reinicio y replay | PROTOTYPED_TESTED |
+| Independencia, autoría, comprensión y calidad científica | **Fuera del alcance del verificador local** | Exigir juez externo, revisión humana y derechos de datos | UNRESOLVED |
+
+**Pruebas:** código `10352f0369060ba5c08d4b363f8dd2c7f878afd1`; [CI push 39098241783](https://github.com/David-std/AWF/actions/runs/39098241783) y [CI PR 39098245104](https://github.com/David-std/AWF/actions/runs/39098245104), 128 PASS × 4 entornos; PC Windows Python 3.12, 126 PASS, 1 SKIP con pruebas unitarias/integración. Estos resultados no constituyen cumplimiento de las 168 reglas históricas ni evaluación de modelo. [ADR-0013](adr/0013-evidence-bound-receipts.md).

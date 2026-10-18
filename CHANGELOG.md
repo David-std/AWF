@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — Sprint 2 receipt-to-ledger binding (PR #18)
+
+- Bind audit receipts, source-chunk observations and epistemic-stage claims to exact event/run/subject/type/payload identities; bare content hashes cannot authorize a claim.
+- Recalculate expected chunk and axis coverage from stored private bytes before recording READ; require separate typed local adjudication events for understanding/applicability rather than caller booleans.
+- Validate current document audit slots and local-scope lineage; failure to persist does not mutate the pure state. Add 12 synthetic integration regressions against stale/swapped/forged/foreign or missing proofs.
+- Document ADR-0013 and keep independent scientific/model adjudication explicitly unresolved.
+
+
 ## Unreleased — Sprint 2 local evidence ledger
 
 - Add transactional SHA-256-linked evidence events with private SQLite content-addressed blobs and optional independently retained head checkpoints.
