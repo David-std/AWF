@@ -332,7 +332,9 @@ def test_three_critic_policy_requires_three_distinct_isolated_sweeps() -> None:
     state = _audited(doc, (_slot("paragraph_0001", "grammar"),))
     for critic in ("A", "B"):
         state = add_clean_sweep(
-            state, doc, critic_id=critic,
+            state,
+            doc,
+            critic_id=critic,
             evidence_ref=f"evidence-{critic}",
             isolated_context_ref=f"context-{critic}",
             policy=policy,
@@ -340,12 +342,20 @@ def test_three_critic_policy_requires_three_distinct_isolated_sweeps() -> None:
         assert decision(state, doc, policy) == RevisionVerdict.FRESH_CRITIC_REQUIRED
     with pytest.raises(ValueError, match="reused isolation"):
         add_clean_sweep(
-            state, doc, critic_id="C", evidence_ref="evidence-C",
-            isolated_context_ref="context-A", policy=policy,
+            state,
+            doc,
+            critic_id="C",
+            evidence_ref="evidence-C",
+            isolated_context_ref="context-A",
+            policy=policy,
         )
     third = add_clean_sweep(
-        state, doc, critic_id="C", evidence_ref="evidence-C",
-        isolated_context_ref="context-C", policy=policy,
+        state,
+        doc,
+        critic_id="C",
+        evidence_ref="evidence-C",
+        isolated_context_ref="context-C",
+        policy=policy,
     )
     assert decision(third, doc, policy) == RevisionVerdict.CONVERGED
 
