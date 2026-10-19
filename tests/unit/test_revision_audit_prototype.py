@@ -372,3 +372,82 @@ def test_invalid_audit_enum_string_is_rejected_not_treated_as_clean() -> None:
             checks_executed=2,
             evidence_ref="string-status-must-not-pass",
         )
+
+
+@pytest.mark.parametrize("budget", ["revision_cycles", "external_iterations"])
+def test_exhausted_budget_overrides_existing_clean_sweeps(budget: str) -> None:
+    doc = _doc("Paragraph.")
+    policy = RevisionPolicy(max_revision_cycles=1, max_external_iterations=1)
+    state = _audited(doc, (_slot("paragraph_0001", "accuracy"),))
+    for critic in ("A", "B"):
+        state = add_clean_sweep(
+            state,
+            doc,
+            critic_id=critic,
+            evidence_ref=f"receipt-{critic}",
+            isolated_context_ref=f"context-{critic}",
+            policy=policy,
+        )
+    assert decision(state, doc, policy) == RevisionVerdict.CONVERGED
+    exhausted = replace(state, **{budget: 1})
+    assert decision(exhausted, doc, policy) == RevisionVerdict.BUDGET_EXHAUSTED
+
+
+def test_local_scope_invalidates_on_heading_level_and_neighbor_shape() -> None:
+    original = _doc("# Introduction\n\nBody paragraph.")
+    changed = _doc("## Introduction\n\nBody paragraph.")
+    heading_slot = _slot("heading_0001", "structure", AuditScope.LOCAL_NEIGHBORS)
+    body_slot = _slot("paragraph_0001", "structure", AuditScope.LOCAL_NEIGHBORS)
+    assert scope_fingerprint(original, heading_slot) != scope_fingerprint(changed, heading_slot)
+    assert scope_fingerprint(original, body_slot) != scope_fingerprint(changed, body_slot)
+    retained = _audited(original, (heading_slot, body_slot))
+    edited = accept_edit(
+        retained, original, changed, policy=RevisionPolicy(), operation_ref="H1-H2"
+    )
+    assert edited.dirty_keys == {heading_slot.key, body_slot.key}
+
+
+@pytest.mark.parametrize("required", [True, 1.0, "2"])
+def test_audit_slot_requires_exact_integer_work_count(required: object) -> None:
+    with pytest.raises(ValueError, match="positive work budget"):
+        AuditSlot("paragraph_0001", "grammar", required_checks=required)  # type: ignore[arg-type]
+
+
+def test_slot_key_rejects_ambiguous_delimiter() -> None:
+    with pytest.raises(ValueError, match="positive work budget"):
+        AuditSlot("p:1", "grammar", required_checks=1)
+    with pytest.raises(ValueError, match="positive work budget"):
+        AuditSlot("p1", "grammar:style", required_checks=1)
+
+
+def test_audit_receipt_does_not_accept_boolean_as_executed_count() -> None:
+    doc = _doc("One paragraph.")
+    slot = AuditSlot("paragraph_0001", "citations", required_checks=1)
+    state = start_revision(doc, (slot,))
+    with pytest.raises(ValueError, match="invalid evidence"):
+        record_audit(
+            state,
+            doc,
+            slot_key=slot.key,
+            status=AuditStatus.CLEAN,
+            checks_executed=True,  # type: ignore[arg-type]
+            evidence_ref="not-an-executed-check",
+        )
+
+
+def test_finding_materiality_requires_boolean() -> None:
+    doc = _doc("A paragraph.")
+    state = start_revision(doc, (_slot("paragraph_0001", "evidence"),))
+    with pytest.raises(ValueError, match="finding requires"):
+        open_finding(
+            state,
+            finding_id="F-1",
+            material="false",  # type: ignore[arg-type]
+            evidence_ref="claimed-observation",
+        )
+
+
+@pytest.mark.parametrize("limit", [True, 1.0, "3"])
+def test_revision_policy_requires_integral_limits(limit: object) -> None:
+    with pytest.raises(ValueError, match="integers"):
+        RevisionPolicy(max_external_iterations=limit)  # type: ignore[arg-type]

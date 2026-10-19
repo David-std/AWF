@@ -14,3 +14,10 @@
 ## Segunda pasada: coherencia de política
 
 Se identificó una inconsistencia de un prototipo inicial: el registrador de barridos consultaba el límite por defecto incluso si el veredicto utilizaba una política personalizada. Se corrigió haciendo pasar la misma `RevisionPolicy` a ambas decisiones, impidiendo la reutilización de recibos de aislamiento y ejecutando explícitamente el límite de iteraciones externas. Nuevos tests prueban la política de 3 críticos, presupuesto externo de 2 iteraciones y rechazo de strings no tipadas como disposiciones de auditoría.
+
+## Auditoría previa a fusión en develop (2026-10-19)
+
+- El veredicto comprueba **primero** los presupuestos agotados: aunque se hayan registrado barridos limpios, consumir el límite de revisión o de iteraciones externas devuelve `BUDGET_EXHAUSTED`, nunca `CONVERGED`.
+- Los recuentos `required_checks`/`checks_executed` y límites de política exigen enteros reales, no `bool`, floats o strings; la materialidad de hallazgos también exige booleano.
+- `LOCAL_NEIGHBORS` incorpora tipo y nivel de encabezado del bloque y de sus vecinos, además del texto. Cambiar un H1 por H2 invalida el scope. Esto **cambia los fingerprints anteriores**: los recibos locales previos deben revalidarse y nunca promoverse por compatibilidad implícita. Aún falta versionar formalmente los fingerprints al persistir migraciones de producción.
+- Se agregan casos adversariales para todos esos límites; el resultado continúa siendo un prototipo de dominio sin verificación académica independiente.
