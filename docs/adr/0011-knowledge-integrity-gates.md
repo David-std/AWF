@@ -16,3 +16,10 @@
 ## Segunda pasada de arquitectura
 
 Se trasladó el cierre de dependencias a `awf.domain.dependencies` y se dejó un reexport compatible en `awf.knowledge.dependency_graph`; la capa de dominio ya no importa conocimiento de aplicación ni adaptadores. La transición `READ` exige ahora un `CoverageAssessment` tipado y completo, no un booleano declarado por el llamante; un cambio de `context_ref` invalida la continuidad de las etapas ya registradas. Estas mejoras eliminan dos vías de falso cumplimiento estructural, pero siguen sin autenticar criptográficamente los recibos.
+
+## Revisión previa a fusión (2026-10-19)
+
+- Los archivos fuente vacíos se pueden inventariar mediante un fragmento de cero bytes por compatibilidad documental, pero **nunca** satisfacen `CoverageAssessment.complete` ni autorizan `READ`.
+- La verificación de manifiestos exige IDs y SHA-256 bien formados, e impide fragmentos de longitud cero dentro de fuentes no vacías. Los cambios de dependencias, criticidad, rutas de evidencia y otros metadatos dejan deuda de preservación aunque el SHA del contenido se mantenga.
+- La calibración rechaza familias de casos representadas como strings en vez de enums tipados; un resultado mecánicamente `PASSED` no certifica comprensión o veracidad académica.
+- Estas garantías estructurales no prueban que un tercero realmente haya leído, comprendido o validado las fuentes; permanecen pendientes identidad, derechos y verificación independiente.
