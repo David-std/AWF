@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — integration audit and continuity (2026-10-19)
+
+- Merge PRs #10–#20 in order into the new `develop` branch from `main`, preserving all merge commits and leaving `main` unchanged.
+- Close adversarial gaps found during independent review: schema/trigger replacement, audit state replay, mixed-run knowledge progress, idempotent private exports, and causal event ordering.
+- Final integrated validation: 196 Linux tests, 194 Windows Python 3.12 tests plus 2 documented skips, and 4/4 Linux/Windows Python 3.12/3.13 Actions jobs on PR #20.
+- Preserve historical decision boundaries: no formal adjudication of 168 MUST rules, no proof of independent reviewer authorization, no external checkpoint, no automatic scientific approval or training entitlement.
+
 ## Unreleased — Sprint 2 durable edit and finding transitions
 
 - Coordinate `accept_edit`, `open_finding` and `resolve_finding` with immutable revision snapshots in one SQLite transaction.

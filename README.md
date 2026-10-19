@@ -2,7 +2,7 @@
 
 **AWF Neural Engine** is an engineering and machine-learning project for traceable academic text revision in Spanish and English. The goal is to preserve meaning, citations, evidence, and author intent while comparing pretrained editors, fine-tuned models, and explicit verification policies.
 
-**Status on the S2 feature branch: S0–S1 core and the first local-only knowledge compiler slice are implemented.** The 168 mandatory historic rules are **not yet adjudicated**; the neural editor, independent semantic verifier, training and external API are **not implemented**. This repository maintains research provenance without claiming detector performance.
+**Status on `develop` (2026-10-19): architecture, S0, S1 and the S2 prototypes in PRs #10–#20 are merged and locally verified.** `main` remains at its pre-integration baseline; Sprint 2 is still open. None of the 168 mandatory historic rules has been formally adjudicated. The neural editor, independent semantic verifier, training and external API are **not implemented**. This repository maintains research provenance without claiming detector performance.
 
 ## Start here
 
@@ -14,9 +14,15 @@
 - [Evidence and source registry](docs/SOURCE_REGISTRY.md) — status and limitations of external references.
 - [Compute plan](docs/COMPUTE_AND_TRAINING.md) — RTX 4050, Qwen baseline, and optional Google-hosted GPU.
 
+## Integration status and current limits
+
+All eleven PRs [#10–#20](https://github.com/David-std/AWF/pulls?q=is%3Apr+is%3Aclosed+base%3Adevelop) were reviewed and merged **in sequence into `develop`**, each retaining its merge history. Final S2 integration commit: `26a937ebf647fd438ed703ac0e3a9c94aabc09c7`. The PR #20 head passed [GitHub Actions run 39186482215](https://github.com/David-std/AWF/actions/runs/39186482215): 4/4 Linux/Windows Python 3.12/3.13 jobs. The exact integrated tree passed **196 tests** on Linux; on the authorized Windows device, Python 3.12 passed **194 tests with 2 platform-specific skips**. Ruff and Pyright passed. See [the current handoff](docs/AGENT_HANDOFF.md) for the gate-by-gate account and outstanding work.
+
+Integrity is **not** independent scholarly assessment: review authorization, signed external checkpoints, full durable critic sweeps, recovery benchmarks/backup tests and the 168 rule adjudications remain incomplete. Do not promote `REVIEW_ATTESTED`, publish the historical ZIP or authorize model training based on these infrastructure tests.
+
 ## Implemented core (S0–S1)
 
-The feature branch includes an installable Python package, CLI and deterministic Markdown ingestion. For example:
+`develop` includes an installable Python package, CLI and deterministic Markdown ingestion. For example:
 
 ```shell
 uv sync --locked
@@ -27,7 +33,7 @@ uv run awf ingest draft.md --store .awf --output document-ir.json
 
 The ingest command reads **original UTF-8 bytes** and returns a content-addressed DocumentIR (SHA-256, blocks, inclusive line positions). `--store` is opt-in private local storage; the original file is never modified. The initial parser recognizes ATX headings, paragraphs and fenced code only; it is not a full CommonMark parser or a semantic verifier.
 
-S0: [PR #11](https://github.com/David-std/AWF/pull/11) · S1: [PR #12](https://github.com/David-std/AWF/pull/12). Both are stacked upon [architecture PR #10](https://github.com/David-std/AWF/pull/10); changes are **not necessarily present on main until merged**.
+S0: [PR #11](https://github.com/David-std/AWF/pull/11) · S1: [PR #12](https://github.com/David-std/AWF/pull/12), following [architecture PR #10](https://github.com/David-std/AWF/pull/10). All three are merged into `develop`, not `main`.
 
 ## Knowledge Compiler (Sprint 2, initial implementation)
 
@@ -41,7 +47,7 @@ uv run awf knowledge audit .awf/knowledge/registry.json \\
 
 The source ZIP remains local. Only SHA-bound metadata is written to a private ignored directory, not the rule descriptions. The first import is deliberately conservative: **168 MUST → UNRESOLVED** and **16 DEFERRED_LAB → EVAL_ONLY**, with all 184 IDs retained. Rules are not silently made executable or admitted into training. [Read the S2 contract](docs/KNOWLEDGE_COMPILER_S2.md).
 
-This is an initial S2 slice, **not** completed semantic adjudication. [Implementation PR #13](https://github.com/David-std/AWF/pull/13) is stacked upon [#12](https://github.com/David-std/AWF/pull/12), [#11](https://github.com/David-std/AWF/pull/11) and [#10](https://github.com/David-std/AWF/pull/10).
+This is an initial S2 slice, **not** completed semantic adjudication. [Implementation PR #13](https://github.com/David-std/AWF/pull/13) was developed on [#12](https://github.com/David-std/AWF/pull/12), [#11](https://github.com/David-std/AWF/pull/11) and [#10](https://github.com/David-std/AWF/pull/10) and is now merged into `develop`.
 
 ## Engineering principles
 
@@ -67,7 +73,7 @@ Some research datasets, model checkpoints, academic texts, and commercial servic
 
 [PR #15](https://github.com/David-std/AWF/pull/15) introduces a pure, model-independent revision-state prototype covering candidate transfers of historic DSR-001..015. It requires an explicit nonempty audit inventory, binds receipts to current hashes, invalidates dependent checks after edits, tracks open findings, and gates convergence on distinct documented clean sweeps and budgets. See the [15-rule review](docs/reviews/STATEFUL_RUNTIME_DSR001_015.md) and [ADR-0010](docs/adr/0010-revision-audit-prototype.md).
 
-The prototype does **not** establish semantic correctness, genuine independent critic isolation, source permissions, persistent audit proofs, a neural model, or finished migration of AWS rules. It is stacked on PRs #10–#14 and is not necessarily in `main` until merged.
+The prototype does **not** establish semantic correctness, genuine independent critic isolation, source permissions, a neural model, or finished migration of AWS rules. It was built on PRs #10–#14 and is now merged into `develop`; subsequent S2 PRs added persistent *local* audit proofs, not external attestation.
 
 ## Knowledge integrity gates — Sprint 2 prototype
 
@@ -77,13 +83,13 @@ The prototype does **not** establish semantic correctness, genuine independent c
 
 ## Local evidence ledger — Sprint 2
 
-[ADR-0012](docs/adr/0012-local-evidence-ledger.md) introduces a private, transactional SQLite journal for evidence bytes and SHA-256-linked events. Use `awf evidence append` and `awf evidence verify` as documented in [the local evidence guide](docs/EVIDENCE_LEDGER_S2.md). This makes declared evidence *retrievable and locally integrity-checkable*, **not signed, externally authenticated, independently assessed, or a proof that a model understood its inputs**. This PR is stacked on #16; it does not finish the ML engine.
+[ADR-0012](docs/adr/0012-local-evidence-ledger.md) introduces a private, transactional SQLite journal for evidence bytes and SHA-256-linked events. Use `awf evidence append` and `awf evidence verify` as documented in [the local evidence guide](docs/EVIDENCE_LEDGER_S2.md). This makes declared evidence *retrievable and locally integrity-checkable*, **not signed, externally authenticated, independently assessed, or a proof that a model understood its inputs**. PR #17 is merged into `develop`; it does not finish the ML engine.
 
 ## Evidence-bound revision and knowledge receipts — Sprint 2
 
 [PR #18](https://github.com/David-std/AWF/pull/18) extends the local evidence ledger with exact event-bound receipt verification for document audits, source chunks, required coverage and knowledge stages. The [ADR-0013](docs/adr/0013-evidence-bound-receipts.md) explains event identity, expected-run/subject checks, carried-audit constraints and adversarial tests; [evidence binding guide](docs/EVIDENCE_BINDING_S2.md) lists application APIs.
 
-**Important:** `local_integrity_passed` is not equivalent to a trustworthy assessment of the manuscript, the sources, reviewer independence or actual model comprehension; `independent_adjudication_proven` remains `false`. This slice has no production editor or neural training and is stacked on unmerged PRs #10–#17. Historical AWS 3.19.1 files remain private.
+**Important:** `local_integrity_passed` is not equivalent to a trustworthy assessment of the manuscript, the sources, reviewer independence or actual model comprehension; `independent_adjudication_proven` remains `false`. The entire S2 stack through #20 is integrated into `develop` but has no production editor or neural training. Historical AWS 3.19.1 files remain private.
 
 ## Atomic revision journal — Sprint 2 incremental prototype
 
