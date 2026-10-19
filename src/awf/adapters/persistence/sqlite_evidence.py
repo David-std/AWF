@@ -269,9 +269,9 @@ class SQLiteEvidenceLedger:
         if not self.database.is_file():
             raise FileNotFoundError("evidence ledger does not exist")
         with self._open() as conn:
-            self._check_schema(conn)
             conn.execute("BEGIN")
             try:
+                self._check_schema(conn)
                 report = self._audit_transaction(conn)
                 if expected_head is not None and expected_head != report.head_digest:
                     raise EvidenceIntegrityError("trusted head digest does not match ledger")
@@ -302,9 +302,9 @@ class SQLiteEvidenceLedger:
         if not self.database.is_file():
             raise FileNotFoundError("evidence ledger does not exist")
         with self._open() as conn:
-            self._check_schema(conn)
             conn.execute("BEGIN")
             try:
+                self._check_schema(conn)
                 report = self._audit_transaction(conn)
                 for seq, digest in anchors:
                     if seq > report.events_checked:
