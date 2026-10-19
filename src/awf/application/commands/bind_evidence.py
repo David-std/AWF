@@ -28,6 +28,7 @@ from awf.domain.knowledge_integrity import (
     assess_coverage,
 )
 from awf.domain.revision_audit import (
+    AuditReceipt,
     AuditStatus,
     RevisionState,
     record_audit,
@@ -67,6 +68,24 @@ def _get_event(
     return payload
 
 
+def audit_claim_payload(receipt: AuditReceipt, *, observation_ref: str) -> bytes:
+    """One canonical event payload shared by volatile and durable audit paths."""
+    if not observation_ref.strip():
+        raise ValueError("an audit needs an observation reference")
+    return _canonical(
+        {
+            "schema": 1,
+            "type": "audit_receipt",
+            "slot_key": receipt.slot_key,
+            "artifact_sha256": receipt.artifact_sha256,
+            "scope_sha256": receipt.scope_sha256,
+            "status": receipt.status.value,
+            "checks_executed": receipt.checks_executed,
+            "observation_ref": observation_ref,
+        }
+    )
+
+
 def record_evidenced_audit(
     state: RevisionState,
     document: DocumentIR,
@@ -94,18 +113,7 @@ def record_evidenced_audit(
         evidence_ref="uncommitted-observation",
     )
     receipt = next(r for r in provisional.receipts if r.slot_key == slot_key)
-    content = _canonical(
-        {
-            "schema": 1,
-            "type": "audit_receipt",
-            "slot_key": receipt.slot_key,
-            "artifact_sha256": receipt.artifact_sha256,
-            "scope_sha256": receipt.scope_sha256,
-            "status": receipt.status.value,
-            "checks_executed": receipt.checks_executed,
-            "observation_ref": observation_ref,
-        }
-    )
+    content = audit_claim_payload(receipt, observation_ref=observation_ref)
     event = store.append(
         kind=EvidenceKind.AUDIT_RECEIPT,
         run_id=run_id,

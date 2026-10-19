@@ -330,65 +330,86 @@ class SQLiteEvidenceLedger:
         self, *, kind: EvidenceKind, run_id: str, subject_id: str, content: bytes
     ) -> EvidenceRecord:
         """Atomically store content bytes and one chain event; reject corrupt histories."""
-        validate_metadata(kind, run_id, subject_id, len(content))
-        digest = sha256_bytes(content)
         with self._open() as conn:
             self._check_schema(conn)
             conn.execute("BEGIN IMMEDIATE")
             try:
                 report = self._audit_transaction(conn)
-                old = conn.execute(
-                    "SELECT byte_length, payload FROM evidence_objects WHERE sha256=?", (digest,)
-                ).fetchone()
-                if old is None:
-                    conn.execute(
-                        "INSERT INTO evidence_objects(sha256, byte_length, payload) VALUES(?,?,?)",
-                        (digest, len(content), sqlite3.Binary(content)),
-                    )
-                elif int(old[0]) != len(content) or old[1] != content:
-                    raise EvidenceIntegrityError("content-addressed object collision or corruption")
-                sequence = report.events_checked + 1
-                time_stamp = datetime.now(UTC).isoformat()
-                row_digest = event_digest(
-                    sequence=sequence,
+                record = self._append_in_transaction(
+                    conn,
+                    report,
                     kind=kind,
                     run_id=run_id,
                     subject_id=subject_id,
-                    evidence_sha256=digest,
-                    evidence_bytes=len(content),
-                    recorded_at=time_stamp,
-                    previous_digest=report.head_digest,
-                )
-                conn.execute(
-                    f"INSERT INTO events({_COLUMNS}) VALUES(?,?,?,?,?,?,?,?,?)",
-                    (
-                        sequence,
-                        kind.value,
-                        run_id,
-                        subject_id,
-                        digest,
-                        len(content),
-                        time_stamp,
-                        report.head_digest,
-                        row_digest,
-                    ),
+                    content=content,
                 )
                 conn.execute("COMMIT")
-                return EvidenceRecord(
-                    sequence,
-                    kind,
-                    run_id,
-                    subject_id,
-                    digest,
-                    len(content),
-                    time_stamp,
-                    report.head_digest,
-                    row_digest,
-                )
+                return record
             except (sqlite3.Error, ValueError):
                 if conn.in_transaction:
                     conn.execute("ROLLBACK")
                 raise
+
+    @staticmethod
+    def _append_in_transaction(
+        conn: sqlite3.Connection,
+        report: LedgerAudit,
+        *,
+        kind: EvidenceKind,
+        run_id: str,
+        subject_id: str,
+        content: bytes,
+    ) -> EvidenceRecord:
+        """Append under an existing write lock; caller owns commit and rollback."""
+        validate_metadata(kind, run_id, subject_id, len(content))
+        digest = sha256_bytes(content)
+        old = conn.execute(
+            "SELECT byte_length, payload FROM evidence_objects WHERE sha256=?", (digest,)
+        ).fetchone()
+        if old is None:
+            conn.execute(
+                "INSERT INTO evidence_objects(sha256, byte_length, payload) VALUES(?,?,?)",
+                (digest, len(content), sqlite3.Binary(content)),
+            )
+        elif int(old[0]) != len(content) or old[1] != content:
+            raise EvidenceIntegrityError("content-addressed object collision or corruption")
+        sequence = report.events_checked + 1
+        time_stamp = datetime.now(UTC).isoformat()
+        row_digest = event_digest(
+            sequence=sequence,
+            kind=kind,
+            run_id=run_id,
+            subject_id=subject_id,
+            evidence_sha256=digest,
+            evidence_bytes=len(content),
+            recorded_at=time_stamp,
+            previous_digest=report.head_digest,
+        )
+        conn.execute(
+            f"INSERT INTO events({_COLUMNS}) VALUES(?,?,?,?,?,?,?,?,?)",
+            (
+                sequence,
+                kind.value,
+                run_id,
+                subject_id,
+                digest,
+                len(content),
+                time_stamp,
+                report.head_digest,
+                row_digest,
+            ),
+        )
+        return EvidenceRecord(
+            sequence,
+            kind,
+            run_id,
+            subject_id,
+            digest,
+            len(content),
+            time_stamp,
+            report.head_digest,
+            row_digest,
+        )
 
     def retrieve(self, evidence_sha256: str) -> bytes:
         """Retrieve only verified content. Requires a valid complete chain first."""

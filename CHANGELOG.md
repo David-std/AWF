@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — Sprint 2 atomic revision journal
+
+- Persist `START` and `AUDIT` `RevisionState` snapshots together with evidence/transition events in the same SQLite transaction, without replacing the earlier in-memory APIs.
+- Recover immutable version history with hash/event checks, optimistic version conflicts and stable idempotency keys; rejected writes and pre-commit process interruption leave no audit event orphan.
+- Add synthetic failure, crash, restart, replay, tampering, legacy-schema and concurrent-writer tests. Document ADR-0014; keep external authority and the remaining state transitions out of scope.
+
 ## Unreleased — Sprint 2 receipt-to-ledger binding (PR #18)
 
 - Bind audit receipts, source-chunk observations and epistemic-stage claims to exact event/run/subject/type/payload identities; bare content hashes cannot authorize a claim.
