@@ -62,3 +62,9 @@ No AI-detector bypass rate is claimed. Detector outputs, if studied, remain sepa
 Some research datasets, model checkpoints, academic texts, and commercial service outputs have use restrictions. No third-party corpus, provider outputs, model weights, proprietary suite archive, or user manuscript is committed here by default. The project's **code license is intentionally undecided** until reuse constraints are reviewed.
 
 > Note: the GitHub repository slug is `David-std/AWF`; the display name is **Academic Writing Forge**. Internal package and command names are `awf` in the S0–S1 implementation.
+
+## Stateful audit prototype (Sprint 2, not a production verifier)
+
+[PR #15](https://github.com/David-std/AWF/pull/15) introduces a pure, model-independent revision-state prototype covering candidate transfers of historic DSR-001..015. It requires an explicit nonempty audit inventory, binds receipts to current hashes, invalidates dependent checks after edits, tracks open findings, and gates convergence on distinct documented clean sweeps and budgets. See the [15-rule review](docs/reviews/STATEFUL_RUNTIME_DSR001_015.md) and [ADR-0010](docs/adr/0010-revision-audit-prototype.md).
+
+The prototype does **not** establish semantic correctness, genuine independent critic isolation, source permissions, persistent audit proofs, a neural model, or finished migration of AWS rules. It is stacked on PRs #10–#14 and is not necessarily in `main` until merged.

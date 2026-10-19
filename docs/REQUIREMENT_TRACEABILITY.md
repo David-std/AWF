@@ -52,3 +52,11 @@ La suite AWS 3.19.1 documenta 184 requisitos normativos (168 MUST, 16 lab/deferr
 - Las 16 entradas `DEFERRED_LAB` permanecen `EVAL_ONLY` y no pueden promocionarse a ejecución ni entrenamiento.
 - `REVIEW_ATTESTED` documenta autor y razón de una decisión de investigación, pero no garantiza validez técnica, licencias o revisión independiente.
 - Véase [ADR-0008](adr/0008-local-knowledge-import.md), [contrato S2](KNOWLEDGE_COMPILER_S2.md) y [PR #13](https://github.com/David-std/AWF/pull/13).
+
+## Prototipo de auditorías DSR-001..015 (evidencia separada de adjudicación)
+
+- ID fuente: `DSR-001..DSR-015` del ledger AWS 3.19.1, conservado solo localmente; archivo de evaluación propio [`STATEFUL_RUNTIME_DSR001_015.md`](reviews/STATEFUL_RUNTIME_DSR001_015.md).
+- Implementación candidata: `src/awf/domain/revision_audit.py`; pruebas adversariales: `tests/unit/test_revision_audit_prototype.py`; [PR #15](https://github.com/David-std/AWF/pull/15).
+- Evidencia de CI para el commit `e6c1b199599b0e31d25002225d14776eff6c2fdc`: [run 39084850246](https://github.com/David-std/AWF/actions/runs/39084850246), 4/4 jobs verdes, 61 tests por trabajo; 16 pruebas unitarias del módulo ejecutadas en la PC local.
+- **Estatus correcto:** `PROTOTYPED_NOT_ADJUDICATED` en AWF, no `REVIEW_ATTESTED`; la matriz privada permanece con 168 `MUST` `UNRESOLVED` y 16 `DEFERRED_LAB` `EVAL_ONLY`.
+- Bloqueadores: persistencia durable de resultados, verificación independiente de recibos, demostración de independencia de críticos, inventario completo de controles por documento y manejo de dependencias semánticas/globales.
