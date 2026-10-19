@@ -2,7 +2,7 @@
 
 **AWF Neural Engine** is an engineering and machine-learning project for traceable academic text revision in Spanish and English. The goal is to preserve meaning, citations, evidence, and author intent while comparing pretrained editors, fine-tuned models, and explicit verification policies.
 
-**Status on `develop` (2026-10-19): architecture, S0, S1 and the S2 prototypes in PRs #10–#20 are merged and locally verified.** `main` remains at its pre-integration baseline; Sprint 2 is still open. None of the 168 mandatory historic rules has been formally adjudicated. The neural editor, independent semantic verifier, training and external API are **not implemented**. This repository maintains research provenance without claiming detector performance.
+**Status on `develop` (2026-10-19): architecture, S0, S1 and S2 increments through PR #22 are merged and verified.** This branch additionally proposes the externally signed ledger checkpoint increment for review. `main` remains at its pre-integration baseline; Sprint 2 is still open. None of the 168 mandatory historic rules has been formally adjudicated. The neural editor, independent semantic verifier, training and external API are **not implemented**. This repository maintains research provenance without claiming detector performance.
 
 ## Start here
 
@@ -16,9 +16,9 @@
 
 ## Integration status and current limits
 
-All eleven PRs [#10–#20](https://github.com/David-std/AWF/pulls?q=is%3Apr+is%3Aclosed+base%3Adevelop) were reviewed and merged **in sequence into `develop`**, each retaining its merge history. Final S2 integration commit: `26a937ebf647fd438ed703ac0e3a9c94aabc09c7`. The PR #20 head passed [GitHub Actions run 39186482215](https://github.com/David-std/AWF/actions/runs/39186482215): 4/4 Linux/Windows Python 3.12/3.13 jobs. The exact integrated tree passed **196 tests** on Linux; on the authorized Windows device, Python 3.12 passed **194 tests with 2 platform-specific skips**. Ruff and Pyright passed. See [the current handoff](docs/AGENT_HANDOFF.md) for the gate-by-gate account and outstanding work.
+PRs [#10–#22](https://github.com/David-std/AWF/pulls?q=is%3Apr+is%3Amerged+base%3Adevelop) were reviewed and merged **in sequence into `develop`**, preserving their merge commits. The last completed increment is [PR #22](https://github.com/David-std/AWF/pull/22), merged as `6fc0f5fde290f4febe4acae1689f387d5d22a02c`: 220 Linux tests and 218 Windows tests (+2 platform-specific skips), with 4/4 GitHub Actions jobs Linux/Windows Python 3.12/3.13 passing, plus Ruff and Pyright. This new checkpoint increment is *not* covered by those prior results until its own CI runs. See [the current handoff](docs/AGENT_HANDOFF.md).
 
-Integrity is **not** independent scholarly assessment: review authorization, signed external checkpoints, full durable critic sweeps, recovery benchmarks/backup tests and the 168 rule adjudications remain incomplete. Do not promote `REVIEW_ATTESTED`, publish the historical ZIP or authorize model training based on these infrastructure tests.
+Integrity is **not** independent scholarly assessment: externally verified human independence, actual external checkpoint custody, full durable critic sweeps, recovery benchmarks/backup tests and the 168 rule adjudications remain incomplete. Do not promote `REVIEW_ATTESTED`, publish the historical ZIP or authorize model training based on these infrastructure tests.
 
 ## Implemented core (S0–S1)
 
@@ -101,4 +101,22 @@ No historical requirement is automatically adjudicated by this infrastructure, a
 
 The application can now verify detached Ed25519 reviewer statements over **one exact ledger event** against an externally SHA-pinned reviewer allowlist (actor/key, roles, run/subject, expiry, revocation). The `awf evidence attest` and `attest-verify` commands do not generate or hold reviewer private keys. Audit and knowledge-stage gates can require signed statements in addition to local integrity; legacy receipts are not silently upgraded. See [ADR-0016](docs/adr/0016-signed-reviewer-authorization.md) and [the authorization guide](docs/REVIEWER_AUTH_S2.md).
 
-This is **cryptographic key/role authorization only**, not third-party identity vetting, independent human judgment, trustworthy timestamping, or permission to accept a manuscript. External checkpoints and durable critic sweeps remain open.
+This is **cryptographic key/role authorization only**, not third-party identity vetting, independent human judgment, trustworthy timestamping, or permission to accept a manuscript. Durable critic sweeps remain open.
+
+## Signed ledger checkpoints — Sprint 2 incremental prototype
+
+The `awf evidence checkpoint-propose` command emits an **unsigned** Ed25519
+claim for the current SQLite head, identified by sequence and event digest.
+An offline custodian signs it outside AWF, and `checkpoint-verify` checks a
+**separately retained SHA-256 of the signed checkpoint**, an independently
+pinned authorization policy, the whole signature lineage and exact historical
+prefixes in one SQLite read transaction. Internally valid database truncation
+is detectable relative to the *most recent independently held checkpoint*.
+No private key or remote publication is managed by this code. See
+[ADR-0017](docs/adr/0017-externally-signed-ledger-checkpoints.md) and
+[checkpoint guide](docs/SIGNED_CHECKPOINTS_S2.md).
+
+If the newest digest was never independently retained, a prior valid signed
+checkpoint may still be replayed: the program cannot prove custody, time,
+independence or scientific merit. Real backup/restore and institutional
+rotation are separate S2 deliverables.

@@ -54,6 +54,10 @@ class EvidenceStorePort(Protocol):
         """Verify chain, metadata and payloads; optionally check a trusted prior head."""
         ...
 
+    def verify_anchors(self, *, anchors: tuple[tuple[int, str], ...]) -> LedgerAudit:
+        """Audit the full chain and all signed (sequence, digest) prefixes atomically."""
+        ...
+
     def resolve_event(
         self, *, event_digest: str, expected_head: str | None = None
     ) -> tuple[EvidenceRecord, bytes]:
@@ -61,12 +65,16 @@ class EvidenceStorePort(Protocol):
         ...
 
 
-class ReviewerSignatureVerifierPort(Protocol):
-    """Verify detached signatures against a policy-pinned public key."""
+class SignatureVerifierPort(Protocol):
+    """Verify a detached signature against an independently trusted public key."""
 
     def verify(self, *, public_key_hex: str, signature_hex: str, message: bytes) -> None:
         """Raise EvidenceIntegrityError for an invalid signature or unsupported backend."""
         ...
+
+
+# Compatibility: reviewer authorization published the narrower name in PR #22.
+ReviewerSignatureVerifierPort = SignatureVerifierPort
 
 
 class RevisionJournalPort(Protocol):

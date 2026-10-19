@@ -6,12 +6,13 @@ Neither an authenticated signer nor a permitted role proves reviewer independenc
 
 from __future__ import annotations
 
-import json
 import re
 from dataclasses import dataclass
 from enum import StrEnum
 
 from awf.domain.evidence import EvidenceIntegrityError, EvidenceKind, sha256_bytes
+from awf.domain.signed_documents import canonical_json_bytes as _canonical
+from awf.domain.signed_documents import strict_json
 
 _ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}\Z")
 _SHA = re.compile(r"[a-f0-9]{64}\Z")
@@ -34,45 +35,6 @@ _ROLE_KINDS = {
 
 def _identifier(value: str) -> bool:
     return isinstance(value, str) and _ID.fullmatch(value) is not None
-
-
-def _canonical(value: dict[str, object]) -> bytes:
-    return (
-        json.dumps(
-            value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False
-        )
-        + "\n"
-    ).encode("utf-8")
-
-
-def _unique_pairs(pairs: list[tuple[str, object]]) -> dict[str, object]:
-    obj: dict[str, object] = {}
-    for key, value in pairs:
-        if key in obj:
-            raise EvidenceIntegrityError("duplicate signed JSON field")
-        obj[key] = value
-    return obj
-
-
-def strict_json(data: bytes) -> dict[str, object]:
-    """Reject ambiguous encodings/duplicates and unsanctioned JSON shape changes."""
-    if len(data) > 64 * 1024:
-        raise EvidenceIntegrityError("authorization document exceeds size limit")
-
-    def reject_constant(_: str) -> object:
-        raise EvidenceIntegrityError("nonfinite number in authorization JSON")
-
-    try:
-        value = json.loads(
-            data.decode("utf-8"), object_pairs_hook=_unique_pairs, parse_constant=reject_constant
-        )
-        if not isinstance(value, dict) or _canonical(value) != data:
-            raise EvidenceIntegrityError("authorization JSON must be a canonical object")
-    except EvidenceIntegrityError:
-        raise
-    except (ValueError, UnicodeError, TypeError) as exc:
-        raise EvidenceIntegrityError("invalid authorization JSON") from exc
-    return value
 
 
 @dataclass(frozen=True, slots=True)

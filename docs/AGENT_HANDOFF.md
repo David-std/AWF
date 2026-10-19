@@ -1,5 +1,15 @@
 # AWF — transferencia de Sprint 2
 
+## Continuación de S2: checkpoint de ledger firmado (incremento tras PR #22)
+
+- **Base exacta:** `develop` `6fc0f5fde290f4febe4acae1689f387d5d22a02c` (PR #22 fusionada); `main` conservada `a902135b80e96eea17ebb9c229eed065077e809d`. Rama propuesta: `feat/s2-signed-checkpoints`. No fusionar ni reescribir `main`.
+- **Contrato nuevo:** `CheckpointClaim`/`SignedLedgerCheckpoint` y `CheckpointTrustPolicy` de custodios, independientes de roles científicos. `verify_signed_checkpoint` exige SHA-256 externo de último checkpoint y política; historia completa firmada, ascendente y con prefijos comprobados; `SQLiteEvidenceLedger.verify_anchors` audita en una sola transacción para evitar mezclar snapshots bajo concurrencia.
+- **CLI:** `awf evidence checkpoint-propose` genera solo una propuesta para firmante fuera de AWF. `checkpoint-verify` valida firma, contexto, revocación, historia y bytes del SQLite; `external_custody_proven=false` explícito. Ninguna clave privada se guarda ni se envía. Véanse [ADR-0017](adr/0017-externally-signed-ledger-checkpoints.md) y [guía operativa](SIGNED_CHECKPOINTS_S2.md).
+- **Comprobación local antes de publicación:** 260 tests PASS Linux Python 3.12 (incluidas 18 iteraciones Hypothesis de prefijos aleatorios), Pyright 0 errores y `uv lock --check` PASS; **CI y verificación Windows pendientes** hasta ejecutar el commit exacto de la PR. Actualizar después con resultados efectivamente ejecutados.
+- **Pendiente S2:** custodia externa institucional de últimos hashes y claves, política de rotación histórica/versiones, copias SQLite coherentes con backup/restore y pruebas de fallo/recuperación, barridos críticos durables y rendimiento por lotes, más adjudicación académica real. **0/168 MUST**, 16 lab-only `EVAL_ONLY`.
+
+**Actualización vigente: 2026-10-19 (UTC).** La bitácora de ramas/comprobaciones que sigue documenta estados anteriores, no sustituye la base exacta de este incremento.
+
 ## Continuación de S2: atestaciones de evaluador (incremento posterior a #21)
 
 - **Punto de partida:** `develop` en `6d489f4640fd3e7bca636b790cf006997624e1f4` (PR #21 fusionada), con `main` conservada en `a902135b80e96eea17ebb9c229eed065077e809d`. Este incremento debe revisarse y fusionarse mediante PR a `develop`, nunca como modificación directa de `main`.
