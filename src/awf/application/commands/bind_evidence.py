@@ -156,8 +156,14 @@ def verify_audit_receipts(
         raise EvidenceIntegrityError("audit state bound to different artifact")
     missing: list[str] = []
     slots = {slot.key: slot for slot in state.slots}
-    receipts = {receipt.slot_key for receipt in state.receipts}
+    receipt_keys = [receipt.slot_key for receipt in state.receipts]
+    receipts = set(receipt_keys)
     missing.extend(sorted(slots.keys() - receipts))
+    if len(slots) != len(state.slots):
+        missing.append("duplicate_audit_slots")
+    if len(receipts) != len(receipt_keys):
+        missing.append("duplicate_audit_receipts")
+    missing.extend(f"unknown_dirty:{key}" for key in sorted(state.dirty_keys - slots.keys()))
     for receipt in state.receipts:
         original = receipt.carried_from or receipt.artifact_sha256
         try:
@@ -307,14 +313,16 @@ def verify_progress_claims(
         return EvidenceGateResult(0, ("no_claims",), False)
     missing: list[str] = []
     order = list(KnowledgeStage)
+    execution = progress.claims[0].context_ref
     for index, claim in enumerate(progress.claims):
         try:
             if (
                 claim.reference_id != progress.reference_id
+                or claim.context_ref != execution
                 or index >= len(order)
                 or order[index] != claim.stage
             ):
-                raise EvidenceIntegrityError("missing or reordered knowledge stage")
+                raise EvidenceIntegrityError("missing, reordered or mixed-context knowledge stage")
             payload = _get_event(
                 store,
                 claim.evidence_ref,

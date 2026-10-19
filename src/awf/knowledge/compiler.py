@@ -6,7 +6,7 @@ import hashlib
 import re
 from collections.abc import Mapping, Sequence
 
-from awf.domain.knowledge import Disposition, KnowledgeItem, KnowledgeRegistry
+from awf.domain.knowledge import Disposition, KnowledgeItem, KnowledgeRegistry, ReviewStatus
 from awf.knowledge.classify import initial_disposition, validate_human_decision
 from awf.knowledge.contradictions import exact_description_duplicates
 
@@ -56,7 +56,7 @@ def compile_knowledge(
         ids.add(item_id)
         target = initial_disposition(priority)
         reviewer = reason = None
-        review_status = "UNREVIEWED"
+        review_status = ReviewStatus.UNREVIEWED
         if item_id in reviews:
             overlay = reviews[item_id]
             if not isinstance(overlay, Mapping):
@@ -71,7 +71,9 @@ def compile_knowledge(
             validate_human_decision(target, reviewer=reviewer, reason=reason)
             if priority == "DEFERRED_LAB" and target != Disposition.EVAL_ONLY:
                 raise ValueError("lab-only evidence cannot be promoted to execution or training")
-            review_status = "REVIEW_ATTESTED"
+            # A name and a rationale alone are a proposal, not proof of an
+            # authorized adjudicator, scientific adequacy or training rights.
+            review_status = ReviewStatus.REVIEW_PROPOSED
         output.append(
             KnowledgeItem(
                 item_id=item_id,

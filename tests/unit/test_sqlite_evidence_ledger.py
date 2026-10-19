@@ -143,6 +143,29 @@ def test_missing_immutability_trigger_blocks_verification(tmp_path: Path) -> Non
         ledger.verify()
 
 
+@pytest.mark.parametrize(
+    ("trigger", "table", "operation"),
+    [
+        ("event_immutable_update", "events", "UPDATE"),
+        ("evidence_immutable_delete", "evidence_objects", "DELETE"),
+    ],
+)
+def test_counterfeit_immutable_trigger_with_same_name_is_rejected(
+    tmp_path: Path, trigger: str, table: str, operation: str
+) -> None:
+    ledger = store(tmp_path)
+    append(ledger)
+    with sqlite3.connect(ledger.database) as db:
+        db.execute(f"DROP TRIGGER {trigger}")
+        db.execute(f"CREATE TRIGGER {trigger} BEFORE {operation} ON {table} BEGIN SELECT 1; END")
+    with pytest.raises(EvidenceIntegrityError, match="schema definition changed"):
+        ledger.verify()
+    with pytest.raises(EvidenceIntegrityError, match="schema definition changed"):
+        append(ledger, b"must not append into unprotected database")
+    with pytest.raises(EvidenceIntegrityError, match="schema definition changed"):
+        ledger.initialize()
+
+
 def test_missing_evidence_payload_detected(tmp_path: Path) -> None:
     ledger = store(tmp_path)
     append(ledger)

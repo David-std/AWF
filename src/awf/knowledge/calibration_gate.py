@@ -47,6 +47,8 @@ def challenge_packet(cases: tuple[CalibrationCase, ...], *, operation_id: str) -
         raise ValueError("operation has no registered challenge cases")
     if len({case.case_id for case in selected}) != len(selected):
         raise ValueError("duplicate challenge case identifiers")
+    if any(not isinstance(case.kind, CaseKind) for case in selected):
+        raise ValueError("challenge case kind must be a typed enum")
     if any(
         not case.prompt_ref.strip()
         or not case.answer_key_ref.strip()
@@ -77,6 +79,8 @@ def calibration_debt(
     errors: list[str] = []
     if len(selected) != len([c for c in cases if c.operation_id == operation_id]):
         errors.append("duplicate_case_id")
+    if any(not isinstance(case.kind, CaseKind) for case in selected.values()):
+        errors.append("invalid_case_kind")
     for kind in CaseKind:
         if not any(c.kind == kind for c in selected.values()):
             errors.append(f"missing_case_family:{kind.value}")

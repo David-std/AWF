@@ -11,6 +11,7 @@ import pytest
 
 from awf.domain.knowledge_integrity import (
     AxisReceipt,
+    CanonicalManifest,
     ChunkReceipt,
     KnowledgeProgress,
     KnowledgeStage,
@@ -72,6 +73,14 @@ def test_empty_document_still_has_one_explicit_chunk() -> None:
     assert m.sources[0].chunks[0].offset_start == 0
     assert m.sources[0].chunks[0].offset_end == 0
     assert len(m.sources[0].chunks) == 1
+    # Inventory preservation must never turn an empty source into a READ PASS.
+    attempted = assess_coverage(
+        m,
+        (ChunkReceipt("empty", "C0001", m.sources[0].chunks[0].sha256, "reader", "event"),),
+        (AxisReceipt("truth", "axis-event"),),
+    )
+    assert attempted.complete is False
+    assert "empty_source:empty" in attempted.invalid_receipts
 
 
 def test_empty_or_duplicate_source_and_axis_inventory_is_rejected() -> None:
@@ -238,6 +247,47 @@ def test_preservation_detects_removed_and_changed_negative_knowledge() -> None:
     )
     assert preservation_debt(initial, new) == ("changed:foundation", "removed:rare")
     assert preservation_debt(initial, initial) == ()
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"critical": True},
+        {"evidence_pointer": "new:unverified-location"},
+        {"dependencies": ()},
+    ],
+)
+def test_preservation_debt_includes_metadata_changes(change: dict[str, object]) -> None:
+    initial = manifest()
+    changed_sources = tuple(
+        replace(ref, **change) if ref.reference_id == "core" else ref for ref in initial.sources
+    )
+    updated = CanonicalManifest(initial.version, changed_sources, initial.expected_axes)
+    assert preservation_debt(initial, updated) == ("changed:core",)
+
+
+def test_manifest_rejects_empty_axis_invalid_digest_and_zero_length_fake_chunks() -> None:
+    original = manifest()
+    with pytest.raises(ValueError, match="axes"):
+        CanonicalManifest(original.version, original.sources, ("",))
+    with pytest.raises(ValueError, match="digest"):
+        CanonicalManifest(
+            original.version,
+            (replace(original.sources[0], sha256="not-hash"),) + original.sources[1:],
+            original.expected_axes,
+        )
+    ref = original.sources[0]
+    broken = replace(ref, chunks=(replace(ref.chunks[0], offset_end=0),) + ref.chunks[1:])
+    with pytest.raises(ValueError, match="contiguous"):
+        CanonicalManifest(
+            original.version, (broken,) + original.sources[1:], original.expected_axes
+        )
+
+
+@pytest.mark.parametrize("amount", [True, 4.0, "4096"])
+def test_chunk_size_must_be_integral(amount: object) -> None:
+    with pytest.raises(ValueError, match="chunk_bytes"):
+        build_manifest(sources(), version="v", expected_axes=("truth",), chunk_bytes=amount)  # type: ignore[arg-type]
 
 
 def test_retrieval_preserves_dependencies_and_rare_critical_exception() -> None:

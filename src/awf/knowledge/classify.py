@@ -17,7 +17,7 @@ def initial_disposition(priority: str) -> Disposition:
 def validate_human_decision(
     target: Disposition, *, reviewer: str | None, reason: str | None
 ) -> None:
-    """Reject untraceable promotion; a training decision still needs data rights review."""
+    """Reject untraceable proposals; no overlay independently authorizes a promotion."""
     if target == Disposition.UNRESOLVED:
         raise ValueError("a review decision must select a non-UNRESOLVED disposition")
     if reviewer is None or len(reviewer.strip()) < 2:

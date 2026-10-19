@@ -37,7 +37,11 @@ la invalidación de auditorías o sin un hallazgo material y su resolución.
    IDs repetidos, tipos incorrectos, versiones obsoletas y observación vacía.
 6. En la recuperación verificar todos los eventos, su correspondencia con
    cada snapshot, run/operación, hash de solicitud y reproducción del dominio
-   contra el estado anterior. Intención sin commit/snapshot bloquea el acceso.
+   contra el estado anterior. Comprobar también el **orden temporal** dentro
+   del ledger: recibo de auditoría o intención posterior al commit previo y
+   anterior a su propio commit. No aceptar un recibo preexistente, aunque
+   todos los hashes y metadatos coincidan. Intención sin commit/snapshot
+   bloquea el acceso.
 
 ## Alternativas y consecuencias
 
@@ -70,5 +74,7 @@ Pruebas sintéticas de invalidación global/local y vecinos, persistencia de
 hallazgos durante edición, resolución explícita y auditoría nueva; reinicio,
 replay, claves reutilizadas, presupuesto, carrera de dos escritores, caída
 abrupta posterior a la intención, rollback por trigger e intención huérfana.
+Se prueba además el rechazo de un recibo válido generado antes de crear la
+revisión, indebidamente reutilizado en un commit posterior.
 CI multiplataforma y revisión independiente permanecen como condiciones de
 cierre técnico, no de certificación académica.

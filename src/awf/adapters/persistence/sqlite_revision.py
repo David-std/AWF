@@ -7,6 +7,7 @@ and external iterations remain in memory; no journal result certifies a critic.
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from collections.abc import Callable
 from dataclasses import replace
@@ -63,6 +64,11 @@ _CREATE_TRIGGERS = (
     BEGIN SELECT RAISE(ABORT, 'revision snapshots immutable'); END""",
 )
 _REVISION_TRIGGERS = {"revision_snapshot_immutable_update", "revision_snapshot_immutable_delete"}
+_EXPECTED_REVISION_DDL = {
+    "revision_snapshots": _CREATE_TABLE,
+    "revision_snapshot_immutable_update": _CREATE_TRIGGERS[0],
+    "revision_snapshot_immutable_delete": _CREATE_TRIGGERS[1],
+}
 _SELECT = (
     "version, operation_id, run_id, request_sha256, previous_state_sha256, "
     "state_sha256, state_bytes, transition_digest"
@@ -84,6 +90,11 @@ def _request_hash(payload: dict[str, object]) -> str:
     return sha256_bytes(_canonical(payload))
 
 
+def _canonical_ddl(statement: str) -> str:
+    """Ignore creation-only idempotency syntax, never trigger bodies or constraints."""
+    return re.sub(r"\s+", " ", re.sub(r"\bIF\s+NOT\s+EXISTS\b", "", statement, flags=re.I)).strip()
+
+
 def _event_payload(conn: sqlite3.Connection, digest: str) -> tuple[str, str, str, bytes]:
     row = conn.execute(
         """SELECT e.kind, e.run_id, e.subject_id, o.payload
@@ -94,6 +105,13 @@ def _event_payload(conn: sqlite3.Connection, digest: str) -> tuple[str, str, str
     if row is None or not isinstance(row[3], bytes):
         raise EvidenceIntegrityError("revision references a missing evidence event")
     return str(row[0]), str(row[1]), str(row[2]), row[3]
+
+
+def _event_sequence(conn: sqlite3.Connection, digest: str) -> int:
+    row = conn.execute("SELECT sequence FROM events WHERE digest=?", (digest,)).fetchone()
+    if row is None or type(row[0]) is not int:
+        raise EvidenceIntegrityError("revision event order references a missing event")
+    return row[0]
 
 
 def _after_event(report: LedgerAudit, digest: str) -> LedgerAudit:
@@ -157,24 +175,18 @@ class SQLiteRevisionJournal:
 
     @staticmethod
     def _check_schema(conn: sqlite3.Connection) -> None:
-        existing = {
-            str(row[0])
-            for row in conn.execute("SELECT name FROM sqlite_master WHERE type='trigger'")
+        definitions = {
+            str(row[0]): str(row[1])
+            for row in conn.execute(
+                "SELECT name, sql FROM sqlite_master WHERE type IN ('table', 'trigger')"
+            )
         }
-        columns = {str(row[1]) for row in conn.execute("PRAGMA table_info(revision_snapshots)")}
-        required = {
-            "revision_id",
-            "version",
-            "operation_id",
-            "run_id",
-            "request_sha256",
-            "previous_state_sha256",
-            "state_sha256",
-            "state_bytes",
-            "transition_digest",
-        }
-        if not _REVISION_TRIGGERS.issubset(existing) or columns != required:
+        if not _REVISION_TRIGGERS.issubset(definitions):
             raise EvidenceIntegrityError("revision snapshot schema or immutability trigger missing")
+        for name, expected in _EXPECTED_REVISION_DDL.items():
+            actual = definitions.get(name)
+            if actual is None or _canonical_ddl(actual) != _canonical_ddl(expected):
+                raise EvidenceIntegrityError(f"revision schema definition changed: {name}")
 
     def _recover(
         self, conn: sqlite3.Connection, revision_id: str, head: str
@@ -206,6 +218,7 @@ class SQLiteRevisionJournal:
         previous_digest = GENESIS_DIGEST
         previous_run: str | None = None
         previous_state: RevisionState | None = None
+        previous_commit_sequence = 0
         claimed_intents: set[str] = set()
         for index, row in enumerate(rows):
             version, op_id, run_id, req_sha, prev_sha, state_sha, raw, transition = row
@@ -260,6 +273,9 @@ class SQLiteRevisionJournal:
                 raise EvidenceIntegrityError("unknown revision transition schema")
             if _canonical(expected) != content:
                 raise EvidenceIntegrityError("revision transition differs from snapshot metadata")
+            commit_sequence = _event_sequence(conn, str(transition))
+            if commit_sequence <= previous_commit_sequence:
+                raise EvidenceIntegrityError("revision commit event order is inconsistent")
             if index == 0:
                 if (
                     body.get("schema") != 1
@@ -270,6 +286,8 @@ class SQLiteRevisionJournal:
                     or state.clean_sweeps
                     or state.dirty_keys != frozenset(slot.key for slot in state.slots)
                     or state.event_log != (f"START:{state.artifact_sha256}",)
+                    or state.revision_cycles != 0
+                    or state.external_iterations != 0
                 ):
                     raise EvidenceIntegrityError("invalid initial revision snapshot")
             elif body.get("schema") == 1:
@@ -280,6 +298,12 @@ class SQLiteRevisionJournal:
                     expected["audit_slot_key"],
                     expected["audit_event_ref"],
                 )
+                self._check_audit_replay(snapshots[-1].state, state, expected["audit_slot_key"])
+                audit_ref = expected["audit_event_ref"]
+                assert isinstance(audit_ref, str)
+                audit_sequence = _event_sequence(conn, audit_ref.removeprefix("event:"))
+                if not previous_commit_sequence < audit_sequence < commit_sequence:
+                    raise EvidenceIntegrityError("audit event order is inconsistent with commit")
             else:
                 intent_ref = expected["intent_event_ref"]
                 if not isinstance(intent_ref, str) or not intent_ref.startswith("event:"):
@@ -299,15 +323,61 @@ class SQLiteRevisionJournal:
                     kind=expected["operation_kind"],
                     intent_ref=intent_ref,
                 )
+                intent_sequence = _event_sequence(conn, intent_ref[6:])
+                if not previous_commit_sequence < intent_sequence < commit_sequence:
+                    raise EvidenceIntegrityError("revision intent event order is inconsistent")
             snapshots.append(
                 PersistedRevision(revision_id, str(run_id), version, state, str(op_id), head)
             )
             previous_digest = str(state_sha)
             previous_run = str(run_id)
             previous_state = state
+            previous_commit_sequence = commit_sequence
         if intent_event_digests != claimed_intents:
             raise EvidenceIntegrityError("revision intent lacks a matching committed snapshot")
         return snapshots
+
+    @staticmethod
+    def _check_audit_replay(
+        previous: RevisionState, current: RevisionState, slot_key: object
+    ) -> None:
+        """Reconstruct the allowed state delta without needing unpublished document bytes.
+
+        Scope fingerprints were calculated from the document when committed;
+        recovery checks their binding to an intact evidence event separately.
+        """
+        if not isinstance(slot_key, str):
+            raise EvidenceIntegrityError("audit replay lacks a slot identity")
+        slot = next((item for item in previous.slots if item.key == slot_key), None)
+        receipt = next((item for item in current.receipts if item.slot_key == slot_key), None)
+        if (
+            slot is None
+            or receipt is None
+            or receipt.carried_from is not None
+            or receipt.artifact_sha256 != previous.artifact_sha256
+            or type(receipt.checks_executed) is not int
+            or not 0 <= receipt.checks_executed <= slot.required_checks
+            or (
+                receipt.status == AuditStatus.CLEAN
+                and receipt.checks_executed != slot.required_checks
+            )
+        ):
+            raise EvidenceIntegrityError("invalid audit receipt in replay")
+        next_dirty = (
+            previous.dirty_keys - {slot_key}
+            if receipt.status == AuditStatus.CLEAN
+            else previous.dirty_keys | {slot_key}
+        )
+        expected = replace(
+            previous,
+            receipts=tuple(r for r in previous.receipts if r.slot_key != slot_key) + (receipt,),
+            dirty_keys=frozenset(next_dirty),
+            clean_sweeps=(),
+            event_log=previous.event_log
+            + (f"AUDIT:{slot_key}:{receipt.status.value}:{previous.artifact_sha256}",),
+        )
+        if current != expected:
+            raise EvidenceIntegrityError("replayed audit changed unrelated revision state")
 
     @staticmethod
     def _check_intent_link(

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -66,26 +67,32 @@ def read_requirement_ledger(
     """Verify exact ZIP identity, boundaries, ledger shape and expected coverage."""
     if not path.is_file():
         raise KnowledgeSourceError("source ZIP does not exist locally")
-    size = path.stat().st_size
-    if size == 0 or size > MAX_ARCHIVE_BYTES:
-        raise KnowledgeSourceError("ZIP size is outside the permitted range")
-    actual = checksum_file(path)
-    if actual != expected_sha256:
-        raise KnowledgeSourceError("source ZIP SHA-256 differs from pinned manifest")
     try:
-        with zipfile.ZipFile(path) as archive:
-            if len(archive.infolist()) > MAX_ARCHIVE_ENTRIES:
-                raise KnowledgeSourceError("archive exceeds entry-count limit")
-            matches = [item for item in archive.infolist() if item.filename == LEDGER_PATH]
-            if len(matches) != 1:
-                raise KnowledgeSourceError("required ledger path must occur exactly once")
-            info = matches[0]
-            if info.file_size > MAX_LEDGER_BYTES:
-                raise KnowledgeSourceError("ledger exceeds decompressed-size limit")
-            with archive.open(info, "r") as stream:
-                raw = stream.read(MAX_LEDGER_BYTES + 1)
-            if len(raw) > MAX_LEDGER_BYTES:
-                raise KnowledgeSourceError("ledger exceeds read limit")
+        with path.open("rb") as source:
+            size = os.fstat(source.fileno()).st_size
+            if size == 0 or size > MAX_ARCHIVE_BYTES:
+                raise KnowledgeSourceError("ZIP size is outside the permitted range")
+            hasher = hashlib.sha256()
+            for chunk in iter(lambda: source.read(1024 * 1024), b""):
+                hasher.update(chunk)
+            if hasher.hexdigest() != expected_sha256:
+                raise KnowledgeSourceError("source ZIP SHA-256 differs from pinned manifest")
+            source.seek(0)
+            # Use the same opened file descriptor that was hashed. Reopening the
+            # pathname after verification would permit archive replacement.
+            with zipfile.ZipFile(source) as archive:
+                if len(archive.infolist()) > MAX_ARCHIVE_ENTRIES:
+                    raise KnowledgeSourceError("archive exceeds entry-count limit")
+                matches = [item for item in archive.infolist() if item.filename == LEDGER_PATH]
+                if len(matches) != 1:
+                    raise KnowledgeSourceError("required ledger path must occur exactly once")
+                info = matches[0]
+                if info.file_size > MAX_LEDGER_BYTES:
+                    raise KnowledgeSourceError("ledger exceeds decompressed-size limit")
+                with archive.open(info, "r") as stream:
+                    raw = stream.read(MAX_LEDGER_BYTES + 1)
+                if len(raw) > MAX_LEDGER_BYTES:
+                    raise KnowledgeSourceError("ledger exceeds read limit")
     except (zipfile.BadZipFile, RuntimeError, OSError) as exc:
         raise KnowledgeSourceError("invalid ZIP archive") from exc
     try:

@@ -29,15 +29,19 @@ la misma versión sin detectar el conflicto.
 4. Recuperar desde las instantáneas ordenadas y comprobar toda la cadena previa
    de eventos y objetos. Cada evento de commit debe corresponder a una fila,
    y cada fila a un evento exacto. Comprobar hashes padre/estado, run, versión,
-   payload y el recibo de auditoría unido al evento original.
+   payload y el recibo de auditoría unido al evento original. Reproducir
+   estructuralmente el delta permitido para `AUDIT`: ninguna instantánea de
+   auditoría puede cambiar hallazgos, contadores, inventario u otros campos
+   ajenos a esa operación aunque su evento y hash sean internamente válidos.
 5. Mantener `RevisionState` y sus operaciones puras. El puerto
    `RevisionJournalPort` ofrece en este corte solo `create`, `record_audit` y
    `load`, sin persistir aún `accept_edit`, hallazgos ni barridos críticos.
    **El camino previo en memoria no se vuelve durable automáticamente.**
 6. Preservar el esquema `user_version=1` del ledger de evidencia; la tabla nueva
    es una extensión aditiva, sin eliminar ni convertir eventos históricos.
-   Si un trigger de inmutabilidad existente desaparece, se rechaza su lectura,
-   sin repararlo silenciosamente.
+   Verificar la definición efectiva de la tabla y los disparadores, no solo
+   sus nombres: si se elimina o sustituye un trigger de inmutabilidad por un
+   disparador inerte con igual nombre, se rechaza su lectura, sin repararlo.
 
 ## Alternativas y consecuencias
 
@@ -70,7 +74,8 @@ Pruebas sintéticas verifican reinicio, retry tras respuesta perdida, misma clav
 con distinto contenido, versión antigua, ejecución diferente, error provocado
 después del evento de auditoría, salida abrupta del proceso antes del commit,
 competencia de dos escritores, migración aditiva, pérdida de fila, alteración de
-bytes y trigger ausente. La CI multiplataforma verifica la compatibilidad.
+bytes, trigger ausente o sustituido sin protección y commit íntegro que introduce
+un cambio ajeno a la transición `AUDIT`. La CI multiplataforma verifica la compatibilidad.
 
 **No se demuestra:** identidad o autoridad del evaluador, verdad académica,
 independencia entre críticos, seguridad ante un atacante que reescribe la base

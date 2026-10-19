@@ -12,8 +12,10 @@ from pathlib import Path
 
 import pytest
 
+import awf.adapters.persistence.sqlite_revision as revision_adapter
 from awf.adapters.document.markdown_adapter import MarkdownAdapter
 from awf.adapters.persistence.sqlite_revision import RevisionConflictError, SQLiteRevisionJournal
+from awf.application.commands.bind_evidence import audit_claim_payload
 from awf.domain.evidence import EvidenceIntegrityError, EvidenceKind
 from awf.domain.revision_audit import (
     AuditScope,
@@ -22,6 +24,8 @@ from awf.domain.revision_audit import (
     RevisionPolicy,
     RevisionVerdict,
     decision,
+    record_audit,
+    start_revision,
 )
 
 
@@ -197,6 +201,71 @@ def test_intent_is_event_bound_to_run_and_operation(tmp_path: Path) -> None:
     assert event.kind == EvidenceKind.REVISION_TRANSITION
     assert (event.run_id, event.subject_id) == ("run-1", "revision-1")
     assert json.loads(raw)["operation_kind"] == "FINDING_OPEN"
+
+
+def test_recovery_rejects_audit_event_from_before_revision_start(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    store = SQLiteRevisionJournal(tmp_path / "ledger.sqlite")
+    store.initialize()
+    manuscript = doc()
+    slot = AuditSlot(manuscript.blocks[1].block_id, "sources", 2)
+    provisional = record_audit(
+        start_revision(manuscript, (slot,)),
+        manuscript,
+        slot_key=slot.key,
+        status=AuditStatus.CLEAN,
+        checks_executed=2,
+        evidence_ref="uncommitted-observation",
+    )
+    old_receipt_event = store.ledger.append(
+        kind=EvidenceKind.AUDIT_RECEIPT,
+        run_id="run-1",
+        subject_id=slot.key,
+        content=audit_claim_payload(provisional.receipts[0], observation_ref="synthetic:pre-start"),
+    )
+    store.create(
+        revision_id="revision-1",
+        operation_id="start",
+        run_id="run-1",
+        document=manuscript,
+        slots=(slot,),
+    )
+    original_append = store.ledger._append_in_transaction
+
+    def incorrectly_reuse_prior_event(conn, report, *, kind, run_id, subject_id, content):
+        if kind == EvidenceKind.AUDIT_RECEIPT:
+            return old_receipt_event
+        return original_append(
+            conn,
+            report,
+            kind=kind,
+            run_id=run_id,
+            subject_id=subject_id,
+            content=content,
+        )
+
+    with monkeypatch.context() as patch:
+        patch.setattr(store.ledger, "_append_in_transaction", incorrectly_reuse_prior_event)
+        # A buggy orchestration path might also preserve the current head
+        # instead of counting a new audit event that was never written.
+        patch.setattr(revision_adapter, "_after_event", lambda report, _digest: report)
+        store.record_audit(
+            revision_id="revision-1",
+            operation_id="audit",
+            run_id="run-1",
+            document=manuscript,
+            expected_version=0,
+            slot_key=slot.key,
+            status=AuditStatus.CLEAN,
+            checks_executed=2,
+            observation_ref="synthetic:pre-start",
+        )
+    # All bytes, event identities, state hashes and schema objects are sound;
+    # only the temporal relationship between receipt and revision is false.
+    assert store.ledger.verify().events_checked == 3
+    with pytest.raises(EvidenceIntegrityError, match="audit event order"):
+        store.load(revision_id="revision-1")
 
 
 def test_retry_old_snapshot_and_changed_request_conflicts(tmp_path: Path) -> None:

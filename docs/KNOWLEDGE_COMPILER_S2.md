@@ -38,13 +38,16 @@ La justificación debe ser concreta. Las disposiciones disponibles son `KEEP_AS_
 - Digest del ZIP: identidad exacta de bytes respecto del manifiesto.
 - Digest de regla: identidad de enunciado normalizado, no respaldo académico.
 - Importación: integridad estructural y ausencia de omisiones.
-- `REVIEW_ATTESTED`: decisión trazada, no validación independiente de calidad.
+- `REVIEW_PROPOSED`: propuesta de clasificación y motivo atribuido a un revisor declarado, **no** una adjudicación formal, autorización de uso ni permiso de entrenamiento. Una cadena de nombre y razón no demuestra identidad.
+- `REVIEW_ATTESTED`: **reservado**; el importador v1 no lo produce y la auditoría v1 rechaza registros que reclamen ese estatus porque todavía no hay verificación independiente ni evidencias ligadas por regla.
 - `knowledge audit`: consistencia del reporte, no prueba de que cada revisión sea correcta.
 - Duplicados: coincidencia textual; contradicciones semánticas **no** implementadas.
 
 ## Pendientes del Sprint 2
 
 Integrar revisión basada en casos, clasificar/justificar los 168 `MUST` uno por uno, inventariar licencias del corpus, detectar conflictos con evidencia, cerrar dependencias explícitas, construir dataset card y decidir almacenamiento transaccional por necesidades reales. Deben mantenerse visibles como pendientes incluso cuando la CI esté verde.
+
+**Endurecimiento previo a fusión (2026-10-19):** overlays preexistentes que antes generaban `REVIEW_ATTESTED` ahora generan `REVIEW_PROPOSED` al reimportarse. Los reportes antiguos que afirman attestation sin evidencias independientes se rechazan, por lo que deben reconstruirse a partir del ZIP local fijado. La prohibición de promocionar `DEFERRED_LAB` se verifica también al auditar un JSON alterado manualmente. Esta migración es intencionalmente no destructiva: no se reescribe el ZIP ni el registro histórico original.
 
 
 ## Workbench privado de revisión por lotes (S2)

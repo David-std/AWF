@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
 from awf.knowledge.calibration_gate import (
@@ -103,4 +105,14 @@ def test_foreign_judgment_does_not_authenticate_operation() -> None:
     alien = CalibrationJudgment("other-case", Verdict.PASSED, "reviewer", "proof")
     assert "unknown_judgment_case" in calibration_debt(
         cases(), results() + (alien,), operation_id="preserve_causality"
+    )
+
+
+def test_untyped_case_family_cannot_fake_calibration() -> None:
+    original = cases()
+    corrupted = (replace(original[0], kind="POSITIVE"),) + original[1:]  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="typed enum"):
+        challenge_packet(corrupted, operation_id="preserve_causality")
+    assert "invalid_case_kind" in calibration_debt(
+        corrupted, results(), operation_id="preserve_causality"
     )

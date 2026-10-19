@@ -10,3 +10,7 @@
 - **Alternativas rechazadas:** copiar el corpus histórico a GitHub, convertir automáticamente cada `MUST` en condicional ejecutable, usar salida de un LLM como evidencia suficiente, promover el estado `IMPLEMENTED` histórico sin tests.
 - **Limitaciones:** todavía no existe reconciliación transaccional de dictámenes desde las fichas ni auditoría automática de contradicciones científicas. Una futura acción de cierre debe exigir evidencia y versionado de cada decisión y seguir siendo capaz de emitir `UNKNOWN`.
 - **Verificación de esta decisión:** PR #14, commit de código `9c65157243f15f689fde325157679bf35882753c`, CI de cuatro plataformas/intérpretes aprobada y ejecución local con archivo auténtico que produjo 20 lotes privados, 184 fichas únicas y cero revisadas.
+
+### Revisión de integridad previa a fusión (2026-10-19)
+
+La regeneración ya no sustituye incondicionalmente los lotes existentes. `save_review_workbench` comprueba primero el manifiesto y **todos** los lotes: si algún archivo difiere del paquete generado, se detiene sin sobrescribir anotaciones ni crear parcialmente archivos nuevos. Si una interrupción dejó un subconjunto idéntico de archivos, la reejecución completa los faltantes y publica el manifest al final. Los archivos privados siguen sin cifrarse, y la herramienta no afirma aislamiento frente a actores locales que cambian directorios simultáneamente a la escritura.
