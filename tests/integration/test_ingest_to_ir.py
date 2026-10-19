@@ -4,6 +4,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+from concurrent.futures import ThreadPoolExecutor
+
+import pytest
 
 from awf.adapters.document.markdown_adapter import MarkdownAdapter
 from awf.adapters.persistence.blob_store import BlobIntegrityError, FileBlobStore
@@ -72,3 +76,77 @@ def test_json_to_stdout_when_output_not_specified(tmp_path, capsys) -> None:
     result = json.loads(capsys.readouterr().out)
     assert result["blocks"][0]["kind"] == "paragraph"
     assert not (tmp_path / "blobs").exists()
+
+
+def test_output_hardlink_cannot_overwrite_original(tmp_path, capsys) -> None:
+    source = tmp_path / "original.md"
+    source.write_bytes(b"protected original")
+    alias = tmp_path / "alias.json"
+    try:
+        os.link(source, alias)
+    except OSError:
+        pytest.skip("this filesystem does not support hard links")
+    assert main(["ingest", str(source), "--output", str(alias)]) == 2
+    assert source.read_bytes() == b"protected original"
+    assert alias.read_bytes() == b"protected original"
+    assert "SOURCE_PROTECTED" in capsys.readouterr().err
+
+
+def test_output_replace_failure_preserves_prior_result(tmp_path, monkeypatch, capsys) -> None:
+    source = tmp_path / "original.md"
+    source.write_text("a paragraph", encoding="utf-8")
+    destination = tmp_path / "result.json"
+    destination.write_bytes(b"previous valid result")
+
+    def fail_replace(_source, _destination) -> None:
+        raise OSError("simulated interrupted publication")
+
+    monkeypatch.setattr("awf.cli.main.os.replace", fail_replace)
+    assert main(["ingest", str(source), "--output", str(destination)]) == 2
+    assert destination.read_bytes() == b"previous valid result"
+    assert source.read_text(encoding="utf-8") == "a paragraph"
+    assert not list(tmp_path.glob(".awf-*"))
+    assert "INGEST_FAILED" in capsys.readouterr().err
+
+
+def test_blob_rejects_symlinked_hash_directory(tmp_path) -> None:
+    root = tmp_path / "private"
+    root.mkdir()
+    external = tmp_path / "external"
+    external.mkdir()
+    raw = b"confidential synthetic bytes"
+    digest = hashlib.sha256(raw).hexdigest()
+    try:
+        (root / digest[:2]).symlink_to(external, target_is_directory=True)
+    except OSError:
+        pytest.skip("creating directory symlinks requires additional OS privileges")
+    with pytest.raises(BlobIntegrityError, match="escapes"):
+        FileBlobStore(root).put(raw)
+    assert not (external / digest).exists()
+
+
+def test_blob_rejects_existing_symlink_even_when_content_matches(tmp_path) -> None:
+    root = tmp_path / "private"
+    raw = b"existing content"
+    digest = hashlib.sha256(raw).hexdigest()
+    target = tmp_path / "other"
+    target.write_bytes(raw)
+    destination = root / digest[:2] / digest
+    destination.parent.mkdir(parents=True)
+    try:
+        destination.symlink_to(target)
+    except OSError:
+        pytest.skip("creating symlinks requires additional OS privileges")
+    with pytest.raises(BlobIntegrityError, match="wrong content"):
+        FileBlobStore(root).put(raw)
+
+
+def test_concurrent_blob_writers_publish_only_complete_originals(tmp_path) -> None:
+    store = FileBlobStore(tmp_path / "private")
+    raw = b"synthetic academic source\n" * 65_536
+    expected = hashlib.sha256(raw).hexdigest()
+    with ThreadPoolExecutor(max_workers=12) as pool:
+        digests = list(pool.map(store.put, [raw] * 24))
+    assert digests == [expected] * 24
+    assert store.path_for(expected).read_bytes() == raw
+    assert not list(store.path_for(expected).parent.glob(".awf-*"))
