@@ -32,12 +32,15 @@ Estados: `DESIGNED` (especificado), `OPEN` (requiere decisión), `IMPLEMENTED` (
 | AWF-R024 | No exigir una GUI antes de validar núcleo y benchmark | Riesgo de scope | CLI inicial, API posterior, sin React por defecto | S0–S7 | DESIGNED |
 | AWF-R025 | Vincular dictámenes S2 a claves y roles de revisores autorizados | Riesgo de suplantación en ledger | Firma Ed25519, política externa fijada por SHA, caducidad/revocación, test de intercambio y CLI | S2 | IMPLEMENTED_PARTIAL |
 | AWF-R026 | Detectar truncamiento/reconstrucción SQLite aunque conserve hashes internos | Riesgo de rollback del ledger tras firma de auditoría | Checkpoint externo Ed25519 con policy SHA-pinned, cadena de prefijos y pruebas de rollback/replay; custodia real sigue externa | S2 | IMPLEMENTED_PARTIAL |
+| AWF-R027 | Recuperar sin pérdida silenciosa de WAL ni snapshots de revisión, nunca sobrescribiendo un ledger activo | Durabilidad/cutover S2 | `sqlite3.backup`, head firmado exacto, replay íntegro de revisiones y publicación create-only; test WAL/race/tamper/fallo | S2 | IMPLEMENTED_PARTIAL |
 
 ## Procedimiento para implementar cada fila
 
 Cada cambio crea relación verificable: `AWF-Rxxx → ADR → código/archivo → tests → commit → demo`. El PR registra evidencias ejecutadas, fallos y exclusiones. Nunca convertir DESIGNED en IMPLEMENTED solo porque existe un módulo vacío.
 
 **AWF-R026:** [ADR-0017](adr/0017-externally-signed-ledger-checkpoints.md) → `domain/checkpoints.py`, `application/commands/checkpoints.py`, `SQLiteEvidenceLedger.verify_anchors` → `tests/integration/test_signed_checkpoints.py` (truncamiento de una instantánea SQLite válida, sustitución de bytes, permisos, firmas, política, JSON, historia y CLI). La aprobación interna no demuestra custodia externa real, disponibilidad de testigo ni tiempo confiable.
+
+**AWF-R027:** [ADR-0018](adr/0018-wal-aware-signed-backup-recovery.md) → `SnapshotWriterPort`, `application/commands/verified_snapshot.py`, `adapters/persistence/sqlite_snapshots.py`, `SQLiteRevisionJournal.verify_all_revisions` → `tests/integration/test_verified_sqlite_snapshots.py` (WAL con lector retenido, race de append, estados huérfanos, tamper, destino existente, symlink, error de publicación y CLI). No implica gestor remoto de backups ni cutover seguro automático.
 
 ## Migración heredada AWS
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — WAL-aware signed backup and restore (Sprint 2)
+
+- Add SQLite online backup creation and fresh-path restore guarded by the latest independently pinned Ed25519 signed checkpoint, without overwriting existing state or accessing custodian private keys.
+- Verify the entire revision journal including replay and orphan transitions, not just event hashes, before publishing a staged copy with an atomic create-only hardlink.
+- Cover active WAL frames, concurrent append, altered revision state, tampered backup, existing targets, symlinks, failed publication and CLI. ADR-0018 keeps automatic cutover, actual external custody and RPO/RTO outside the prototype.
+
 ## Unreleased — externally signed ledger checkpoints (Sprint 2)
 
 - Add a separate Ed25519 custodian trust policy, canonical versioned checkpoint claims, an externally held latest-checkpoint hash and mandatory signed ancestry for detecting internally valid truncation/rollback.

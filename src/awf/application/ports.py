@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Protocol
 
-from awf.application.dto import LoadedKnowledgeSource, PersistedRevision
+from awf.application.dto import LoadedKnowledgeSource, PersistedRevision, SnapshotReceipt
 from awf.domain.document import DocumentIR
 from awf.domain.evidence import EvidenceKind, EvidenceRecord, LedgerAudit
 from awf.domain.revision_audit import AuditSlot, AuditStatus, RevisionPolicy
@@ -75,6 +75,16 @@ class SignatureVerifierPort(Protocol):
 
 # Compatibility: reviewer authorization published the narrower name in PR #22.
 ReviewerSignatureVerifierPort = SignatureVerifierPort
+
+
+class SnapshotWriterPort(Protocol):
+    """Produce a validated new snapshot without overwriting existing state."""
+
+    def create_new(
+        self, *, destination: Path, expected_head: str, expected_events: int
+    ) -> SnapshotReceipt:
+        """Commit a coherent copy only when its contents match this trusted head."""
+        ...
 
 
 class RevisionJournalPort(Protocol):

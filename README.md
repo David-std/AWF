@@ -2,7 +2,7 @@
 
 **AWF Neural Engine** is an engineering and machine-learning project for traceable academic text revision in Spanish and English. The goal is to preserve meaning, citations, evidence, and author intent while comparing pretrained editors, fine-tuned models, and explicit verification policies.
 
-**Status on `develop` (2026-10-19): architecture, S0, S1 and S2 increments through PR #22 are merged and verified.** [PR #23](https://github.com/David-std/AWF/pull/23) proposes the externally signed ledger checkpoint increment for review. `main` remains at its pre-integration baseline; Sprint 2 is still open. None of the 168 mandatory historic rules has been formally adjudicated. The neural editor, independent semantic verifier, training and external API are **not implemented**. This repository maintains research provenance without claiming detector performance.
+**Status on `develop` (2026-10-19): architecture, S0, S1 and S2 increments through PR #23 are merged and verified.** This branch proposes WAL-aware signed backup/restore for review. `main` remains at its pre-integration baseline; Sprint 2 is still open. None of the 168 mandatory historic rules has been formally adjudicated. The neural editor, independent semantic verifier, training and external API are **not implemented**. This repository maintains research provenance without claiming detector performance.
 
 ## Start here
 
@@ -16,9 +16,9 @@
 
 ## Integration status and current limits
 
-PRs [#10–#22](https://github.com/David-std/AWF/pulls?q=is%3Apr+is%3Amerged+base%3Adevelop) were reviewed and merged **in sequence into `develop`**, preserving their merge commits. The last completed increment is [PR #22](https://github.com/David-std/AWF/pull/22), merged as `6fc0f5fde290f4febe4acae1689f387d5d22a02c`: 220 Linux tests and 218 Windows tests (+2 platform-specific skips), with 4/4 GitHub Actions jobs Linux/Windows Python 3.12/3.13 passing, plus Ruff and Pyright. This new checkpoint increment is *not* covered by those prior results until its own CI runs. See [the current handoff](docs/AGENT_HANDOFF.md).
+PRs [#10–#23](https://github.com/David-std/AWF/pulls?q=is%3Apr+is%3Amerged+base%3Adevelop) were reviewed and merged **in sequence into `develop`**, preserving their merge commits. The last completed increment is [PR #23](https://github.com/David-std/AWF/pull/23), merged as `484b911b1b754909786510273cee6218825258d9`: 260 Linux tests and 258 Windows tests (+2 platform-specific skips), with 4/4 GitHub Actions jobs Linux/Windows Python 3.12/3.13 passing, plus Ruff and Pyright ([run 39197320026](https://github.com/David-std/AWF/actions/runs/39197320026)). The new recovery increment requires its own CI before merge. See [the current handoff](docs/AGENT_HANDOFF.md).
 
-Integrity is **not** independent scholarly assessment: externally verified human independence, actual external checkpoint custody, full durable critic sweeps, recovery benchmarks/backup tests and the 168 rule adjudications remain incomplete. Do not promote `REVIEW_ATTESTED`, publish the historical ZIP or authorize model training based on these infrastructure tests.
+Integrity is **not** independent scholarly assessment: externally verified human independence, actual external checkpoint custody, full durable critic sweeps, recovery benchmarks and the 168 rule adjudications remain incomplete. Do not promote `REVIEW_ATTESTED`, publish the historical ZIP or authorize model training based on these infrastructure tests.
 
 ## Implemented core (S0–S1)
 
@@ -118,5 +118,21 @@ No private key or remote publication is managed by this code. See
 
 If the newest digest was never independently retained, a prior valid signed
 checkpoint may still be replayed: the program cannot prove custody, time,
-independence or scientific merit. Real backup/restore and institutional
+independence or scientific merit. Real external backup custody and institutional
 rotation are separate S2 deliverables.
+
+## WAL-aware verified backups and restore — Sprint 2 incremental prototype
+
+Use `awf evidence snapshot-create SOURCE.sqlite DESTINATION.sqlite` to produce
+a coherent SQLite backup even when WAL has pending committed frames, and
+`snapshot-restore BACKUP.sqlite NEW_LEDGER.sqlite` to recover into a **new**
+location. Both require the latest independently pinned signed checkpoint,
+its full signature history and policy; the restored copy must match the
+signed head exactly. The recovery audit also reconstructs every saved
+`RevisionState`, detects altered/missing snapshots and rejects compromised
+revision triggers. Publishing never overwrites an existing file.
+
+See [ADR-0018](docs/adr/0018-wal-aware-signed-backup-recovery.md) and
+[the operational guide](docs/VERIFIED_SNAPSHOTS_S2.md). There is no remote
+backup provider, scheduler, automatic cutover, proof of third-party custody
+or RPO/RTO commitment. A backup does not authorize scholarly claims.

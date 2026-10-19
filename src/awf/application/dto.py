@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 from awf.domain.revision_audit import RevisionState
 
@@ -28,3 +29,14 @@ class PersistedRevision:
     operation_id: str
     ledger_head: str
     replayed: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class SnapshotReceipt:
+    """A committed new SQLite file; this is not an external custody claim."""
+
+    destination: Path
+    event_count: int
+    head_digest: str
+    file_sha256: str
+    independently_custodied: bool = False
