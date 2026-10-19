@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 
+import awf.adapters.persistence.sqlite_revision as revision_adapter
 from awf.adapters.document.markdown_adapter import MarkdownAdapter
 from awf.adapters.persistence.sqlite_evidence import SQLiteEvidenceLedger
 from awf.adapters.persistence.sqlite_revision import (
@@ -254,6 +255,43 @@ def test_tampered_snapshot_and_missing_trigger_fail_closed(tmp_path: Path) -> No
         conn.execute("DROP TRIGGER revision_snapshot_immutable_update")
     with pytest.raises(EvidenceIntegrityError, match="trigger"):
         store.initialize()
+
+
+def test_same_name_noop_revision_trigger_never_counts_as_immutable(tmp_path: Path) -> None:
+    store = journal(tmp_path)
+    begin(store)
+    with sqlite3.connect(store.ledger.database) as conn:
+        conn.execute("DROP TRIGGER revision_snapshot_immutable_update")
+        conn.execute(
+            "CREATE TRIGGER revision_snapshot_immutable_update "
+            "BEFORE UPDATE ON revision_snapshots BEGIN SELECT 1; END"
+        )
+    with pytest.raises(EvidenceIntegrityError, match="revision schema definition changed"):
+        store.load(revision_id="revision-1")
+    with pytest.raises(EvidenceIntegrityError, match="revision schema definition changed"):
+        audit(store)
+    with pytest.raises(EvidenceIntegrityError, match="revision schema definition changed"):
+        store.initialize()
+
+
+def test_recovery_rejects_unrelated_state_delta_despite_valid_commit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    store = journal(tmp_path)
+    begin(store)
+    original_audit = revision_adapter.apply_audit
+
+    def unsafe_audit(*args, **kwargs):
+        # Simulate a regression that increments critic iterations on a basic
+        # audit: the event and snapshot remain correctly hashed and committed.
+        return replace(original_audit(*args, **kwargs), external_iterations=1)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(revision_adapter, "apply_audit", unsafe_audit)
+        audit(store)
+    assert store.ledger.verify().events_checked == 3
+    with pytest.raises(EvidenceIntegrityError, match="replayed audit changed unrelated"):
+        store.load(revision_id="revision-1")
 
 
 def test_uncommitted_pure_state_cannot_be_loaded(tmp_path: Path) -> None:
