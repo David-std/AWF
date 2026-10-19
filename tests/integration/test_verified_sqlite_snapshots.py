@@ -267,6 +267,26 @@ def test_atomic_publish_failure_cleans_staging_without_touching_original(
     assert SQLiteEvidenceLedger(source).verify().head_digest == signed.claim.head_digest
 
 
+def test_concurrent_destination_creation_at_atomic_publish_preserves_new_occupant(
+    tmp_path: Path,
+    monkeypatch,
+):
+    source, signed, policy, _, now = _setup(tmp_path)
+    target = tmp_path / "raced-destination.sqlite"
+    actual_link = os.link
+
+    def race_link(staged: Path, destination: Path) -> None:
+        destination.write_bytes(b"created by a different actor immediately before publish")
+        actual_link(staged, destination)
+
+    monkeypatch.setattr(os, "link", race_link)
+    with pytest.raises(FileExistsError):
+        _copy(source, target, signed, policy, now)
+    assert target.read_bytes() == b"created by a different actor immediately before publish"
+    assert not tuple(tmp_path.glob(".raced-destination.awf-snapshot-*"))
+    assert SQLiteEvidenceLedger(source).verify().head_digest == signed.claim.head_digest
+
+
 @pytest.mark.parametrize("value", [0.0, -1.0, float("inf"), float("nan"), 3601.0])
 def test_snapshot_writer_rejects_invalid_transfer_timeouts(tmp_path: Path, value: float):
     with pytest.raises(ValueError, match="timeout"):
