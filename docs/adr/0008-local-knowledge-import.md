@@ -1,0 +1,15 @@
+# ADR-0008 — Importación local y conservadora de conocimiento
+
+- **Estado:** Aceptada para el primer corte de Sprint 2.
+- **Contexto:** AWS 3.19.1 es evidencia privada y se distribuye como ZIP local. El archivo real contiene 184 requisitos (168 `MUST`, 16 `DEFERRED_LAB`). El usuario decidió explícitamente **no publicar** el ZIP ni su corpus. El Knowledge Compiler debe operar sin cargar servicios externos ni copiar texto a GitHub.
+- **Decisión:** `awf knowledge import <zip> --manifest provenance/source-manifest.json` valida SHA-256 exacto, versión, número de requisitos y ruta única del ledger interno. Sin extraer el ZIP, crea un registro JSON de **metadatos solamente** dentro de `.awf/knowledge/` (ignorado por Git). Para cada regla conserva ID, dominio, prioridad, referencias internas y digest del enunciado, **no su contenido textual**.
+- **Clasificación inicial:** `MUST → UNRESOLVED`, `DEFERRED_LAB → EVAL_ONLY`. Una decisión humana explícita (archivo local `--review`, ligado al hash del ZIP, con autor y justificación) puede cambiar la disposición de `MUST` pero no promocionar requisitos `DEFERRED_LAB` a producción o entrenamiento. La etiqueta `REVIEW_ATTESTED` significa declaración documentada, no prueba científica o verificación de identidad humana.
+- **Duplicación y contradicción:** comparar digests normalizados localiza duplicados exactos. No hacer afirmaciones de contradicción semántica ni borrar reglas similares por heurística. Las dependencias deben declararse, y la detección de ciclos/nodos inexistentes falla de modo seguro.
+- **Auditoría:** `awf knowledge audit registry.json [--archive zip]` valida consistencia interna y opcionalmente vuelve a comparar el hash del ZIP. Un reporte editado podría falsificar metadatos; no se considera una firma ni una prueba independiente de juicio académico.
+- **Persistencia:** JSON atómico local primero. **Se aplaza SQLite + SQLAlchemy/Alembic** hasta que existan consultas/ediciones transaccionales que lo requieran. Esto modifica el desglose de implementación del blueprint, pero mantiene el puerto de almacenamiento reemplazable y evita añadir ORM decorativo. La migración requerirá otro ADR y pruebas de compatibilidad de esquema.
+- **Fuera del alcance:** parser científico de reglas, recuperador RAG, clasificación automática de valor, uso como datos de SFT, detección automática de contradicciones semánticas, recopilación de textos de licencias inciertas. Ninguno puede anunciarse como resuelto por pasar el CI.
+- **Seguridad:** límites a ZIP y ledger descomprimido, path interno fijo, no extracción, coincidencia exacta de digest, salida privada y protección de inputs ante sobrescritura.
+
+## Dependencias hexagonales
+
+El caso de uso `application/commands/compile_knowledge.py` depende ahora de `KnowledgeSourcePort` y `KnowledgeReviewPort`, que devuelven un `LoadedKnowledgeSource` tipado. `PinnedAwsArchive` y `JsonReviewReader` implementan esos puertos en `adapters/knowledge/`; solo `cli/main.py` los instancia. Un test arquitectónico comprueba que ninguna unidad `application/` importa `awf.adapters`. Los adapters siguen pudiendo importar interfaces del núcleo, no a la inversa.

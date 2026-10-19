@@ -2,7 +2,7 @@
 
 **AWF Neural Engine** is an engineering and machine-learning project for traceable academic text revision in Spanish and English. The goal is to preserve meaning, citations, evidence, and author intent while comparing pretrained editors, fine-tuned models, and explicit verification policies.
 
-**Status on the S1 feature branch: Python CLI and conservative Markdown ingestion implemented and CI-tested.** The neural editor, knowledge compiler, semantic verifier, training and external API are **not implemented**. This repository maintains research provenance without claiming detector performance.
+**Status on the S2 feature branch: S0–S1 core and the first local-only knowledge compiler slice are implemented.** The 168 mandatory historic rules are **not yet adjudicated**; the neural editor, independent semantic verifier, training and external API are **not implemented**. This repository maintains research provenance without claiming detector performance.
 
 ## Start here
 
@@ -28,6 +28,20 @@ uv run awf ingest draft.md --store .awf --output document-ir.json
 The ingest command reads **original UTF-8 bytes** and returns a content-addressed DocumentIR (SHA-256, blocks, inclusive line positions). `--store` is opt-in private local storage; the original file is never modified. The initial parser recognizes ATX headings, paragraphs and fenced code only; it is not a full CommonMark parser or a semantic verifier.
 
 S0: [PR #11](https://github.com/David-std/AWF/pull/11) · S1: [PR #12](https://github.com/David-std/AWF/pull/12). Both are stacked upon [architecture PR #10](https://github.com/David-std/AWF/pull/10); changes are **not necessarily present on main until merged**.
+
+## Knowledge Compiler (Sprint 2, initial implementation)
+
+```shell
+uv run awf knowledge import "/private/path/academic_writing_suite_v3_19_1_product(1).zip" \\
+  --manifest provenance/source-manifest.json \\
+  --output .awf/knowledge/registry.json
+uv run awf knowledge audit .awf/knowledge/registry.json \\
+  --archive "/private/path/academic_writing_suite_v3_19_1_product(1).zip"
+```
+
+The source ZIP remains local. Only SHA-bound metadata is written to a private ignored directory, not the rule descriptions. The first import is deliberately conservative: **168 MUST → UNRESOLVED** and **16 DEFERRED_LAB → EVAL_ONLY**, with all 184 IDs retained. Rules are not silently made executable or admitted into training. [Read the S2 contract](docs/KNOWLEDGE_COMPILER_S2.md).
+
+This is an initial S2 slice, **not** completed semantic adjudication. [Implementation PR #13](https://github.com/David-std/AWF/pull/13) is stacked upon [#12](https://github.com/David-std/AWF/pull/12), [#11](https://github.com/David-std/AWF/pull/11) and [#10](https://github.com/David-std/AWF/pull/10).
 
 ## Engineering principles
 

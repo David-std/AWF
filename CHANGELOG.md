@@ -1,6 +1,13 @@
 # Changelog
 
-## Unreleased — AWF 0.1.0 (Sprint 1 branch)
+## Unreleased — AWF 0.1.0 (Sprint 2 knowledge-import branch)
+
+- Add `awf knowledge import` and `knowledge audit` for a SHA-pinned, local-only AWS 3.19.1 archive; export metadata without text or source ZIP.
+- Preserve all 184 requirement IDs conservatively: 168 unresolved MUST, 16 lab-only evaluation entries. No implicit training authorization or semantic contradiction claims.
+- Add private atomic registry exports, reviewed decision overlays, duplicate-description inspection, strict ZIP guards and negative tests.
+- ADR-0008 defers SQLAlchemy/SQLite until transaction/queries demonstrate need; S2 is explicitly still incomplete.
+
+## Sprint 1 branch
 
 - Implement `awf ingest <file.md>` with deterministic UTF-8 parsing, immutable DocumentIR and SHA-256 of original bytes.
 - Support optional local content-addressed original preservation with integrity checks, repeatable output and a guarded `--output` path.

@@ -2,14 +2,14 @@
 
 **Alcance:** esta tabla captura los requisitos expresados por el usuario y las decisiones del diseño AWF. NO afirma la migración individual de los 184 requisitos históricos de AWS: ese mapeo debe realizarse en S2 contra el ZIP original por ID, estado y evidencia. No confundir compromiso documental con código verificado.
 
-Estados: `DESIGNED` (especificado), `OPEN` (requiere decisión), `IMPLEMENTED` (solo tras test automatizado + demostración), `RESEARCH` (hipótesis). Todos los elementos de ejecución están **DESIGNED** o **OPEN**.
+Estados: `DESIGNED` (especificado), `OPEN` (requiere decisión), `IMPLEMENTED` (solo tras test automatizado + demostración), `RESEARCH` (hipótesis). Los estados son independientes por sprint. La importación S2 parcial no demuestra adjudicación del corpus ni ejecución de todas las reglas.
 
 | ID | Requerimiento/decisión | Fuente del proyecto | Evidencia de aceptación prevista | Sprint | Estado |
 |---|---|---|---|---|---|
-| AWF-R001 | Conservar AWS 3.19.1 exacto con SHA/licencia/provenance, sin importar a ciegas | TDP/AWS y conversación | SHA del ZIP + manifest + inventario de derechos | S0/S2 | DESIGNED |
+| AWF-R001 | Conservar AWS 3.19.1 exacto con SHA/licencia/provenance, sin importar a ciegas | TDP/AWS y conversación | SHA del ZIP + manifest; derechos de redistribución por revisar | S0/S2 | IMPLEMENTED_PARTIAL |
 | AWF-R002 | Mantener arquitectura para migración entre chats/agentes sin pérdida | Solicitud explícita del usuario | Spec completa, ADR, README, handoff, estado verificable | S0 | DESIGNED |
-| AWF-R003 | Tipar reglas deterministas/probabilísticas/contextuales, evitar if masivos | Pregunta sobre skills ineficientes | Registry con aplicabilidad y prueba por regla; 184 IDs auditados | S2 | DESIGNED |
-| AWF-R004 | Evaluar redundancia, obsolescencia y contradicción de fuentes | Pregunta sobre investigación acumulada | Disposition + duplicado + fuente/snapshot + contradicción | S2/S6 | DESIGNED |
+| AWF-R003 | Tipar reglas deterministas/probabilísticas/contextuales, evitar if masivos | Pregunta sobre skills ineficientes | Metadatos de 184 IDs conservados; adjudicación manual y tests por regla pendientes | S2 | IMPLEMENTED_PARTIAL |
+| AWF-R004 | Evaluar redundancia, obsolescencia y contradicción de fuentes | Pregunta sobre investigación acumulada | Detectados duplicados normalizados; evaluación semántica/obsolescencia pendiente | S2/S6 | IMPLEMENTED_PARTIAL |
 | AWF-R005 | Evitar que LLM se otorgue un PASS sin evidencia | Auditoría AWS | Inyección de falso recibo falla; verificación real sobre bytes | S3 | DESIGNED |
 | AWF-R006 | Preservar causalidad, certeza, alcance, tiempo, cifras, citas y atribución | GDText/Meaning Audit | Mutaciones adversariales + gold + medición de falsos negativos | S3 | DESIGNED |
 | AWF-R007 | Mantener originales inmutables con hash y rollback | Blueprint | Bytes originales intactos y SHA validado; rollback/diff aún pendiente | S1 | IMPLEMENTED_PARTIAL |
@@ -45,3 +45,10 @@ La suite AWS 3.19.1 documenta 184 requisitos normativos (168 MUST, 16 lab/deferr
 - S1: ingesta Markdown, IR inmutable, hashes, almacenamiento opcional e idempotencia comprobados en PR #12. No se ha implementado todavía la creación de revisiones ni un mecanismo de rollback de revisiones: el almacenamiento original permite conservar bytes, pero no demuestra un historial completo.
 - Evidencia: [run S1 39076453243](https://github.com/David-std/AWF/actions/runs/39076453243), SHA `cbd05e9ba242c40eb3de0f6477a313342286860d`.
 - Este progreso **no equivale a migrar los 184 requisitos históricos** ni a entrenar AWF. Mantenerlos como plan S2 en adelante.
+
+## Avance controlado S2
+
+- Se dispone de código y pruebas sintéticas para importar el ZIP local fijado por hash y generar un registro metadata-only. **No se han migrado decisiones de cumplimiento de las 168 reglas MUST**: permanecen `UNRESOLVED`.
+- Las 16 entradas `DEFERRED_LAB` permanecen `EVAL_ONLY` y no pueden promocionarse a ejecución ni entrenamiento.
+- `REVIEW_ATTESTED` documenta autor y razón de una decisión de investigación, pero no garantiza validez técnica, licencias o revisión independiente.
+- Véase [ADR-0008](adr/0008-local-knowledge-import.md), [contrato S2](KNOWLEDGE_COMPILER_S2.md) y [PR #13](https://github.com/David-std/AWF/pull/13).
