@@ -31,10 +31,13 @@ Estados: `DESIGNED` (especificado), `OPEN` (requiere decisión), `IMPLEMENTED` (
 | AWF-R023 | Código higiénico, tipado y test con principios SOLID aplicados | Solicitud de estándares | Ruff, pyright, pytest, hypothesis, quality gate CI | S0 | DESIGNED |
 | AWF-R024 | No exigir una GUI antes de validar núcleo y benchmark | Riesgo de scope | CLI inicial, API posterior, sin React por defecto | S0–S7 | DESIGNED |
 | AWF-R025 | Vincular dictámenes S2 a claves y roles de revisores autorizados | Riesgo de suplantación en ledger | Firma Ed25519, política externa fijada por SHA, caducidad/revocación, test de intercambio y CLI | S2 | IMPLEMENTED_PARTIAL |
+| AWF-R026 | Detectar truncamiento/reconstrucción SQLite aunque conserve hashes internos | Riesgo de rollback del ledger tras firma de auditoría | Checkpoint externo Ed25519 con policy SHA-pinned, cadena de prefijos y pruebas de rollback/replay; custodia real sigue externa | S2 | IMPLEMENTED_PARTIAL |
 
 ## Procedimiento para implementar cada fila
 
 Cada cambio crea relación verificable: `AWF-Rxxx → ADR → código/archivo → tests → commit → demo`. El PR registra evidencias ejecutadas, fallos y exclusiones. Nunca convertir DESIGNED en IMPLEMENTED solo porque existe un módulo vacío.
+
+**AWF-R026:** [ADR-0017](adr/0017-externally-signed-ledger-checkpoints.md) → `domain/checkpoints.py`, `application/commands/checkpoints.py`, `SQLiteEvidenceLedger.verify_anchors` → `tests/integration/test_signed_checkpoints.py` (truncamiento de una instantánea SQLite válida, sustitución de bytes, permisos, firmas, política, JSON, historia y CLI). La aprobación interna no demuestra custodia externa real, disponibilidad de testigo ni tiempo confiable.
 
 ## Migración heredada AWS
 

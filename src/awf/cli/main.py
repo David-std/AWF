@@ -25,9 +25,11 @@ from awf.application.commands.authorize_review import (
     append_signed_review_claim,
     verify_signed_review_event,
 )
+from awf.application.commands.checkpoints import propose_checkpoint, verify_signed_checkpoint
 from awf.application.commands.compile_knowledge import import_knowledge
 from awf.application.commands.ingest_document import ingest_document
 from awf.application.commands.prepare_review import prepare_review
+from awf.domain.checkpoints import SignedLedgerCheckpoint, parse_checkpoint_policy
 from awf.domain.evidence import EvidenceKind
 from awf.domain.reviewer_auth import ReviewerRole, SignedReviewerClaim, parse_trust_policy
 from awf.knowledge.audit import audit_registry
@@ -107,6 +109,39 @@ def create_parser() -> argparse.ArgumentParser:
     reviewer.add_argument("--run-id", required=True)
     reviewer.add_argument("--subject-id", required=True)
     reviewer.add_argument("--expected-head", help="optional externally held current ledger head")
+    proposal = actions.add_parser(
+        "checkpoint-propose", help="prepare unsigned ledger head for offline custodian signing"
+    )
+    proposal.add_argument("--database", type=Path, default=Path(".awf/evidence/ledger.sqlite"))
+    proposal.add_argument("--ledger-id", required=True)
+    proposal.add_argument("--key-id", required=True)
+    proposal.add_argument("--previous-file", type=Path, help="prior signed checkpoint, if any")
+    proposal.add_argument(
+        "--history-file",
+        type=Path,
+        action="append",
+        default=[],
+        help="older signed checkpoint; repeat in chronological order",
+    )
+    proposal.add_argument("--expected-previous-sha256", help="independent witness of prior file")
+    proposal.add_argument("--policy-file", type=Path, help="trusted checkpoint signer policy")
+    proposal.add_argument("--expected-policy-sha256", help="independent trusted policy digest")
+    checkpoint = actions.add_parser(
+        "checkpoint-verify", help="verify externally anchored signature and ledger ancestry"
+    )
+    checkpoint.add_argument("source", type=Path, help="signed canonical checkpoint JSON")
+    checkpoint.add_argument("--database", type=Path, default=Path(".awf/evidence/ledger.sqlite"))
+    checkpoint.add_argument("--expected-checkpoint-sha256", required=True)
+    checkpoint.add_argument("--policy-file", type=Path, required=True)
+    checkpoint.add_argument("--expected-policy-sha256", required=True)
+    checkpoint.add_argument(
+        "--history-file",
+        type=Path,
+        action="append",
+        default=[],
+        help="ancestor checkpoint; repeat oldest to newest",
+    )
+    checkpoint.add_argument("--require-current-head", action="store_true")
     return parser
 
 
@@ -274,6 +309,104 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 2
 
     if args.command == "evidence":
+        if args.evidence_action in {"checkpoint-propose", "checkpoint-verify"}:
+            try:
+                store = SQLiteEvidenceLedger(args.database)
+                now = int(datetime.now(UTC).timestamp())
+                previous = None
+                history = tuple(
+                    SignedLedgerCheckpoint.from_bytes(_read_private_auth_file(path))
+                    for path in args.history_file
+                )
+                if args.evidence_action == "checkpoint-propose":
+                    has_previous = args.previous_file is not None
+                    # A linked proposal must prove that its parent was actually
+                    # authorized, pinned and present in the ledger.
+                    provided = (
+                        args.expected_previous_sha256 is not None,
+                        args.policy_file is not None,
+                        args.expected_policy_sha256 is not None,
+                    )
+                    if has_previous != all(provided) or (
+                        not has_previous and (any(provided) or history)
+                    ):
+                        raise ValueError(
+                            "a previous checkpoint requires its external digest and policy"
+                        )
+                    if has_previous:
+                        previous = SignedLedgerCheckpoint.from_bytes(
+                            _read_private_auth_file(args.previous_file)
+                        )
+                        policy = parse_checkpoint_policy(
+                            _read_private_auth_file(args.policy_file),
+                            expected_sha256=args.expected_policy_sha256,
+                        )
+                        verify_signed_checkpoint(
+                            store=store,
+                            signed=previous,
+                            expected_signed_sha256=args.expected_previous_sha256,
+                            policy=policy,
+                            verifier=Ed25519ReviewerVerifier(),
+                            now=now,
+                            history=history,
+                        )
+                    claim = propose_checkpoint(
+                        store=store,
+                        ledger_id=args.ledger_id,
+                        key_id=args.key_id,
+                        issued_at=now,
+                        previous=previous,
+                    )
+                    # Include exact signed bytes for an independent offline signer.
+                    print(
+                        json.dumps(
+                            {
+                                "status": "CHECKPOINT_UNSIGNED_PROPOSAL",
+                                "claim": claim.payload(),
+                                "signing_message_hex": claim.signing_bytes.hex(),
+                                "signature_verified": False,
+                                "external_custody_proven": False,
+                            }
+                        )
+                    )
+                else:
+                    if args.source.resolve() in {
+                        args.database.resolve(),
+                        args.policy_file.resolve(),
+                    }:
+                        raise ValueError("signed checkpoint file must differ from inputs")
+                    signed = SignedLedgerCheckpoint.from_bytes(_read_private_auth_file(args.source))
+                    policy = parse_checkpoint_policy(
+                        _read_private_auth_file(args.policy_file),
+                        expected_sha256=args.expected_policy_sha256,
+                    )
+                    result = verify_signed_checkpoint(
+                        store=store,
+                        signed=signed,
+                        expected_signed_sha256=args.expected_checkpoint_sha256,
+                        policy=policy,
+                        verifier=Ed25519ReviewerVerifier(),
+                        now=now,
+                        history=history,
+                        require_current_head=args.require_current_head,
+                    )
+                    print(
+                        json.dumps(
+                            {
+                                "status": "SIGNED_CHECKPOINT_VALID",
+                                "ledger_id": signed.claim.ledger_id,
+                                "checkpoint_event_count": result.checkpoint_event_count,
+                                "current_event_count": result.current_event_count,
+                                "checkpoint_is_current_head": result.checkpoint_is_current_head,
+                                "external_custody_proven": result.external_custody_proven,
+                            }
+                        )
+                    )
+                return 0
+            except (OSError, ValueError, RuntimeError, sqlite3.Error) as exc:
+                print(f"AWF_ERROR [CHECKPOINT_FAILED] {exc}", file=sys.stderr)
+                return 2
+
         if args.evidence_action in {"attest", "attest-verify"}:
             try:
                 if args.evidence_action == "attest" and args.source.resolve() in {

@@ -269,15 +269,54 @@ class SQLiteEvidenceLedger:
         if not self.database.is_file():
             raise FileNotFoundError("evidence ledger does not exist")
         with self._open() as conn:
-            self._check_schema(conn)
             conn.execute("BEGIN")
             try:
+                self._check_schema(conn)
                 report = self._audit_transaction(conn)
                 if expected_head is not None and expected_head != report.head_digest:
                     raise EvidenceIntegrityError("trusted head digest does not match ledger")
                 conn.execute("COMMIT")
                 return report
             except (sqlite3.Error, EvidenceIntegrityError):
+                if conn.in_transaction:
+                    conn.execute("ROLLBACK")
+                raise
+
+    def verify_anchors(self, *, anchors: tuple[tuple[int, str], ...]) -> LedgerAudit:
+        """Audit the chain and every requested signed prefix in one read snapshot.
+
+        A verified prefix is not necessarily today's head. Callers choose if
+        subsequent honest appends are permitted, but cannot mix observations
+        from different SQLite snapshots under concurrent writers.
+        """
+        if not anchors or len(anchors) > 1024:
+            raise ValueError("provide 1–1024 signed ledger prefix anchors")
+        for seq, digest in anchors:
+            if (
+                type(seq) is not int
+                or seq < 1
+                or not isinstance(digest, str)
+                or re.fullmatch(r"[a-f0-9]{64}", digest) is None
+            ):
+                raise ValueError("invalid signed prefix sequence or digest")
+        if not self.database.is_file():
+            raise FileNotFoundError("evidence ledger does not exist")
+        with self._open() as conn:
+            conn.execute("BEGIN")
+            try:
+                self._check_schema(conn)
+                report = self._audit_transaction(conn)
+                for seq, digest in anchors:
+                    if seq > report.events_checked:
+                        raise EvidenceIntegrityError("signed checkpoint was truncated from ledger")
+                    row = conn.execute(
+                        "SELECT digest FROM events WHERE sequence=?", (seq,)
+                    ).fetchone()
+                    if row is None or row[0] != digest:
+                        raise EvidenceIntegrityError("signed ledger prefix digest mismatch")
+                conn.execute("COMMIT")
+                return report
+            except (sqlite3.Error, ValueError):
                 if conn.in_transaction:
                     conn.execute("ROLLBACK")
                 raise

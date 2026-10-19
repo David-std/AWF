@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — externally signed ledger checkpoints (Sprint 2)
+
+- Add a separate Ed25519 custodian trust policy, canonical versioned checkpoint claims, an externally held latest-checkpoint hash and mandatory signed ancestry for detecting internally valid truncation/rollback.
+- Audit all checkpoint prefixes, SQLite objects and immutable schema in one read snapshot through `EvidenceStorePort.verify_anchors`; expose `checkpoint-propose` (unsigned) and `checkpoint-verify` commands without handling custodian secrets.
+- Add adversarial signed/forged/truncated/rebuilt/revoked/stale/lineage tests and ADR-0017. External custody, trusted timestamps, historic grant rotation and scientific adjudication remain outside the guarantee.
+
 ## Unreleased — reviewer authorization prototype (Sprint 2)
 
 - Introduce Ed25519-signed review attestations bound to exact ledger event, role, run and subject, verified against an externally pinned allowlist with expiration/revocation.
