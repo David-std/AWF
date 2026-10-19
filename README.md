@@ -96,3 +96,9 @@ The prototype does **not** establish semantic correctness, genuine independent c
 The `SQLiteRevisionJournal` Python API persists versioned `RevisionState` snapshots and their evidence events together in **one local SQLite transaction**. A stable operation ID supports idempotent retry; stale writers fail closed, and recovery checks the event/snapshot chain. A subsequent S2 increment adds durable edits and finding open/resolution with exact event-bound intentions, compatible with previous commits. Critic sweeps and academic acceptance are not durable. See [ADR-0014](docs/adr/0014-atomic-revision-journal.md), [ADR-0015](docs/adr/0015-durable-edit-and-finding-transitions.md) and [the recovery guide](docs/DURABLE_REVISION_S2.md).
 
 No historical requirement is automatically adjudicated by this infrastructure, and no locally stored audit is independent proof of academic accuracy or evaluator authority. The original AWS archive stays private.
+
+## Reviewer signatures and role authorization — Sprint 2 prototype
+
+The application can now verify detached Ed25519 reviewer statements over **one exact ledger event** against an externally SHA-pinned reviewer allowlist (actor/key, roles, run/subject, expiry, revocation). The `awf evidence attest` and `attest-verify` commands do not generate or hold reviewer private keys. Audit and knowledge-stage gates can require signed statements in addition to local integrity; legacy receipts are not silently upgraded. See [ADR-0016](docs/adr/0016-signed-reviewer-authorization.md) and [the authorization guide](docs/REVIEWER_AUTH_S2.md).
+
+This is **cryptographic key/role authorization only**, not third-party identity vetting, independent human judgment, trustworthy timestamping, or permission to accept a manuscript. External checkpoints and durable critic sweeps remain open.

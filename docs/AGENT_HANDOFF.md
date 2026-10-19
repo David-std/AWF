@@ -1,5 +1,13 @@
 # AWF — transferencia de Sprint 2
 
+## Continuación de S2: atestaciones de evaluador (incremento posterior a #21)
+
+- **Punto de partida:** `develop` en `6d489f4640fd3e7bca636b790cf006997624e1f4` (PR #21 fusionada), con `main` conservada en `a902135b80e96eea17ebb9c229eed065077e809d`. Este incremento debe revisarse y fusionarse mediante PR a `develop`, nunca como modificación directa de `main`.
+- **Contrato añadido:** `domain/reviewer_auth.py` establece declaración canónica, roles y permisos por evento/run/sujeto; `application/commands/authorize_review.py` verifica permisos y recibos con un puerto criptográfico; `adapters/security/ed25519_reviewer.py` implementa Ed25519. `awf evidence attest` y `attest-verify` admiten/verifican declaraciones firmadas con una política cuya huella debe proceder de fuera del almacén. `EvidenceKind.REVIEW_ATTESTATION` es aditivo.
+- **Calidad local comprobada:** 220 pruebas completas en Linux Python 3.12 (incluye nuevos casos de firma alterada, cambio de evento/contexto, grant revocado/vencido, inventario de auditorías, READ y etapas de conocimiento, CLI), Ruff, Pyright, `uv lock --check` y `uv build` sin errores. CI multiplataforma de este incremento queda como condición de fusión, no se infiere de la validación local.
+- **Decisión y guía:** [ADR-0016](adr/0016-signed-reviewer-authorization.md) y [autorización S2](REVIEWER_AUTH_S2.md). Las claves privadas no se almacenan ni publican. Una clave autorizada no prueba identidad civil, independencia entre críticos, calidad científica ni hora externa confiable. `independent_adjudication_proven=False` se conserva.
+- **Cierre pendiente de Sprint 2:** checkpoint/firma externa del ledger, custodia y revocación/rotación institucional de claves, durabilidad de barridos críticos, pruebas de backup/restore, benchmark de verificación por lotes y adjudicación formal del corpus. Estado formal **0/168 `MUST`**, 16 lab-only `EVAL_ONLY`.
+
 **Actualización vigente: 2026-10-19 (UTC).** Sprint 2 permanece parcial. Las secciones fechadas más abajo son una bitácora histórica; sus indicaciones antiguas sobre PR «sin fusionar», ramas operativas y siguientes pasos **han quedado sustituidas** por este apartado.
 
 ## Estado vigente — integración revisada en `develop`

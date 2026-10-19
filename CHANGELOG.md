@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — reviewer authorization prototype (Sprint 2)
+
+- Introduce Ed25519-signed review attestations bound to exact ledger event, role, run and subject, verified against an externally pinned allowlist with expiration/revocation.
+- Add separate audit and knowledge-claim authorization gates, `awf evidence attest` and `attest-verify`, and adversarial signature, swap, scope and revocation tests.
+- Preserve the distinction between key/role authorization and independent scholarly adjudication; neither legacy receipts nor the 168 MUST rules gain automatic approval.
+
 ## Unreleased — integration audit and continuity (2026-10-19)
 
 - Merge PRs #10–#20 in order into the new `develop` branch from `main`, preserving all merge commits and leaving `main` unchanged.
