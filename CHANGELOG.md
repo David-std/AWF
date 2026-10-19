@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — Sprint 2 durable edit and finding transitions
+
+- Coordinate `accept_edit`, `open_finding` and `resolve_finding` with immutable revision snapshots in one SQLite transaction.
+- Add event-bound typed intents and schema-2 commits, retaining replay of original schema-1 START/AUDIT records.
+- Verify conservative receipt invalidation, material finding lineage, crash rollback, concurrent writers and idempotence with synthetic tests. ADR-0015 documents the absence of external reviewer authority.
+
 ## Unreleased — Sprint 2 atomic revision journal
 
 - Persist `START` and `AUDIT` `RevisionState` snapshots together with evidence/transition events in the same SQLite transaction, without replacing the earlier in-memory APIs.

@@ -103,3 +103,16 @@ Este corte no adjudica automáticamente ningún DSR de las 168 `MUST`; primero d
 | Edición, findings, barridos y juicio académico durable | **No implementados en este corte** | Diseñar comandos independientes y verificar sus dependencias | UNRESOLVED |
 
 No se promocionan DSR-001..032 ni otras reglas a `REVIEW_ATTESTED`. Véanse [ADR-0014](adr/0014-atomic-revision-journal.md) y [contrato de recuperación](DURABLE_REVISION_S2.md). Evidencia: código `88bd75bbfdc218225176dfcc64c4e77a93cf12a8`, [CI 39169111258](https://github.com/David-std/AWF/actions/runs/39169111258), 4/4 entornos, 139 PASS en Ubuntu y 138 PASS + 1 SKIP POSIX en Windows.
+
+## Extensión durable de ediciones y hallazgos S2
+
+| Contrato | Implementación | Caso adversarial | Estado |
+|---|---|---|---|
+| Ediciones invalidan recibos globales y scopes locales afectados | `SQLiteRevisionJournal.accept_edit` y rutina pura de fingerprints | Vecino alterado, documento obsoleto, presupuesto agotado | PROTOTYPED_TESTED_CI |
+| Hallazgos permanecen abiertos hasta resolución explícita | `open_finding` y `resolve_finding` | ID duplicado, resolución inexistente, distinto run | PROTOTYPED_TESTED_CI |
+| Intención, commit y estado tienen destino transaccional único | `revision_intent` y `revision_commit` schema 2 | Crash, trigger de fallo, replay, concurrencia, intención huérfana | PROTOTYPED_TESTED_CI |
+| Veracidad académica, identidad/roles y sweep independiente | Fuera del corte | Exige firma, permisos, juzgado externo | UNRESOLVED |
+
+Véanse [ADR-0015](adr/0015-durable-edit-and-finding-transitions.md) y
+[guía de recuperación](DURABLE_REVISION_S2.md). **0/168 `MUST` adjudicadas**;
+16 `DEFERRED_LAB` siguen solo `EVAL_ONLY`.

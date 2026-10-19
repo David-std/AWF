@@ -87,6 +87,6 @@ The prototype does **not** establish semantic correctness, genuine independent c
 
 ## Atomic revision journal — Sprint 2 incremental prototype
 
-The `SQLiteRevisionJournal` Python API persists versioned `RevisionState` snapshots and their evidence events together in **one local SQLite transaction**. A stable operation ID supports idempotent retry; stale writers fail closed, and recovery checks the event/snapshot chain. This currently covers revision creation and audit recording only; other revision transitions are not yet durable. See [ADR-0014](docs/adr/0014-atomic-revision-journal.md) and [the API/recovery guide](docs/DURABLE_REVISION_S2.md).
+The `SQLiteRevisionJournal` Python API persists versioned `RevisionState` snapshots and their evidence events together in **one local SQLite transaction**. A stable operation ID supports idempotent retry; stale writers fail closed, and recovery checks the event/snapshot chain. A subsequent S2 increment adds durable edits and finding open/resolution with exact event-bound intentions, compatible with previous commits. Critic sweeps and academic acceptance are not durable. See [ADR-0014](docs/adr/0014-atomic-revision-journal.md), [ADR-0015](docs/adr/0015-durable-edit-and-finding-transitions.md) and [the recovery guide](docs/DURABLE_REVISION_S2.md).
 
 No historical requirement is automatically adjudicated by this infrastructure, and no locally stored audit is independent proof of academic accuracy or evaluator authority. The original AWS archive stays private.

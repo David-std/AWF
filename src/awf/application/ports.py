@@ -8,7 +8,7 @@ from typing import Protocol
 from awf.application.dto import LoadedKnowledgeSource, PersistedRevision
 from awf.domain.document import DocumentIR
 from awf.domain.evidence import EvidenceKind, EvidenceRecord, LedgerAudit
-from awf.domain.revision_audit import AuditSlot, AuditStatus
+from awf.domain.revision_audit import AuditSlot, AuditStatus, RevisionPolicy
 
 
 class DocumentParserPort(Protocol):
@@ -87,6 +87,42 @@ class RevisionJournalPort(Protocol):
         slot_key: str,
         status: AuditStatus,
         checks_executed: int,
+        observation_ref: str,
+    ) -> PersistedRevision: ...
+
+    def accept_edit(
+        self,
+        *,
+        revision_id: str,
+        operation_id: str,
+        run_id: str,
+        old_document: DocumentIR,
+        new_document: DocumentIR,
+        expected_version: int,
+        policy: RevisionPolicy,
+        observation_ref: str,
+    ) -> PersistedRevision: ...
+
+    def open_finding(
+        self,
+        *,
+        revision_id: str,
+        operation_id: str,
+        run_id: str,
+        expected_version: int,
+        finding_id: str,
+        material: bool,
+        observation_ref: str,
+    ) -> PersistedRevision: ...
+
+    def resolve_finding(
+        self,
+        *,
+        revision_id: str,
+        operation_id: str,
+        run_id: str,
+        expected_version: int,
+        finding_id: str,
         observation_ref: str,
     ) -> PersistedRevision: ...
 

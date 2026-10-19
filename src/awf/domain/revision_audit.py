@@ -257,7 +257,33 @@ def accept_edit(
     critic sweep survives. Reuse is recorded with old artifact lineage.
     """
     _assert_document(state, old)
-    if new.sha256 == old.sha256 or not operation_ref.strip():
+    return _accept_edit_scopes(
+        state,
+        old_sha256=old.sha256,
+        new_sha256=new.sha256,
+        old_scopes={slot.key: scope_fingerprint(old, slot) for slot in state.slots},
+        new_scopes={slot.key: scope_fingerprint(new, slot) for slot in state.slots},
+        policy=policy,
+        operation_ref=operation_ref,
+    )
+
+
+def _accept_edit_scopes(
+    state: RevisionState,
+    *,
+    old_sha256: str,
+    new_sha256: str,
+    old_scopes: dict[str, str],
+    new_scopes: dict[str, str],
+    policy: RevisionPolicy,
+    operation_ref: str,
+) -> RevisionState:
+    """Replay redacted scope fingerprints; caller must bind them to real documents."""
+    if old_sha256 != state.artifact_sha256:
+        raise ValueError("previous artifact does not match current revision")
+    if set(old_scopes) != {slot.key for slot in state.slots} or set(new_scopes) != set(old_scopes):
+        raise ValueError("edit scope inventory differs from recorded audit inventory")
+    if new_sha256 == old_sha256 or not operation_ref.strip():
         raise ValueError("accept_edit requires changed bytes and an operation reference")
     if state.revision_cycles >= policy.max_revision_cycles:
         raise ValueError("revision budget exhausted; cannot silently accept another edit")
@@ -265,29 +291,29 @@ def accept_edit(
     carried: list[AuditReceipt] = []
     dirty: set[str] = set()
     for slot in state.slots:
-        new_fp = scope_fingerprint(new, slot)
+        new_fp = new_scopes[slot.key]
         old_receipt = old_receipts.get(slot.key)
         if (
             old_receipt is not None
             and old_receipt.status == AuditStatus.CLEAN
             and slot.key not in state.dirty_keys
-            and old_receipt.scope_sha256 == scope_fingerprint(old, slot)
+            and old_receipt.scope_sha256 == old_scopes[slot.key]
             and old_receipt.scope_sha256 == new_fp
-            and old_receipt.artifact_sha256 == old.sha256
+            and old_receipt.artifact_sha256 == old_sha256
         ):
             carried.append(
-                replace(old_receipt, artifact_sha256=new.sha256, carried_from=old.sha256)
+                replace(old_receipt, artifact_sha256=new_sha256, carried_from=old_sha256)
             )
         else:
             dirty.add(slot.key)
     return replace(
         state,
-        artifact_sha256=new.sha256,
+        artifact_sha256=new_sha256,
         receipts=tuple(carried),
         dirty_keys=frozenset(dirty),
         clean_sweeps=(),
         revision_cycles=state.revision_cycles + 1,
-        event_log=state.event_log + (f"ACCEPT_EDIT:{old.sha256}:{new.sha256}:{operation_ref}",),
+        event_log=state.event_log + (f"ACCEPT_EDIT:{old_sha256}:{new_sha256}:{operation_ref}",),
     )
 
 
