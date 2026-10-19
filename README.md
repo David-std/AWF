@@ -74,3 +74,7 @@ The prototype does **not** establish semantic correctness, genuine independent c
 [PR #16](https://github.com/David-std/AWF/pull/16) adds source-byte and chunk-to-EOF inventories, nonempty expected coverage, explicit AVAILABLE/READ/UNDERSTOOD/APPLICABLE/APPLIED/VERIFIED evidence stages, calibration with positive/near-miss/counterexample/holdout cases, source-pinned cards, critical dependency closure and separately reported token efficiency vs fidelity evidence. See [the 17-rule audit](docs/reviews/KNOWLEDGE_INTEGRITY_DSR016_032.md) and [ADR-0011](docs/adr/0011-knowledge-integrity-gates.md).
 
 **Boundary:** a valid receipt is *not* proof that a person or model read and understood the material. Nor is it a license to reuse private texts, an academic-correctness certificate, a fine-tuned neural model, or a verified detector result. The historical corpus stays private.
+
+## Local evidence ledger — Sprint 2
+
+[ADR-0012](docs/adr/0012-local-evidence-ledger.md) introduces a private, transactional SQLite journal for evidence bytes and SHA-256-linked events. Use `awf evidence append` and `awf evidence verify` as documented in [the local evidence guide](docs/EVIDENCE_LEDGER_S2.md). This makes declared evidence *retrievable and locally integrity-checkable*, **not signed, externally authenticated, independently assessed, or a proof that a model understood its inputs**. This PR is stacked on #16; it does not finish the ML engine.

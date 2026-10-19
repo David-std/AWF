@@ -67,3 +67,15 @@ La suite AWS 3.19.1 documenta 184 requisitos normativos (168 MUST, 16 lab/deferr
 - Prototipos independientes del corpus público: `domain/knowledge_integrity.py`, `domain/dependencies.py`, `knowledge/calibration_gate.py` y `knowledge/usage_policy.py`. Se preservó el import anterior de `knowledge/dependency_graph.py` para no romper consumidores.
 - Validación del código `5f2f1ac373ca836bd89c21cd5135ae3b0abff1b2`: [CI 39090959008](https://github.com/David-std/AWF/actions/runs/39090959008), 4/4 combinaciones aprobadas, 96 pytest PASS por entorno, lint/tipado/build.
 - **No cerrar por conteo de tests:** los 17 siguen `PROTOTYPED_NOT_ADJUDICATED` y el registro privado conserva los 168 `MUST` sin resolución. El modelo comprueba integridad de metadatos, no lectura/competencia, calidad de fuentes, propiedad intelectual ni fidelidad semántica independiente.
+
+## Evidencia durable (S2, infraestructura horizontal)
+
+| Contrato propuesto | Implementación | Evidencia requerida | Estado |
+|---|---|---|---|
+| Bytes locales por SHA y evento atómico | `domain/evidence.py`, `adapters/persistence/sqlite_evidence.py` | Reabrir después de reinicio; fallos de escritura sin objeto huérfano | PROTOTYPED_TESTED |
+| Cadena y autenticidad relativa a checkpoint | `verify(expected_head)` | Tampering, borrado parcial y checkpoint externo divergente | PROTOTYPED_TESTED |
+| No equivaler recibo con prueba académica | `external_authenticity_proven=false` en CLI; ADR-0012 | Análisis de límites y tests | STRUCTURAL_BOUNDARY |
+
+Este corte no adjudica automáticamente ningún DSR de las 168 `MUST`; primero debe comprobarse la integración real con los controladores de revisión.
+
+**Evidencia de CI:** commit `e168f482b153ccb172293fd6d8ddfbf91ab780a1`, [run 39096421735](https://github.com/David-std/AWF/actions/runs/39096421735), matriz 4/4 aprobada con 116 tests por trabajo; ver también [ADR-0012](adr/0012-local-evidence-ledger.md). Estado `PROTOTYPED_TESTED` se refiere a integridad y recuperación del almacén, **no** al juicio del revisor ni a las 168 reglas del corpus.

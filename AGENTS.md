@@ -1,6 +1,6 @@
 # AWF — instrucciones para agentes y colaboradores
 
-Este archivo controla la **forma de trabajar** en David-std/AWF. No sustituye la especificación. Estado actual: diseño 0.1, sin motor implementado.
+Este archivo controla la **forma de trabajar** en David-std/AWF. No sustituye la especificación. Estado actual: prototipos S0–S2 en PR apiladas; hay CLI, ingesta, registros y puertas de auditoría, pero no editor neuronal ni verificador independiente completo. Comprobar el estado exacto en `docs/AGENT_HANDOFF.md`.
 
 ## Lectura obligatoria y precedencia
 

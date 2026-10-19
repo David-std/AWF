@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — Sprint 2 local evidence ledger
+
+- Add transactional SHA-256-linked evidence events with private SQLite content-addressed blobs and optional independently retained head checkpoints.
+- Add `awf evidence append/verify` CLI with source-file protection, synthetic regression tests, and explicit limit: hashes are not signatures nor academic assessment.
+- ADR-0012 distinguishes necessary transactional persistence from earlier metadata-only JSON exports.
+
 ## Unreleased — Sprint 2 knowledge-integrity prototype
 
 - Add source-identity and chunk-to-EOF inventory, evidence-bound read coverage and debt reporting.
