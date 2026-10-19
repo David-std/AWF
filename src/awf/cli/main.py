@@ -20,6 +20,7 @@ from awf.adapters.knowledge.zip_archive import checksum_file
 from awf.adapters.persistence.blob_store import FileBlobStore
 from awf.adapters.persistence.registry_store import save_registry, save_review_workbench
 from awf.adapters.persistence.sqlite_evidence import SQLiteEvidenceLedger
+from awf.adapters.persistence.sqlite_snapshots import SQLiteSnapshotWriter
 from awf.adapters.security.ed25519_reviewer import Ed25519ReviewerVerifier
 from awf.application.commands.authorize_review import (
     append_signed_review_claim,
@@ -29,6 +30,7 @@ from awf.application.commands.checkpoints import propose_checkpoint, verify_sign
 from awf.application.commands.compile_knowledge import import_knowledge
 from awf.application.commands.ingest_document import ingest_document
 from awf.application.commands.prepare_review import prepare_review
+from awf.application.commands.verified_snapshot import create_verified_snapshot
 from awf.domain.checkpoints import SignedLedgerCheckpoint, parse_checkpoint_policy
 from awf.domain.evidence import EvidenceKind
 from awf.domain.reviewer_auth import ReviewerRole, SignedReviewerClaim, parse_trust_policy
@@ -142,6 +144,30 @@ def create_parser() -> argparse.ArgumentParser:
         help="ancestor checkpoint; repeat oldest to newest",
     )
     checkpoint.add_argument("--require-current-head", action="store_true")
+    for action_name, explanation in (
+        ("snapshot-create", "create a new online SQLite backup bound to a signed current head"),
+        ("snapshot-restore", "restore a signed SQLite snapshot to a NEW empty path"),
+    ):
+        snapshot = actions.add_parser(action_name, help=explanation)
+        snapshot.add_argument("source", type=Path, help="live SQLite or prior snapshot")
+        snapshot.add_argument("destination", type=Path, help="must be a nonexistent SQLite path")
+        snapshot.add_argument("--checkpoint-file", type=Path, required=True)
+        snapshot.add_argument("--expected-checkpoint-sha256", required=True)
+        snapshot.add_argument("--policy-file", type=Path, required=True)
+        snapshot.add_argument("--expected-policy-sha256", required=True)
+        snapshot.add_argument(
+            "--timeout-seconds",
+            type=float,
+            default=120,
+            help="bounded online backup transfer time (1–3600 seconds)",
+        )
+        snapshot.add_argument(
+            "--history-file",
+            type=Path,
+            action="append",
+            default=[],
+            help="complete signed ancestors, oldest first",
+        )
     return parser
 
 
@@ -309,6 +335,57 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 2
 
     if args.command == "evidence":
+        if args.evidence_action in {"snapshot-create", "snapshot-restore"}:
+            try:
+                protected = (
+                    args.source,
+                    args.checkpoint_file,
+                    args.policy_file,
+                    *args.history_file,
+                )
+                if any(args.destination.resolve() == path.resolve() for path in protected):
+                    raise ValueError("snapshot destination would overwrite an input")
+                signed = SignedLedgerCheckpoint.from_bytes(
+                    _read_private_auth_file(args.checkpoint_file)
+                )
+                history = tuple(
+                    SignedLedgerCheckpoint.from_bytes(_read_private_auth_file(path))
+                    for path in args.history_file
+                )
+                policy = parse_checkpoint_policy(
+                    _read_private_auth_file(args.policy_file),
+                    expected_sha256=args.expected_policy_sha256,
+                )
+                result = create_verified_snapshot(
+                    store=SQLiteEvidenceLedger(args.source),
+                    writer=SQLiteSnapshotWriter(args.source, timeout_seconds=args.timeout_seconds),
+                    destination=args.destination,
+                    signed=signed,
+                    expected_signed_sha256=args.expected_checkpoint_sha256,
+                    policy=policy,
+                    verifier=Ed25519ReviewerVerifier(),
+                    now=int(datetime.now(UTC).timestamp()),
+                    history=history,
+                )
+                print(
+                    json.dumps(
+                        {
+                            "status": "SNAPSHOT_BACKUP_CREATED"
+                            if args.evidence_action == "snapshot-create"
+                            else "SNAPSHOT_RESTORED_TO_NEW_PATH",
+                            "destination": str(result.destination),
+                            "event_count": result.event_count,
+                            "head_digest": result.head_digest,
+                            "snapshot_file_sha256": result.file_sha256,
+                            "external_custody_proven": result.independently_custodied,
+                        }
+                    )
+                )
+                return 0
+            except (OSError, ValueError, RuntimeError, sqlite3.Error) as exc:
+                print(f"AWF_ERROR [SNAPSHOT_FAILED] {exc}", file=sys.stderr)
+                return 2
+
         if args.evidence_action in {"checkpoint-propose", "checkpoint-verify"}:
             try:
                 store = SQLiteEvidenceLedger(args.database)

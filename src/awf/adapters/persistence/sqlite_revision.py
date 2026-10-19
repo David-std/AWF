@@ -188,6 +188,61 @@ class SQLiteRevisionJournal:
             if actual is None or _canonical_ddl(actual) != _canonical_ddl(expected):
                 raise EvidenceIntegrityError(f"revision schema definition changed: {name}")
 
+    def verify_all_revisions(self, *, expected_head: str | None = None) -> tuple[LedgerAudit, int]:
+        """Verify every persisted revision in one audited SQLite read snapshot.
+
+        A bare evidence ledger without revision tables is valid only if no
+        transition events claim revisions. An orphan revision, damaged schema
+        or altered snapshot cannot be accepted as a fully verified backup.
+        """
+        if not self.ledger.database.is_file():
+            raise FileNotFoundError("revision evidence store does not exist")
+        with self.ledger._open() as conn:
+            conn.execute("BEGIN")
+            try:
+                self.ledger._check_schema(conn)
+                report = self.ledger._audit_transaction(conn)
+                if expected_head is not None and expected_head != report.head_digest:
+                    raise EvidenceIntegrityError("trusted head digest does not match ledger")
+                has_snapshots = (
+                    conn.execute(
+                        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='revision_snapshots'"
+                    ).fetchone()
+                    is not None
+                )
+                subjects = {
+                    str(row[0])
+                    for row in conn.execute(
+                        "SELECT DISTINCT subject_id FROM events WHERE kind=?",
+                        (EvidenceKind.REVISION_TRANSITION.value,),
+                    )
+                }
+                if has_snapshots:
+                    self._check_schema(conn)
+                    identifiers = {
+                        str(row[0])
+                        for row in conn.execute(
+                            "SELECT DISTINCT revision_id FROM revision_snapshots"
+                        )
+                    }
+                    if identifiers != subjects:
+                        raise EvidenceIntegrityError("revision snapshots and transitions disagree")
+                    for revision_id in sorted(identifiers):
+                        if not self._recover(conn, revision_id, report.head_digest):
+                            raise EvidenceIntegrityError("revision recovery returned no snapshots")
+                elif subjects:
+                    raise EvidenceIntegrityError(
+                        "revision transitions exist without journal schema"
+                    )
+                else:
+                    identifiers = set()
+                conn.execute("COMMIT")
+                return report, len(identifiers)
+            except BaseException:
+                if conn.in_transaction:
+                    conn.execute("ROLLBACK")
+                raise
+
     def _recover(
         self, conn: sqlite3.Connection, revision_id: str, head: str
     ) -> list[PersistedRevision]:

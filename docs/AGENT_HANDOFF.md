@@ -1,5 +1,15 @@
 # AWF — transferencia de Sprint 2
 
+## Continuación S2 — recuperación SQLite ligada a checkpoint firmado (tras PR #23)
+
+- **Base exacta:** `develop` commit de fusión PR #23 `484b911b1b754909786510273cee6218825258d9`, `main` sin tocar `a902135b80e96eea17ebb9c229eed065077e809d`. Rama incremental `feat/s2-verified-sqlite-backups` con PR independiente para fusionar solo tras CI/Windows.
+- **Contratos:** `SnapshotReceipt` DTO, `SnapshotWriterPort`, `create_verified_snapshot` exigen firma/política/último hash de checkpoint por testigo externo y `require_current_head=True`; el adaptador usa `sqlite3.backup`, audita snapshot completo y publica solo a un destino nuevo con hardlink atómico (nunca sobrescribe datos preexistentes).
+- **Protección adicional:** `SQLiteRevisionJournal.verify_all_revisions` valida esquema/triggers, evidencia y replay completo de *cada* revisión en un snapshot único; el mero hecho de que los eventos SHA sean válidos no permite restaurar un `RevisionState` adulterado.
+- **Corte Linux previo a publicación:** 278 pruebas PASS Python 3.12 (incluyendo timeout de backup, WAL, carrera y replay del journal con triggers recreados), Ruff/Pyright 0 errores, `uv lock --check` y `uv build --offline` aprobados; CI y Windows exacto requieren ejecución antes de merge. Pruebas adversariales sintéticas sin ZIP histórico. [ADR-0018](adr/0018-wal-aware-signed-backup-recovery.md), [guía de snapshot](VERIFIED_SNAPSHOTS_S2.md).
+- **Punto S2 pendiente:** permisos/custodia reales de terceros, política de rotación de claves, cutover y RPO/RTO, barridos críticos durables, perfilado del replay para muchos documentos y adjudicación sustantiva de 168 MUST. Ningún resultado de copia autentica verdad académica; `0/168 REVIEW_ATTESTED` permanece inalterado.
+
+**Actualización vigente: 2026-10-19 (UTC).** La bitácora anterior permanece por trazabilidad histórica; los SHA y resultados de esta sección prevalecen al continuar.
+
 ## Continuación de S2: checkpoint de ledger firmado (incremento tras PR #22)
 
 - **Base exacta:** `develop` `6fc0f5fde290f4febe4acae1689f387d5d22a02c` (PR #22 fusionada); `main` conservada `a902135b80e96eea17ebb9c229eed065077e809d`. Rama propuesta: `feat/s2-signed-checkpoints`. No fusionar ni reescribir `main`.
