@@ -1,6 +1,20 @@
 # AWF — transferencia de Sprint 2
 
-Fecha de validación: 2026-10-17 (Lima). Estado: **Sprint 2 parcial; revisión técnica de reglas todavía abierta**.
+**Actualización vigente: 2026-10-19 (UTC).** Sprint 2 permanece parcial. Las secciones fechadas más abajo son una bitácora histórica; sus indicaciones antiguas sobre PR «sin fusionar», ramas operativas y siguientes pasos **han quedado sustituidas** por este apartado.
+
+## Estado vigente — integración revisada en `develop`
+
+- `main` se conserva en `a902135b80e96eea17ebb9c229eed065077e809d`. Se creó `develop` desde ese commit y se fusionaron secuencialmente, por merge commit, las once PR [#10](https://github.com/David-std/AWF/pull/10) a [#20](https://github.com/David-std/AWF/pull/20). Todas figuran `closed/merged`, con base final `develop`; ninguna se fusionó a `main`.
+- HEAD exacto de `develop`: `26a937ebf647fd438ed703ac0e3a9c94aabc09c7`, cierre de PR #20. La integración conservó sin pérdida las correcciones de cada revisión y resolvió explícitamente conflictos en las PR #14, #17 y #20. Los contratos rectores son `AGENTS.md`, [arquitectura 0.1](architecture/ARCHITECTURE_SPEC_0_1.md), [decision lock](architecture/DECISIONS_LOCK.yaml) y ADR-0006 a ADR-0015.
+- Resultado final: **196 pytest PASS** en Linux Python 3.12 para el árbol integrado, Ruff lint/formato y Pyright sin errores. PR #20, commit `cdd8de2304fd24ced17490aaa815a84e78e10307`, [Actions 39186482215](https://github.com/David-std/AWF/actions/runs/39186482215): **4/4 jobs SUCCESS** en Ubuntu/Windows con Python 3.12/3.13. El SHA del árbol integrado se contrastó antes de publicar la resolución de conflictos.
+- Validación adicional con Desktop Commander en el equipo autorizado ASUS ROG STRIX, en worktree aislado de `develop` al mismo SHA: **194 PASS, 2 SKIP** en Windows Python 3.12; una omisión requiere POSIX y la otra es una restricción documentada de archivos ZIP abiertos en Windows. La rama de trabajo preexistente `feat/s2-evidence-binding` quedó intacta. `hypothesis==6.142.4` se instaló solo en `.audit_test_deps` del worktree temporal.
+- Garantías revisadas: exportes privados atómicos de DocumentIR y workbench, decisiones históricas `REVIEW_PROPOSED` separadas de `REVIEW_ATTESTED`, rechazo de entradas/schemas manipulados, preservación conservadora de auditorías/fragmentos, cadena SQLite comprobada contra triggers falsificados, contexto de ejecución coherente y replay de `START`, `AUDIT`, `EDIT`, `FINDING_OPEN`, `FINDING_RESOLVE` con commit coordinado y secuencia causal de eventos.
+- **Estado del corpus inalterado:** 184 entradas (168 `MUST`, 16 `DEFERRED_LAB`), **0/168 formalmente adjudicadas**. Existen análisis preliminares para 32; faltan 136 análisis sustantivos. Las 16 lab-only siguen `EVAL_ONLY`; ni pruebas verdes ni recibos SQLite promueven reglas a `REVIEW_ATTESTED`.
+- **Siguientes prioridades S2:** (1) identidad, roles y autorización verificables de evaluadores; (2) checkpoint firmado o custodiado fuera de SQLite, rotación y restauración de backups; (3) transacciones durables para barridos críticos/iteraciones externas si se pretende automatizar convergencia; (4) medición y optimización de la verificación de muchos fragmentos; (5) adjudicación de reglas con fuente, permisos, falsadores y revisión humana independiente. Mantener cerrada la puerta a entrenamiento y a declaraciones de validez académica hasta resolver estas condiciones.
+
+## Registro histórico — información anterior a la integración
+
+Fecha del primer corte: 2026-10-17 (Lima). Estado histórico: **Sprint 2 parcial; revisión técnica de reglas todavía abierta**.
 
 ## Estado exacto del repositorio
 
