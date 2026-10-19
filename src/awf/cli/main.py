@@ -16,9 +16,10 @@ from awf.adapters.knowledge.pinned_archive import PinnedAwsArchive
 from awf.adapters.knowledge.review_file import JsonReviewReader
 from awf.adapters.knowledge.zip_archive import checksum_file
 from awf.adapters.persistence.blob_store import FileBlobStore
-from awf.adapters.persistence.registry_store import save_registry
+from awf.adapters.persistence.registry_store import save_registry, save_review_workbench
 from awf.application.commands.compile_knowledge import import_knowledge
 from awf.application.commands.ingest_document import ingest_document
+from awf.application.commands.prepare_review import prepare_review
 from awf.knowledge.audit import audit_registry
 
 
@@ -52,6 +53,15 @@ def create_parser() -> argparse.ArgumentParser:
     auditor.add_argument(
         "--archive", type=Path, help="optionally compare actual local archive hash"
     )
+    review_plan = operations.add_parser(
+        "plan-review", help="prepare private, source-bound review batches (not approvals)"
+    )
+    review_plan.add_argument("archive", type=Path, help="local original AWS ZIP")
+    review_plan.add_argument(
+        "--manifest", type=Path, default=Path("provenance/source-manifest.json")
+    )
+    review_plan.add_argument("--source-id", default="aws-3.19.1")
+    review_plan.add_argument("--batch-size", type=int, default=12)
     return parser
 
 
@@ -98,6 +108,49 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 2
 
     if args.command == "knowledge":
+        if args.knowledge_action == "plan-review":
+            try:
+                overview, packets = prepare_review(
+                    archive_path=args.archive,
+                    manifest_path=args.manifest,
+                    reader=PinnedAwsArchive(),
+                    source_id=args.source_id,
+                    batch_size=args.batch_size,
+                )
+                # Rooted beside the trusted manifest, never inside tracked docs/.
+                parent = args.manifest.resolve().parent
+                repo_root = parent.parent if parent.name == "provenance" else parent
+                privacy_root = repo_root / ".awf"
+                output_dir = (
+                    privacy_root
+                    / "knowledge"
+                    / (f"review-{overview['archive_sha256'][:12]}-b{args.batch_size:02d}")
+                )
+                for path in (privacy_root, privacy_root / "knowledge", output_dir):
+                    if path.is_symlink():
+                        raise ValueError("private review path cannot be a symbolic link")
+                save_review_workbench(output_dir, overview=overview, packets=packets)
+                print(
+                    json.dumps(
+                        {
+                            "status": "REVIEW_PENDING",
+                            "manifest": str(output_dir / "manifest.json"),
+                            "batches": len(packets),
+                            "requirements_count": overview["requirements_count"],
+                            "open_count": overview["open_count"],
+                            "priority_counts": overview["priority_counts"],
+                            "legacy_verification_class_counts": overview[
+                                "legacy_verification_class_counts"
+                            ],
+                        },
+                        ensure_ascii=False,
+                    )
+                )
+                return 0
+            except (OSError, ValueError, RuntimeError, KeyError) as exc:
+                print(f"AWF_ERROR [REVIEW_PLAN_FAILED] {exc}", file=sys.stderr)
+                return 2
+
         if args.knowledge_action == "import":
             output: Path | None = args.output
             protected = [args.archive, args.manifest]
@@ -166,7 +219,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 print(f"AWF_ERROR [KNOWLEDGE_AUDIT_FAILED] {exc}", file=sys.stderr)
                 return 2
 
-        parser.error("expected knowledge import or knowledge audit")
+        parser.error("expected knowledge import, knowledge plan-review or knowledge audit")
         return 2
 
     parser.error("unknown command")
