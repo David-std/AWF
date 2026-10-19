@@ -54,7 +54,7 @@ def test_command_uses_interchangeable_ports_not_zip_reader() -> None:
         review_reader=FakeReview(),
     )
     assert result.records[0].disposition == Disposition.KEEP_AS_CODE
-    assert result.records[0].review_status == "REVIEW_ATTESTED"
+    assert result.records[0].review_status == "REVIEW_PROPOSED"
 
 
 def test_application_layer_never_imports_adapters() -> None:

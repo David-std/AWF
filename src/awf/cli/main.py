@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sqlite3
 import sys
+import tempfile
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -15,7 +17,7 @@ from awf.adapters.knowledge.pinned_archive import PinnedAwsArchive
 from awf.adapters.knowledge.review_file import JsonReviewReader
 from awf.adapters.knowledge.zip_archive import checksum_file
 from awf.adapters.persistence.blob_store import FileBlobStore
-from awf.adapters.persistence.registry_store import save_registry
+from awf.adapters.persistence.registry_store import save_registry, save_review_workbench
 from awf.adapters.persistence.sqlite_evidence import SQLiteEvidenceLedger
 from awf.application.commands.compile_knowledge import import_knowledge
 from awf.application.commands.ingest_document import ingest_document
@@ -90,16 +92,30 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "ingest":
         source: Path = args.source
         output: Path | None = args.output
-        if output is not None and output.resolve() == source.resolve():
-            print("AWF_ERROR [SOURCE_PROTECTED] output cannot overwrite source", file=sys.stderr)
-            return 2
         try:
+            if output is not None and (
+                output.resolve() == source.resolve()
+                or (output.exists() and source.exists() and output.samefile(source))
+            ):
+                print(
+                    "AWF_ERROR [SOURCE_PROTECTED] output cannot overwrite source", file=sys.stderr
+                )
+                return 2
             store = FileBlobStore(args.store) if args.store is not None else None
             document = ingest_document(source, parser=MarkdownAdapter(), blob_store=store)
             representation = json.dumps(document.to_dict(), ensure_ascii=False, indent=2) + "\n"
             if output is not None:
                 output.parent.mkdir(parents=True, exist_ok=True)
-                output.write_text(representation, encoding="utf-8")
+                # A crash while writing must leave the prior output complete.
+                fd, temporary_name = tempfile.mkstemp(prefix=".awf-", dir=output.parent)
+                try:
+                    with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+                        handle.write(representation)
+                        handle.flush()
+                        os.fsync(handle.fileno())
+                    os.replace(temporary_name, output)
+                finally:
+                    Path(temporary_name).unlink(missing_ok=True)
             else:
                 print(representation, end="")
             return 0
@@ -129,10 +145,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 for path in (privacy_root, privacy_root / "knowledge", output_dir):
                     if path.is_symlink():
                         raise ValueError("private review path cannot be a symbolic link")
-                # Publish manifest only after all private batches have been written.
-                for filename, packet in sorted(packets.items()):
-                    save_registry(output_dir / filename, packet)
-                save_registry(output_dir / "manifest.json", overview)
+                save_review_workbench(output_dir, overview=overview, packets=packets)
                 print(
                     json.dumps(
                         {

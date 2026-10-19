@@ -23,6 +23,10 @@ def _identifier(value: str) -> bool:
     return re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,99}", value) is not None
 
 
+def _valid_digest(value: str) -> bool:
+    return re.fullmatch(r"[0-9a-f]{64}", value) is not None
+
+
 @dataclass(frozen=True, slots=True)
 class SourceChunk:
     chunk_id: str
@@ -55,19 +59,37 @@ class CanonicalManifest:
         ids = [ref.reference_id for ref in self.sources]
         if not self.version or not ids or len(ids) != len(set(ids)):
             raise ValueError("manifest requires unique nonempty source inventory")
-        if not self.expected_axes or len(set(self.expected_axes)) != len(self.expected_axes):
+        if (
+            not self.expected_axes
+            or len(set(self.expected_axes)) != len(self.expected_axes)
+            or not all(_identifier(axis) for axis in self.expected_axes)
+        ):
             raise ValueError("manifest requires unique nonempty expected axes")
         declared = set(ids)
         for ref in self.sources:
             if not _identifier(ref.reference_id) or not ref.evidence_pointer:
                 raise ValueError("source ID and evidence pointer are required")
+            if not _valid_digest(ref.sha256):
+                raise ValueError("source digest must identify original bytes")
             if not set(ref.dependencies).issubset(declared):
                 raise ValueError("unknown referenced source dependency")
             if ref.byte_length < 0 or not ref.chunks:
                 raise ValueError("each reference requires one or more verified chunks")
             offset = 0
+            seen_chunks: set[str] = set()
             for chunk in ref.chunks:
-                if chunk.offset_start != offset or chunk.offset_end < offset:
+                if (
+                    not _identifier(chunk.chunk_id)
+                    or chunk.chunk_id in seen_chunks
+                    or not _valid_digest(chunk.sha256)
+                ):
+                    raise ValueError("source chunks require unique IDs and valid digests")
+                seen_chunks.add(chunk.chunk_id)
+                if (
+                    chunk.offset_start != offset
+                    or chunk.offset_end < offset
+                    or (ref.byte_length > 0 and chunk.offset_end == offset)
+                ):
                     raise ValueError("source chunks must cover contiguous byte offsets")
                 offset = chunk.offset_end
             if offset != ref.byte_length:
@@ -94,7 +116,7 @@ def build_manifest(
     chunk_bytes: int = 4096,
 ) -> CanonicalManifest:
     """Compute SHA and byte-contiguous chunks without exporting original text."""
-    if chunk_bytes < 1 or chunk_bytes > 1024 * 1024:
+    if type(chunk_bytes) is not int or chunk_bytes < 1 or chunk_bytes > 1024 * 1024:
         raise ValueError("chunk_bytes outside supported limits")
     refs: list[CanonicalReference] = []
     for source in sources:
@@ -177,6 +199,9 @@ def assess_coverage(
     seen: set[tuple[str, str]] = set()
     accepted: set[tuple[str, str]] = set()
     invalid: list[str] = []
+    for ref in manifest.sources:
+        if ref.byte_length == 0:
+            invalid.append(f"empty_source:{ref.reference_id}")
     for receipt in chunk_receipts:
         key = (receipt.reference_id, receipt.chunk_id)
         label = ":".join(key)
@@ -283,7 +308,7 @@ def preservation_debt(old: CanonicalManifest, new: CanonicalManifest) -> tuple[s
         latest = current.get(key)
         if latest is None:
             debt.append(f"removed:{key}")
-        elif prior.sha256 != latest.sha256 or prior.negative_knowledge != latest.negative_knowledge:
+        elif prior != latest:
             debt.append(f"changed:{key}")
     return tuple(sorted(debt))
 

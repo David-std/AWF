@@ -46,7 +46,14 @@ class AuditSlot:
     scope: AuditScope = AuditScope.DOCUMENT
 
     def __post_init__(self) -> None:
-        if not self.block_id or not self.axis or self.required_checks < 1:
+        if (
+            not self.block_id
+            or not self.axis
+            or ":" in self.block_id
+            or ":" in self.axis
+            or type(self.required_checks) is not int
+            or self.required_checks < 1
+        ):
             raise ValueError("audit slot requires an identity and positive work budget")
 
     @property
@@ -63,6 +70,15 @@ class RevisionPolicy:
     clean_sweeps_required: int = 2
 
     def __post_init__(self) -> None:
+        if any(
+            type(value) is not int
+            for value in (
+                self.max_revision_cycles,
+                self.max_external_iterations,
+                self.clean_sweeps_required,
+            )
+        ):
+            raise ValueError("revision limits must be integers")
         if (
             min(
                 self.max_revision_cycles,
@@ -137,13 +153,21 @@ def scope_fingerprint(doc: DocumentIR, slot: AuditSlot) -> str:
     if slot.scope != AuditScope.LOCAL_NEIGHBORS:
         raise ValueError("unsupported scope type")
     i = matches[0]
+
+    def shape(index: int) -> dict[str, object]:
+        block = blocks[index]
+        return {
+            "kind": block.kind.value,
+            "heading_level": block.heading_level,
+            "text": block.text,
+        }
+
     return _sha(
         {
             "axis": slot.axis,
-            "block_kind": blocks[i].kind.value,
-            "block": blocks[i].text,
-            "previous": blocks[i - 1].text if i > 0 else None,
-            "next": blocks[i + 1].text if i + 1 < len(blocks) else None,
+            "block": shape(i),
+            "previous": shape(i - 1) if i > 0 else None,
+            "next": shape(i + 1) if i + 1 < len(blocks) else None,
         }
     )
 
@@ -185,7 +209,12 @@ def record_audit(
     slot = next((s for s in state.slots if s.key == slot_key), None)
     if slot is None:
         raise ValueError("unregistered audit task")
-    if not evidence_ref.strip() or checks_executed < 0 or checks_executed > slot.required_checks:
+    if (
+        type(checks_executed) is not int
+        or not evidence_ref.strip()
+        or checks_executed < 0
+        or checks_executed > slot.required_checks
+    ):
         raise ValueError("invalid evidence or executed-check count")
     if status == AuditStatus.CLEAN and checks_executed != slot.required_checks:
         raise ValueError("CLEAN requires every declared check to execute")
@@ -265,7 +294,7 @@ def accept_edit(
 def open_finding(
     state: RevisionState, *, finding_id: str, material: bool, evidence_ref: str
 ) -> RevisionState:
-    if not finding_id.strip() or not evidence_ref.strip():
+    if not finding_id.strip() or not evidence_ref.strip() or type(material) is not bool:
         raise ValueError("finding requires ID and evidence")
     if any(f.finding_id == finding_id for f in state.findings):
         raise ValueError("finding IDs are immutable; explicit resolution is required")
@@ -373,6 +402,11 @@ def decision(
     """Recheck the live document and every registered slot before convergence."""
     _assert_document(state, doc)
     selected = policy or RevisionPolicy()
+    if (
+        state.revision_cycles >= selected.max_revision_cycles
+        or state.external_iterations >= selected.max_external_iterations
+    ):
+        return RevisionVerdict.BUDGET_EXHAUSTED
     receipts = {r.slot_key: r for r in state.receipts}
     all_clean = (
         bool(state.slots)
@@ -398,9 +432,4 @@ def decision(
         return RevisionVerdict.CONVERGED
     else:
         result = RevisionVerdict.FRESH_CRITIC_REQUIRED
-    if (
-        state.revision_cycles >= selected.max_revision_cycles
-        or state.external_iterations >= selected.max_external_iterations
-    ):
-        return RevisionVerdict.BUDGET_EXHAUSTED
     return result

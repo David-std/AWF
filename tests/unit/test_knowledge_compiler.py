@@ -6,7 +6,7 @@ import hashlib
 
 import pytest
 
-from awf.domain.knowledge import Applicability, Disposition
+from awf.domain.knowledge import Applicability, Disposition, ReviewStatus
 from awf.knowledge.applicability import applicability_for
 from awf.knowledge.compiler import compile_knowledge
 from awf.knowledge.dependency_graph import KnowledgeDependencyError, dependency_closure
@@ -88,9 +88,10 @@ def test_explicit_review_does_not_self_certify_applicability() -> None:
         }
     )
     item = approved.records[0]
-    assert item.review_status == "REVIEW_ATTESTED"
+    assert item.review_status == ReviewStatus.REVIEW_PROPOSED
     assert applicability_for(item, context_verified=False) == Applicability.UNKNOWN
-    assert applicability_for(item, context_verified=True) == Applicability.APPLICABLE
+    assert applicability_for(item, context_verified=True) == Applicability.UNKNOWN
+    assert approved.to_dict()["unreviewed_count"] == 3
 
 
 def test_deferred_lab_cannot_be_promoted_to_training() -> None:
