@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
+import tempfile
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -45,16 +47,30 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "ingest":
         source: Path = args.source
         output: Path | None = args.output
-        if output is not None and output.resolve() == source.resolve():
-            print("AWF_ERROR [SOURCE_PROTECTED] output cannot overwrite source", file=sys.stderr)
-            return 2
         try:
+            if output is not None and (
+                output.resolve() == source.resolve()
+                or (output.exists() and source.exists() and output.samefile(source))
+            ):
+                print(
+                    "AWF_ERROR [SOURCE_PROTECTED] output cannot overwrite source", file=sys.stderr
+                )
+                return 2
             store = FileBlobStore(args.store) if args.store is not None else None
             document = ingest_document(source, parser=MarkdownAdapter(), blob_store=store)
             representation = json.dumps(document.to_dict(), ensure_ascii=False, indent=2) + "\n"
             if output is not None:
                 output.parent.mkdir(parents=True, exist_ok=True)
-                output.write_text(representation, encoding="utf-8")
+                # A crash while writing must leave the prior output complete.
+                fd, temporary_name = tempfile.mkstemp(prefix=".awf-", dir=output.parent)
+                try:
+                    with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+                        handle.write(representation)
+                        handle.flush()
+                        os.fsync(handle.fileno())
+                    os.replace(temporary_name, output)
+                finally:
+                    Path(temporary_name).unlink(missing_ok=True)
             else:
                 print(representation, end="")
             return 0
