@@ -14,7 +14,7 @@ from awf.adapters.knowledge.pinned_archive import PinnedAwsArchive
 from awf.adapters.knowledge.review_file import JsonReviewReader
 from awf.adapters.knowledge.zip_archive import checksum_file
 from awf.adapters.persistence.blob_store import FileBlobStore
-from awf.adapters.persistence.registry_store import save_registry
+from awf.adapters.persistence.registry_store import save_registry, save_review_workbench
 from awf.application.commands.compile_knowledge import import_knowledge
 from awf.application.commands.ingest_document import ingest_document
 from awf.application.commands.prepare_review import prepare_review
@@ -113,10 +113,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 for path in (privacy_root, privacy_root / "knowledge", output_dir):
                     if path.is_symlink():
                         raise ValueError("private review path cannot be a symbolic link")
-                # Publish manifest only after all private batches have been written.
-                for filename, packet in sorted(packets.items()):
-                    save_registry(output_dir / filename, packet)
-                save_registry(output_dir / "manifest.json", overview)
+                save_review_workbench(output_dir, overview=overview, packets=packets)
                 print(
                     json.dumps(
                         {

@@ -249,3 +249,73 @@ def test_review_plan_rejects_invalid_batch_size(
     ]
     assert main(args) == 2
     assert "batch_size" in capsys.readouterr().err
+
+
+def test_review_plan_never_overwrites_local_human_annotations(
+    local_source: tuple[Path, Path, str], capsys
+) -> None:
+    archive, manifest, _ = local_source
+    args = [
+        "knowledge",
+        "plan-review",
+        str(archive),
+        "--manifest",
+        str(manifest),
+        "--batch-size",
+        "1",
+    ]
+    assert main(args) == 0
+    overview_path = Path(json.loads(capsys.readouterr().out)["manifest"])
+    overview = json.loads(overview_path.read_text(encoding="utf-8"))
+    packet_path = overview_path.parent / overview["batches"][0]["file"]
+    packet = json.loads(packet_path.read_text(encoding="utf-8"))
+    packet["rules"][0]["review_template"]["reason"] = "Unfinished private annotation"
+    packet_path.write_text(json.dumps(packet, ensure_ascii=False), encoding="utf-8")
+    annotated_bytes = packet_path.read_bytes()
+    prior_manifest = overview_path.read_bytes()
+
+    assert main(args) == 2
+    assert "local changes" in capsys.readouterr().err
+    assert packet_path.read_bytes() == annotated_bytes
+    assert overview_path.read_bytes() == prior_manifest
+
+
+def test_review_plan_resumes_incomplete_write_without_changing_existing_packets(
+    local_source: tuple[Path, Path, str], capsys
+) -> None:
+    archive, manifest, _ = local_source
+    args = [
+        "knowledge",
+        "plan-review",
+        str(archive),
+        "--manifest",
+        str(manifest),
+        "--batch-size",
+        "1",
+    ]
+    assert main(args) == 0
+    overview_path = Path(json.loads(capsys.readouterr().out)["manifest"])
+    overview = json.loads(overview_path.read_text(encoding="utf-8"))
+    first = overview_path.parent / overview["batches"][0]["file"]
+    second = overview_path.parent / overview["batches"][1]["file"]
+    first_bytes = first.read_bytes()
+    second.unlink()
+    overview_path.unlink()
+
+    assert main(args) == 0
+    capsys.readouterr()
+    assert first.read_bytes() == first_bytes
+    assert second.exists() and overview_path.exists()
+
+
+def test_review_plan_rejects_modified_manifest(
+    local_source: tuple[Path, Path, str], capsys
+) -> None:
+    archive, manifest, _ = local_source
+    args = ["knowledge", "plan-review", str(archive), "--manifest", str(manifest)]
+    assert main(args) == 0
+    overview_path = Path(json.loads(capsys.readouterr().out)["manifest"])
+    overview_path.write_text("manual review summary\n", encoding="utf-8")
+    assert main(args) == 2
+    assert "manifest.json" in capsys.readouterr().err
+    assert overview_path.read_text(encoding="utf-8") == "manual review summary\n"
