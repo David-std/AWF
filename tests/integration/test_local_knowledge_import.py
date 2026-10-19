@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import sys
 import zipfile
 from pathlib import Path
 
@@ -11,7 +13,7 @@ import pytest
 
 from awf.adapters.knowledge.pinned_archive import PinnedAwsArchive
 from awf.adapters.knowledge.review_file import JsonReviewReader
-from awf.adapters.knowledge.zip_archive import LEDGER_PATH
+from awf.adapters.knowledge.zip_archive import LEDGER_PATH, read_requirement_ledger
 from awf.application.commands.compile_knowledge import import_knowledge
 from awf.cli.main import main
 from awf.knowledge.audit import audit_registry
@@ -138,6 +140,58 @@ def test_import_does_not_change_original_archive(local_source: tuple[Path, Path,
     assert hashlib.sha256(archive.read_bytes()).hexdigest() == digest
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows locks open ZIP files")
+def test_zip_path_replacement_after_checksum_does_not_change_verified_bytes(
+    local_source: tuple[Path, Path, str], tmp_path: Path, monkeypatch
+) -> None:
+    archive, _, trusted_sha = local_source
+    replacement = tmp_path / "replacement.zip"
+    with zipfile.ZipFile(replacement, mode="w") as output:
+        output.writestr(
+            LEDGER_PATH,
+            json.dumps(
+                {
+                    "suite_version": "3.19.1",
+                    "requirements": [
+                        {
+                            "id": "DSR-001",
+                            "domain": "structural",
+                            "priority": "MUST",
+                            "requirement": "Different untrusted source text",
+                            "source_ids": ["deep-1"],
+                        },
+                        {
+                            "id": "DSR-002",
+                            "domain": "detector",
+                            "priority": "DEFERRED_LAB",
+                            "requirement": "Different laboratory text",
+                            "source_ids": ["deep-2"],
+                        },
+                    ],
+                }
+            ),
+        )
+    original_zipfile = zipfile.ZipFile
+    was_replaced = False
+
+    def replace_path_before_zip_open(file, *args, **kwargs):
+        nonlocal was_replaced
+        if not was_replaced:
+            os.replace(replacement, archive)
+            was_replaced = True
+        return original_zipfile(file, *args, **kwargs)
+
+    monkeypatch.setattr(zipfile, "ZipFile", replace_path_before_zip_open)
+    rows = read_requirement_ledger(
+        archive,
+        expected_sha256=trusted_sha,
+        expected_version="3.19.1",
+        expected_count=2,
+    )
+    assert was_replaced
+    assert rows[0]["requirement"] == "Preserve provenance."
+
+
 def test_unreviewed_promotion_in_report_fails_audit(
     local_source: tuple[Path, Path, str],
 ) -> None:
@@ -183,3 +237,79 @@ def test_audit_detects_mismatched_report_totals(local_source: tuple[Path, Path, 
     report = import_test_knowledge(archive_path=archive, manifest_path=manifest).to_dict()
     report["requirements_count"] = 184
     assert audit_registry(report)["valid"] is False
+
+
+def test_overlay_creates_proposal_not_executable_attestation(
+    local_source: tuple[Path, Path, str], tmp_path: Path
+) -> None:
+    archive, manifest, digest = local_source
+    overlay = tmp_path / "review.json"
+    overlay.write_text(
+        json.dumps(
+            {
+                "source_sha256": digest,
+                "decisions": [
+                    {
+                        "id": "DSR-001",
+                        "disposition": "KEEP_AS_CODE",
+                        "reviewer": "Researcher",
+                        "reason": "Prototype only: the mechanical source check is not attested.",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    report = import_test_knowledge(
+        archive_path=archive, manifest_path=manifest, review_path=overlay
+    ).to_dict()
+    assert report["records"][0]["review_status"] == "REVIEW_PROPOSED"
+    assert report["unreviewed_count"] == 2
+    assert audit_registry(report)["valid"] is True
+
+
+def test_audit_rejects_forged_attestation_even_with_plausible_identity(
+    local_source: tuple[Path, Path, str],
+) -> None:
+    archive, manifest, _ = local_source
+    report = import_test_knowledge(archive_path=archive, manifest_path=manifest).to_dict()
+    report["records"][0].update(
+        disposition="KEEP_AS_CODE",
+        review_status="REVIEW_ATTESTED",
+        reviewer="Claimed evaluator",
+        decision_reason="The code supposedly passed a private source audit.",
+    )
+    report["disposition_counts"].update(UNRESOLVED=0, KEEP_AS_CODE=1)
+    report["unreviewed_count"] = 1
+    verdict = audit_registry(report)
+    assert verdict["valid"] is False
+    assert any("self-attested" in msg for msg in verdict["errors"])
+
+
+def test_audit_rejects_deferred_lab_promotion_even_with_proposal(
+    local_source: tuple[Path, Path, str],
+) -> None:
+    archive, manifest, _ = local_source
+    report = import_test_knowledge(archive_path=archive, manifest_path=manifest).to_dict()
+    report["records"][1].update(
+        disposition="TRAIN",
+        review_status="REVIEW_PROPOSED",
+        reviewer="Researcher",
+        decision_reason="This is only a proposal; no valid training permission is present.",
+    )
+    report["disposition_counts"].update(EVAL_ONLY=0, TRAIN=1)
+    verdict = audit_registry(report)
+    assert verdict["valid"] is False
+    assert any("deferred lab promotion" in msg for msg in verdict["errors"])
+
+
+@pytest.mark.parametrize("value", ["REVIEW_APPROVED", None, 1])
+def test_audit_rejects_undeclared_review_status(
+    local_source: tuple[Path, Path, str], value: object
+) -> None:
+    archive, manifest, _ = local_source
+    report = import_test_knowledge(archive_path=archive, manifest_path=manifest).to_dict()
+    report["records"][0]["review_status"] = value
+    verdict = audit_registry(report)
+    assert verdict["valid"] is False
+    assert any("unknown review status" in msg for msg in verdict["errors"])
