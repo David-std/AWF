@@ -2,7 +2,7 @@
 
 **AWF Neural Engine** is an engineering and machine-learning project for traceable academic text revision in Spanish and English. The goal is to preserve meaning, citations, evidence, and author intent while comparing pretrained editors, fine-tuned models, and explicit verification policies.
 
-**Status: design baseline v0.1 — implementation not started.** This repository intentionally begins with an architecture specification and research provenance rather than claims of working training or detector performance.
+**Status on the S1 feature branch: Python CLI and conservative Markdown ingestion implemented and CI-tested.** The neural editor, knowledge compiler, semantic verifier, training and external API are **not implemented**. This repository maintains research provenance without claiming detector performance.
 
 ## Start here
 
@@ -13,6 +13,21 @@
 - [Roadmap](docs/ROADMAP.md) and [current handoff](docs/AGENT_HANDOFF.md).
 - [Evidence and source registry](docs/SOURCE_REGISTRY.md) — status and limitations of external references.
 - [Compute plan](docs/COMPUTE_AND_TRAINING.md) — RTX 4050, Qwen baseline, and optional Google-hosted GPU.
+
+## Implemented core (S0–S1)
+
+The feature branch includes an installable Python package, CLI and deterministic Markdown ingestion. For example:
+
+```shell
+uv sync --locked
+uv run awf --version
+uv run awf ingest draft.md
+uv run awf ingest draft.md --store .awf --output document-ir.json
+```
+
+The ingest command reads **original UTF-8 bytes** and returns a content-addressed DocumentIR (SHA-256, blocks, inclusive line positions). `--store` is opt-in private local storage; the original file is never modified. The initial parser recognizes ATX headings, paragraphs and fenced code only; it is not a full CommonMark parser or a semantic verifier.
+
+S0: [PR #11](https://github.com/David-std/AWF/pull/11) · S1: [PR #12](https://github.com/David-std/AWF/pull/12). Both are stacked upon [architecture PR #10](https://github.com/David-std/AWF/pull/10); changes are **not necessarily present on main until merged**.
 
 ## Engineering principles
 
@@ -32,4 +47,4 @@ No AI-detector bypass rate is claimed. Detector outputs, if studied, remain sepa
 
 Some research datasets, model checkpoints, academic texts, and commercial service outputs have use restrictions. No third-party corpus, provider outputs, model weights, proprietary suite archive, or user manuscript is committed here by default. The project's **code license is intentionally undecided** until reuse constraints are reviewed.
 
-> Note: the GitHub repository slug is `David-std/AWF`; the display name is **Academic Writing Forge**. Internal package and command names are planned as `awf`.
+> Note: the GitHub repository slug is `David-std/AWF`; the display name is **Academic Writing Forge**. Internal package and command names are `awf` in the S0–S1 implementation.

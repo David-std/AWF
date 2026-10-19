@@ -30,6 +30,9 @@ Thumbs.db
 secrets/
 credentials/
 
+# Local AWF content-addressed private object store
+.awf/
+
 # Raw documents, datasets, and outputs: never commit without rights review
 /data/raw/
 /data/interim/
