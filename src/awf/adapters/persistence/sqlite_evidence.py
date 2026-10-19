@@ -8,6 +8,7 @@ independent attestation/remote anchors are intentionally OUT OF SCOPE.
 from __future__ import annotations
 
 import os
+import re
 import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -60,6 +61,31 @@ _TRIGGERS = frozenset(
         "event_immutable_delete",
     }
 )
+_DDL_STATEMENTS = tuple(
+    statement.strip().rstrip(";") for statement in _SCHEMA.strip().split(";\n") if statement.strip()
+)
+_EXPECTED_SCHEMA_SQL = dict(
+    zip(
+        (
+            "evidence_objects",
+            "events",
+            "evidence_immutable_update",
+            "evidence_immutable_delete",
+            "event_immutable_update",
+            "event_immutable_delete",
+        ),
+        _DDL_STATEMENTS,
+        strict=True,
+    )
+)
+
+
+def _canonical_ddl(statement: str) -> str:
+    """Compare effective DDL, ignoring the creation-only idempotency clause."""
+    without_if_not_exists = re.sub(r"\bIF\s+NOT\s+EXISTS\b", "", statement, flags=re.IGNORECASE)
+    return re.sub(r"\s+", " ", without_if_not_exists).strip()
+
+
 _COLUMNS = (
     "sequence, kind, run_id, subject_id, evidence_sha256, evidence_bytes, "
     "recorded_at, previous_digest, digest"
@@ -124,12 +150,20 @@ class SQLiteEvidenceLedger:
         version = int(connection.execute("PRAGMA user_version").fetchone()[0])
         if version != _SCHEMA_VERSION:
             raise EvidenceIntegrityError("database has unsupported schema version")
-        triggers = {
-            str(row[0])
-            for row in connection.execute("SELECT name FROM sqlite_master WHERE type='trigger'")
+        definitions = {
+            str(row[0]): str(row[1])
+            for row in connection.execute(
+                "SELECT name, sql FROM sqlite_master WHERE type IN ('table', 'trigger')"
+            )
         }
-        if not _TRIGGERS.issubset(triggers):
+        if not _TRIGGERS.issubset(definitions):
             raise EvidenceIntegrityError("immutable trigger contract missing")
+        # Matching trigger names are insufficient: a replacement no-op trigger
+        # leaves a writable ledger that can still pass the hash-chain audit.
+        for name, expected in _EXPECTED_SCHEMA_SQL.items():
+            actual = definitions.get(name)
+            if actual is None or _canonical_ddl(actual) != _canonical_ddl(expected):
+                raise EvidenceIntegrityError(f"evidence schema definition changed: {name}")
         status = str(connection.execute("PRAGMA quick_check").fetchone()[0])
         if status != "ok":
             raise EvidenceIntegrityError("SQLite quick_check failed")

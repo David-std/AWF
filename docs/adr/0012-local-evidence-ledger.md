@@ -11,7 +11,7 @@ Implementar `SQLiteEvidenceLedger` con **SQLite estándar de Python** y sin depe
 1. `evidence_objects`, almacenados por SHA-256 y longitud, en un BLOB local.
 2. `events`, ordenados por secuencia sin huecos, con clase, ejecución, sujeto, hash de evidencia, UTC, hash anterior y digest canónico del evento.
 3. Triggers de prohibición de `UPDATE` y `DELETE` para evitar modificaciones accidentales desde SQL.
-4. `verify()` recorre **todos** los eventos y objetos, comprueba referencias, hashes, longitud, secuencia, versiones de esquema y triggers.
+4. `verify()` recorre **todos** los eventos y objetos, comprueba referencias, hashes, longitud, secuencia, versiones de esquema y definiciones efectivas de tablas y triggers. No basta que un disparador conserve su nombre: un reemplazo sin `RAISE(ABORT)` invalida el contrato. La comparación omite únicamente `IF NOT EXISTS`, que no modifica su operación.
 5. `--expected-head` acepta un digest conservado **fuera de la base de datos**, útil para detectar una restauración a un prefijo válido del historial. Sin un head externo, una truncación completa y coherente del final no es detectable.
 6. WAL, `synchronous=FULL` y `foreign_keys=ON` para durabilidad local y concurrencia básica. No hay API remota, almacenamiento en nube ni cifrado gestionado por AWF.
 
@@ -31,7 +31,7 @@ ADR-0008 aplazó SQLite mientras solo había archivos JSON exportados. **Ahora e
 
 ## Criterios de aceptación
 
-Reinicio recupera bytes idénticos; se rechazan cambio de payload/evento/versión, huecos, disparadores ausentes, checkpoint divergente, archivo simbólico, nombre inválido y contenido vacío/grande; reusar un hash conserva objeto único pero produce eventos distintos; una escritura abortada no deja bytes huérfanos; escrituras concurrentes generan una secuencia continua. Matriz Linux/Windows Python 3.12/3.13 y prueba en el equipo del usuario, sin datos privados en el repositorio.
+Reinicio recupera bytes idénticos; se rechazan cambio de payload/evento/versión, huecos, disparadores ausentes o reemplazados por otros inertes con el mismo nombre, definiciones divergentes de tablas, checkpoint divergente, archivo simbólico, nombre inválido y contenido vacío/grande; reusar un hash conserva objeto único pero produce eventos distintos; una escritura abortada no deja bytes huérfanos; escrituras concurrentes generan una secuencia continua. Matriz Linux/Windows Python 3.12/3.13 y prueba en el equipo del usuario, sin datos privados en el repositorio.
 
 ## Límites de integración
 
