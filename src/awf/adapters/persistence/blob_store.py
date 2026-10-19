@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import tempfile
 from pathlib import Path
 
 
@@ -26,20 +27,29 @@ class FileBlobStore:
     def put(self, raw: bytes) -> str:
         digest = hashlib.sha256(raw).hexdigest()
         path = self.path_for(digest)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            handle = path.open("xb")
-        except FileExistsError as exc:
-            if path.read_bytes() != raw:
-                raise BlobIntegrityError("existing blob has wrong content for its SHA-256") from exc
-            return digest
+        path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        # A pre-existing symlinked digest directory must not redirect private
+        # original bytes outside the caller-selected store.
+        if path.parent.resolve() != self.root.resolve() / digest[:2]:
+            raise BlobIntegrityError("blob directory escapes the selected store")
 
+        # Publish only after the complete file is flushed. Creating the final
+        # path before writing lets a concurrent ingest observe partial bytes.
+        fd, temporary_name = tempfile.mkstemp(prefix=".awf-", dir=path.parent)
         try:
-            with handle:
+            with os.fdopen(fd, "wb") as handle:
                 handle.write(raw)
                 handle.flush()
                 os.fsync(handle.fileno())
-        except OSError:
-            path.unlink(missing_ok=True)
-            raise
+            try:
+                # Hard-link creation is exclusive and atomic on supported local
+                # filesystems. Never replace an existing content-addressed blob.
+                os.link(temporary_name, path)
+            except FileExistsError as exc:
+                if path.is_symlink() or path.read_bytes() != raw:
+                    raise BlobIntegrityError(
+                        "existing blob has wrong content for its SHA-256"
+                    ) from exc
+        finally:
+            Path(temporary_name).unlink(missing_ok=True)
         return digest

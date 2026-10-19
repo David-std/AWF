@@ -19,6 +19,12 @@ class Disposition(StrEnum):
     REMOVE_FROM_ACTIVE = "REMOVE_FROM_ACTIVE"
 
 
+class ReviewStatus(StrEnum):
+    UNREVIEWED = "UNREVIEWED"
+    REVIEW_PROPOSED = "REVIEW_PROPOSED"
+    REVIEW_ATTESTED = "REVIEW_ATTESTED"  # Reserved for evidence-bound adjudication.
+
+
 class Applicability(StrEnum):
     APPLICABLE = "APPLICABLE"
     NOT_APPLICABLE = "NOT_APPLICABLE"
@@ -39,7 +45,7 @@ class KnowledgeItem:
     source_ids: tuple[str, ...]
     source_text_sha256: str
     disposition: Disposition
-    review_status: str
+    review_status: ReviewStatus
     reviewer: str | None = None
     decision_reason: str | None = None
 
@@ -51,7 +57,7 @@ class KnowledgeItem:
             "source_ids": list(self.source_ids),
             "source_text_sha256": self.source_text_sha256,
             "disposition": self.disposition.value,
-            "review_status": self.review_status,
+            "review_status": self.review_status.value,
             "reviewer": self.reviewer,
             "decision_reason": self.decision_reason,
         }
@@ -83,7 +89,7 @@ class KnowledgeRegistry:
             "requirements_count": len(self.records),
             "disposition_counts": self.counts(),
             "unreviewed_count": sum(
-                item.review_status != "REVIEW_ATTESTED" for item in self.records
+                item.review_status != ReviewStatus.REVIEW_ATTESTED for item in self.records
             ),
             "possible_duplicate_groups": [list(group) for group in self.possible_duplicate_groups],
             "records": [item.to_dict() for item in self.records],
@@ -92,5 +98,6 @@ class KnowledgeRegistry:
                 "semantic_contradictions_verified": False,
                 "model_training_authorized": False,
                 "operational_behavior_validated": False,
+                "independent_review_attested": False,
             },
         }

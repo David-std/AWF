@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from awf.domain.knowledge import Applicability, Disposition, KnowledgeItem
+from awf.domain.knowledge import Applicability, Disposition, KnowledgeItem, ReviewStatus
 
 
 def applicability_for(item: KnowledgeItem, *, context_verified: bool) -> Applicability:
@@ -12,7 +12,7 @@ def applicability_for(item: KnowledgeItem, *, context_verified: bool) -> Applica
     """
     if item.disposition in {Disposition.EVAL_ONLY, Disposition.REMOVE_FROM_ACTIVE}:
         return Applicability.NOT_APPLICABLE
-    if item.review_status != "REVIEW_ATTESTED" or not context_verified:
+    if item.review_status != ReviewStatus.REVIEW_ATTESTED or not context_verified:
         return Applicability.UNKNOWN
     if item.disposition == Disposition.KEEP_AS_CODE:
         return Applicability.APPLICABLE

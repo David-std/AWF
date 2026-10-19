@@ -10,7 +10,7 @@ import re
 from collections import Counter
 from collections.abc import Mapping
 
-from awf.domain.knowledge import Disposition
+from awf.domain.knowledge import Disposition, ReviewStatus
 
 
 def audit_registry(report: Mapping[str, object]) -> dict[str, object]:
@@ -42,20 +42,41 @@ def audit_registry(report: Mapping[str, object]) -> dict[str, object]:
             continue
         if priority not in {"MUST", "DEFERRED_LAB"}:
             errors.append(f"unknown priority at index {i}")
-        if raw.get("review_status") != "REVIEW_ATTESTED":
+        try:
+            review_status = ReviewStatus(raw.get("review_status"))
+        except (ValueError, TypeError):
+            errors.append(f"unknown review status at index {i}")
+            continue
+        if priority == "DEFERRED_LAB" and selected != Disposition.EVAL_ONLY:
+            errors.append(f"deferred lab promotion at index {i}")
+        if review_status == ReviewStatus.UNREVIEWED:
             if (priority == "MUST" and selected != Disposition.UNRESOLVED) or (
                 priority == "DEFERRED_LAB" and selected != Disposition.EVAL_ONLY
             ):
                 errors.append(f"unreviewed promotion at index {i}")
-        elif not raw.get("reviewer") or not raw.get("decision_reason"):
-            errors.append(f"reviewed disposition missing reviewer/reason at index {i}")
+        elif review_status == ReviewStatus.REVIEW_PROPOSED:
+            reviewer = raw.get("reviewer")
+            reason = raw.get("decision_reason")
+            if (
+                selected == Disposition.UNRESOLVED
+                or not isinstance(reviewer, str)
+                or len(reviewer.strip()) < 2
+                or not isinstance(reason, str)
+                or len(reason.strip()) < 20
+            ):
+                errors.append(f"malformed review proposal at index {i}")
+        else:
+            # v1 has neither independent evaluator identity nor evidence-bound
+            # adjudication. A hand-edited report may not bypass that gate.
+            errors.append(f"unsupported self-attested review at index {i}")
     expected = report.get("disposition_counts")
     if not isinstance(expected, dict) or any(expected.get(k) != counts[k] for k in Disposition):
         errors.append("disposition counts do not match records")
     if report.get("requirements_count") != len(records):
         errors.append("requirements count does not match records")
     unreviewed = sum(
-        isinstance(r, dict) and r.get("review_status") != "REVIEW_ATTESTED" for r in records
+        isinstance(r, dict) and r.get("review_status") != ReviewStatus.REVIEW_ATTESTED.value
+        for r in records
     )
     if report.get("unreviewed_count") != unreviewed:
         errors.append("unreviewed count does not match records")
