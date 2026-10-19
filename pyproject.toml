@@ -9,7 +9,7 @@ description = "Traceable academic-writing revision engine with independent verif
 readme = "README.md"
 requires-python = ">=3.12"
 authors = []
-dependencies = []
+dependencies = ["cryptography>=46,<51"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
@@ -40,6 +40,8 @@ ignore = []
 [tool.pyright]
 include = ["src"]
 pythonVersion = "3.12"
+venvPath = "."
+venv = ".venv"
 typeCheckingMode = "standard"
 reportMissingTypeStubs = false
 

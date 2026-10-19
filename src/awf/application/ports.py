@@ -61,6 +61,14 @@ class EvidenceStorePort(Protocol):
         ...
 
 
+class ReviewerSignatureVerifierPort(Protocol):
+    """Verify detached signatures against a policy-pinned public key."""
+
+    def verify(self, *, public_key_hex: str, signature_hex: str, message: bytes) -> None:
+        """Raise EvidenceIntegrityError for an invalid signature or unsupported backend."""
+        ...
+
+
 class RevisionJournalPort(Protocol):
     """Atomic revision/evidence commits; never authorizes final scholarly acceptance."""
 

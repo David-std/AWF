@@ -9,6 +9,7 @@ import sqlite3
 import sys
 import tempfile
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from pathlib import Path
 
 from awf import __version__
@@ -19,10 +20,16 @@ from awf.adapters.knowledge.zip_archive import checksum_file
 from awf.adapters.persistence.blob_store import FileBlobStore
 from awf.adapters.persistence.registry_store import save_registry, save_review_workbench
 from awf.adapters.persistence.sqlite_evidence import SQLiteEvidenceLedger
+from awf.adapters.security.ed25519_reviewer import Ed25519ReviewerVerifier
+from awf.application.commands.authorize_review import (
+    append_signed_review_claim,
+    verify_signed_review_event,
+)
 from awf.application.commands.compile_knowledge import import_knowledge
 from awf.application.commands.ingest_document import ingest_document
 from awf.application.commands.prepare_review import prepare_review
 from awf.domain.evidence import EvidenceKind
+from awf.domain.reviewer_auth import ReviewerRole, SignedReviewerClaim, parse_trust_policy
 from awf.knowledge.audit import audit_registry
 
 
@@ -69,7 +76,11 @@ def create_parser() -> argparse.ArgumentParser:
     actions = evidence.add_subparsers(dest="evidence_action")
     writer = actions.add_parser("append", help="store evidence locally and bind an event")
     writer.add_argument("source", type=Path, help="local evidence file (max 512 KiB)")
-    writer.add_argument("--kind", required=True, choices=[k.value for k in EvidenceKind])
+    writer.add_argument(
+        "--kind",
+        required=True,
+        choices=[k.value for k in EvidenceKind if k != EvidenceKind.REVIEW_ATTESTATION],
+    )
     writer.add_argument("--run-id", required=True)
     writer.add_argument("--subject-id", required=True)
     writer.add_argument("--database", type=Path, default=Path(".awf/evidence/ledger.sqlite"))
@@ -78,7 +89,31 @@ def create_parser() -> argparse.ArgumentParser:
     audit.add_argument(
         "--expected-head", help="head digest retained independently from this database"
     )
+    attestor = actions.add_parser(
+        "attest", help="verify and store an offline-signed reviewer claim"
+    )
+    attestor.add_argument("source", type=Path, help="canonical signed JSON, never a private key")
+    attestor.add_argument("--database", type=Path, default=Path(".awf/evidence/ledger.sqlite"))
+    attestor.add_argument("--policy-file", type=Path, required=True)
+    attestor.add_argument("--expected-policy-sha256", required=True)
+    attestor.add_argument("--expected-head", help="optional externally held current ledger head")
+    reviewer = actions.add_parser("attest-verify", help="recheck role, signature and event binding")
+    reviewer.add_argument("--database", type=Path, default=Path(".awf/evidence/ledger.sqlite"))
+    reviewer.add_argument("--policy-file", type=Path, required=True)
+    reviewer.add_argument("--expected-policy-sha256", required=True)
+    reviewer.add_argument("--attestation-ref", required=True)
+    reviewer.add_argument("--target-ref", required=True)
+    reviewer.add_argument("--role", required=True, choices=[role.value for role in ReviewerRole])
+    reviewer.add_argument("--run-id", required=True)
+    reviewer.add_argument("--subject-id", required=True)
+    reviewer.add_argument("--expected-head", help="optional externally held current ledger head")
     return parser
+
+
+def _read_private_auth_file(path: Path) -> bytes:
+    if path.is_symlink() or not path.is_file() or path.stat().st_size > 64 * 1024:
+        raise ValueError("authorization input must be a bounded regular non-symlinked file")
+    return path.read_bytes()
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -239,6 +274,69 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 2
 
     if args.command == "evidence":
+        if args.evidence_action in {"attest", "attest-verify"}:
+            try:
+                if args.evidence_action == "attest" and args.source.resolve() in {
+                    args.database.resolve(),
+                    args.policy_file.resolve(),
+                }:
+                    raise ValueError("signed statement must not overwrite another input")
+                policy = parse_trust_policy(
+                    _read_private_auth_file(args.policy_file),
+                    expected_sha256=args.expected_policy_sha256,
+                )
+                store = SQLiteEvidenceLedger(args.database)
+                verifier = Ed25519ReviewerVerifier()
+                now = int(datetime.now(UTC).timestamp())
+                if args.evidence_action == "attest":
+                    signed = SignedReviewerClaim.from_bytes(_read_private_auth_file(args.source))
+                    record = append_signed_review_claim(
+                        store=store,
+                        signed=signed,
+                        policy=policy,
+                        verifier=verifier,
+                        now=now,
+                        expected_head=args.expected_head,
+                    )
+                    print(
+                        json.dumps(
+                            {
+                                "status": "REVIEWER_ATTESTATION_RECORDED",
+                                "attestation_ref": f"event:{record.digest}",
+                                "actor_id": signed.claim.actor_id,
+                                "policy_sha256": policy.policy_sha256,
+                                "independent_adjudication_proven": False,
+                            }
+                        )
+                    )
+                else:
+                    actor_id = verify_signed_review_event(
+                        store=store,
+                        attestation_ref=args.attestation_ref,
+                        target_ref=args.target_ref,
+                        expected_role=ReviewerRole(args.role),
+                        run_id=args.run_id,
+                        subject_id=args.subject_id,
+                        policy=policy,
+                        verifier=verifier,
+                        now=now,
+                        expected_head=args.expected_head,
+                    )
+                    print(
+                        json.dumps(
+                            {
+                                "status": "REVIEWER_AUTHORIZATION_VERIFIED",
+                                "actor_id": actor_id,
+                                "policy_sha256": policy.policy_sha256,
+                                "independent_adjudication_proven": False,
+                            }
+                        )
+                    )
+                return 0
+            except (OSError, ValueError, RuntimeError, sqlite3.Error) as exc:
+                print(f"AWF_ERROR [REVIEWER_AUTH_FAILED] {exc}", file=sys.stderr)
+                return 2
+
         if args.evidence_action == "append":
             try:
                 if args.source.resolve() == args.database.resolve():
