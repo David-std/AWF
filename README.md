@@ -78,3 +78,9 @@ The prototype does **not** establish semantic correctness, genuine independent c
 ## Local evidence ledger — Sprint 2
 
 [ADR-0012](docs/adr/0012-local-evidence-ledger.md) introduces a private, transactional SQLite journal for evidence bytes and SHA-256-linked events. Use `awf evidence append` and `awf evidence verify` as documented in [the local evidence guide](docs/EVIDENCE_LEDGER_S2.md). This makes declared evidence *retrievable and locally integrity-checkable*, **not signed, externally authenticated, independently assessed, or a proof that a model understood its inputs**. This PR is stacked on #16; it does not finish the ML engine.
+
+## Evidence-bound revision and knowledge receipts — Sprint 2
+
+[PR #18](https://github.com/David-std/AWF/pull/18) extends the local evidence ledger with exact event-bound receipt verification for document audits, source chunks, required coverage and knowledge stages. The [ADR-0013](docs/adr/0013-evidence-bound-receipts.md) explains event identity, expected-run/subject checks, carried-audit constraints and adversarial tests; [evidence binding guide](docs/EVIDENCE_BINDING_S2.md) lists application APIs.
+
+**Important:** `local_integrity_passed` is not equivalent to a trustworthy assessment of the manuscript, the sources, reviewer independence or actual model comprehension; `independent_adjudication_proven` remains `false`. This slice has no production editor or neural training and is stacked on unmerged PRs #10–#17. Historical AWS 3.19.1 files remain private.
