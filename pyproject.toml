@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "academic-writing-forge"
+version = "0.1.0"
+description = "Traceable academic-writing revision engine with independent verification"
+readme = "README.md"
+requires-python = ">=3.12"
+authors = []
+dependencies = []
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+    "Topic :: Text Processing",
+]
+
+[project.scripts]
+awf = "awf.cli.main:run"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["awf*"]
+
+[tool.uv]
+package = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["data", "models", "artifacts", "reports"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "B", "UP"]
+ignore = []
+
+[tool.pyright]
+include = ["src"]
+pythonVersion = "3.12"
+typeCheckingMode = "standard"
+reportMissingTypeStubs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = ["contract: checks implementation against a declared interface"]
