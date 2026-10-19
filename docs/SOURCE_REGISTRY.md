@@ -1,0 +1,28 @@
+# Registro inicial de fuentes y límites de evidencia
+
+Cada entrada indica qué justifica, qué **no** demuestra y en qué etapa debe revalidarse. No se presenta una página comercial como validación independiente de rendimiento. La fuente histórica AWS se gestiona en `docs/PROVENANCE.md`.
+
+| ID | Fuente | Tipo | Uso arquitectónico | Límite |
+|---|---|---|---|---|
+| SR-01 | [CoEdIT — EMNLP 2023](https://aclanthology.org/2023.findings-emnlp.350/) / [repo](https://github.com/vipulraheja/coedit) | Artículo + código | Baseline de edición instruccional, pares de datos | No implica disponibilidad de todos los textos ni eficiencia ES |
+| SR-02 | [mEdIT — NAACL 2024](https://aclanthology.org/2024.naacl-long.56/) / [repo](https://github.com/vipulraheja/medit) | Artículo + código | Transferencia y baseline multilingüe | Medir ámbito académico ES por separado |
+| SR-03 | [Qwen3-4B](https://huggingface.co/Qwen/Qwen3-4B) | Model card | Modelo neuronal preentrenado candidato | No garantiza mejora al ajustar ni consumo de VRAM |
+| SR-04 | [TRL PEFT](https://huggingface.co/docs/trl/en/peft_integration) | Documentación primaria | Implementar SFT/DPO con adaptadores | La librería no valida la calidad del dataset |
+| SR-05 | [PEFT/LoRA](https://huggingface.co/docs/peft/index) | Documentación primaria | Ajuste eficiente | Cuantización/QLoRA no hacen determinista al LLM |
+| SR-06 | [uv](https://docs.astral.sh/uv/) | Documentación técnica | Gestión de paquetes/lock reproducible | Lock no garantiza reproducibilidad de GPU por sí solo |
+| SR-07 | [Ruff](https://docs.astral.sh/ruff/) / [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html) | Estándares y guías | Código legible, lint, formato | Usar un formateador canónico, no reglas cosméticas rivales |
+| SR-08 | [CQRS pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/cqrs) | Documentación de arquitectura | Entender tradeoffs de comando/consulta | No justifica doble BD ni eventual consistency en AWF |
+| SR-09 | [MLflow](https://mlflow.org/docs/latest/tracking/) | Documentación técnica | Tracking y model registry posterior | No sustituye model/dataset cards ni control legal |
+| SR-10 | [HF Dataset Cards](https://huggingface.co/docs/hub/datasets-cards) | Documentación técnica | Metadatos, usos, limitaciones, licencia | Dataset card no constituye permiso si la licencia falta |
+| SR-11 | [StealthHumanizer](https://github.com/rudra496/StealthHumanizer) | Ingeniería abierta del tercero | Interfaces de modelos y pipelines | Scores proxies no validan Turnitin/GPTZero/Pangram |
+| SR-12 | [Phrasly Technology](https://phrasly.ai/technology) | Declaración del proveedor | Hipótesis SFT + feedback/RL | No divulga pesos/recompensa/datos; claims no replicación independiente |
+| SR-13 | [Docling](https://github.com/docling-project/docling) / [GROBID](https://github.com/kermitt2/grobid) | Código/documentación | Ingesta de documentos/bibliografía | No obligatorio para S0; probar casos reales |
+| SR-14 | [Kaggle GPU](https://www.kaggle.com/docs/efficient-gpu-usage) / [Colab](https://research.google.com/colaboratory/faq.html) | Políticas proveedores | Opciones experimentales | Cuotas y GPUs no garantizadas |
+| SR-15 | [Runpod GPU](https://www.runpod.io/gpu-models/rtx-4090) / [Modal](https://modal.com/pricing) | Proveedores comerciales | Alquiler eventual | Precio/stock cambian; no gasto comprometido |
+| SR-16 | [IteraTeR](https://github.com/vipulraheja/iterater) | Corpus de revisiones | Candidato dataset humano | Revisar licencia/splits/uso para entrenamiento |
+
+## Clasificación obligatoria de una nueva fuente
+
+`INDEPENDENT_STUDY`, `OPEN_DATA`, `VENDOR_DOCUMENTATION`, `VENDOR_BENCHMARK`, `IMPLEMENTATION_SOURCE`, `INTERNAL_EXPERIMENT`, `HYPOTHESIS`. Guardar publicación, experimento y snapshot por separado cuando sea relevante.
+
+**Pendiente:** fichas de literatura con resultados cuantitativos, datasets usados, amenazas de validez, contradicciones y versión exacta. Este registro es un índice inicial, no una revisión sistemática concluida.

@@ -1,0 +1,75 @@
+spec_version: 0.1.1
+spec_date: 2026-10-17
+status: proposed_architecture_not_implemented
+source_blueprint_sha256: 32592f7ef8de1b3f39c82d7a8765435ec50817f292ec7b910d8cbf9a68524ce2
+canonical_spec: docs/architecture/ARCHITECTURE_SPEC_0_1.md
+repository:
+  github: David-std/AWF
+  display_name: Academic Writing Forge
+  acronym: AWF
+  ml_component: AWF Neural Engine
+  package: awf
+  cli: awf
+  note: "The historical blueprint suggests a different repository slug; actual GitHub slug governs links."
+legacy_baseline:
+  version: AWS-3.19.1
+  file: academic_writing_suite_v3_19_1_product(1).zip
+  sha256: ccff7d4f8c672a6ec1305faa128540893c44ee6c373941eece72a61880bb6d3c
+  entry_count: 1364
+  policy: immutable_external_archive_do_not_commit_without_license_review
+architecture:
+  style: modular_monolith_hexagonal_ports_adapters
+  cqrs: lightweight_commands_and_queries_single_store
+  event_sourcing: disabled
+  python: "3.12"
+  package_manager: uv
+  database_initial: sqlite
+  database_orm: SQLAlchemy_2
+  migrations: alembic
+  database_future: postgresql_only_when_evidence_supports
+  formatter_linter: ruff
+  type_checker: pyright
+  tests: pytest_and_hypothesis
+  pretrained_baseline_candidate: Qwen3-4B
+  ml: Transformers_PEFT_TRL
+  tracking_future: MLflow
+  interface: CLI_first_API_after_core
+quality_gates:
+  critical_fail: REJECTED
+  critical_unknown: NEEDS_REVIEW
+  generator_self_verification: forbidden
+  original_documents: immutable_sha256
+  heldout_training: forbidden
+  accepted_edits: human_approval_required
+  detector_scores_primary_objective: false
+compute:
+  user_reported_local_gpu: NVIDIA_RTX_4050
+  user_reported_qwen_local_inference: successful
+  vram_gb: unknown_verify_before_training
+  user_reported_google_plan: Google_AI_Pro
+  user_reported_google_notebook_compute_access: available_subject_to_actual_quota
+  purchase_or_subscription_required_for_S0_to_S3: false
+sprints:
+  S0: repo_cli_tooling_ci
+  S1: immutable_document_ir
+  S2: knowledge_compiler
+  S3: verification_first
+  S4: pretrained_baselines
+  S5: SFT_LoRA_QLoRA
+  S6: conditional_DPO_ablations
+  S7: API_deployment
+  S8: optional_detector_research
+open_decisions:
+  - code_license
+  - rights_to_publish_legacy_corpus
+  - manuscript_privacy_and_external_API_policy
+  - verified_GPU_VRAM_and_RAM
+  - gold_dataset_annotation_permissions
+  - deployment_scope_and_identity
+  - brand_or_domain_availability
+change_control:
+  architecture_or_stack_change_requires_ADR: true
+  no_pretend_implemented_without_tests: true
+  keep_negative_results: true
+  no_destructive_corpus_compaction: true
+  written_contracts_override_chat_summaries_without_silent_reinterpretation: true

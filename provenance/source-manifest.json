@@ -1,0 +1,41 @@
+{
+  "schema_version": "0.1.0",
+  "generated_at": "2026-10-17",
+  "policy": "metadata-only; artifacts are kept external until rights and privacy review",
+  "artifacts": [
+    {
+      "id": "aws-3.19.1",
+      "kind": "historical_suite_baseline",
+      "filename": "academic_writing_suite_v3_19_1_product(1).zip",
+      "sha256": "ccff7d4f8c672a6ec1305faa128540893c44ee6c373941eece72a61880bb6d3c",
+      "size_bytes": 15719623,
+      "zip_entries": 1364,
+      "repo_committed": false,
+      "rights_status": "needs_redistribution_review",
+      "role": "source_evidence_not_training_by_default"
+    },
+    {
+      "id": "awf-blueprint-0.1",
+      "kind": "architecture_source",
+      "filename": "AWF_Neural_Engine_architecture_blueprint_v0_1.zip",
+      "sha256": "32592f7ef8de1b3f39c82d7a8765435ec50817f292ec7b910d8cbf9a68524ce2",
+      "repo_committed": false,
+      "rights_status": "user_project_document",
+      "role": "origin_of_architecture_spec"
+    },
+    {
+      "id": "awf-spec-0.1",
+      "kind": "architecture_document",
+      "repo_path": "docs/architecture/ARCHITECTURE_SPEC_0_1.md",
+      "source_sha256": "4011f2b31ff729890245ad2cbd807d51ad7eb4abd7516bb0333ba64b3a522401",
+      "repo_committed": true
+    },
+    {
+      "id": "awf-handoff-template-0.1",
+      "kind": "architecture_document",
+      "repo_path": "docs/templates/AGENT_HANDOFF_TEMPLATE.md",
+      "source_sha256": "25a917eed434921ea75837d6a4c90a17f8077a6ec29310b5dacfe23d5ee315f6",
+      "repo_committed": true
+    }
+  ]
+}
