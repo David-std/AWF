@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — Sprint 2 knowledge-integrity prototype
+
+- Add source-identity and chunk-to-EOF inventory, evidence-bound read coverage and debt reporting.
+- Separate available, read, understood, applicable, applied and verified as explicitly evidenced transitions, without equating receipts to comprehension.
+- Add four-family calibration checks and answer-key-free challenge packets; reject missing, duplicate or unresolved challenges.
+- Preserve critical exceptions, historical negative knowledge, dependencies and reversible source pointers; reject style-template or implicit-training use.
+- Track token efficiency separately from execution-fidelity evidence.
+- Record DSR-016..032 technical transfer review and ADR-0011. No rule is automatically adjudicated.
+
 ## Unreleased — Sprint 2 private review workbench
 
 - Add complete private review packets grouped by domain and deterministic batch number; read original rules only from pinned local ZIP.
