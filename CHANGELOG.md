@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — single-snapshot verified evidence reads (Sprint 2)
+
+- Add `VerifiedEvidenceReaderPort` and transaction-scoped `SQLiteEvidenceLedger.verified_read` to amortize a complete integrity audit across multiple receipt resolutions without caching trusted heads.
+- Route chunk coverage, audit receipts and knowledge-stage adjudication (including nested READ coverage) through one consistent SQLite snapshot; individual `resolve_event` still audits before resolving and invalid event/run/subject/payloads remain unverified.
+- Add synthetic count-based and WAL concurrency regressions, an offline timing benchmark, ADR-0019 and measurement guide. No assumption about academic adjudication, witness custody or production latency targets.
+
 ## Unreleased — WAL-aware signed backup and restore (Sprint 2)
 
 - Add SQLite online backup creation and fresh-path restore guarded by the latest independently pinned Ed25519 signed checkpoint, without overwriting existing state or accessing custodian private keys.

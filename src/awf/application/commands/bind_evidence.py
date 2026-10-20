@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, replace
 
-from awf.application.ports import EvidenceStorePort
+from awf.application.ports import EvidenceStorePort, VerifiedEvidenceReaderPort
 from awf.domain.document import DocumentIR
 from awf.domain.evidence import (
     EvidenceIntegrityError,
@@ -29,6 +29,7 @@ from awf.domain.knowledge_integrity import (
 )
 from awf.domain.revision_audit import (
     AuditReceipt,
+    AuditSlot,
     AuditStatus,
     RevisionState,
     record_audit,
@@ -49,7 +50,7 @@ def event_reference(record: EvidenceRecord) -> str:
 
 
 def _get_event(
-    store: EvidenceStorePort,
+    store: VerifiedEvidenceReaderPort,
     evidence_ref: str,
     *,
     kind: EvidenceKind,
@@ -164,6 +165,39 @@ def verify_audit_receipts(
     if len(receipts) != len(receipt_keys):
         missing.append("duplicate_audit_receipts")
     missing.extend(f"unknown_dirty:{key}" for key in sorted(state.dirty_keys - slots.keys()))
+    if not state.receipts:
+        return EvidenceGateResult(0, tuple(sorted(missing)), False)
+    try:
+        with store.verified_read(expected_head=expected_head) as reader:
+            _verify_audit_receipts_in_snapshot(
+                state,
+                document,
+                reader=reader,
+                run_id=run_id,
+                expected_head=expected_head,
+                slots=slots,
+                missing=missing,
+            )
+    except EvidenceIntegrityError:
+        missing.extend(receipt.slot_key for receipt in state.receipts)
+    return EvidenceGateResult(
+        checked=len(state.receipts),
+        unverified=tuple(sorted(missing)),
+        local_integrity_passed=bool(slots) and not missing,
+    )
+
+
+def _verify_audit_receipts_in_snapshot(
+    state: RevisionState,
+    document: DocumentIR,
+    *,
+    reader: VerifiedEvidenceReaderPort,
+    run_id: str,
+    expected_head: str | None,
+    slots: dict[str, AuditSlot],
+    missing: list[str],
+) -> None:
+    """Check receipts against one fully verified read view."""
     for receipt in state.receipts:
         original = receipt.carried_from or receipt.artifact_sha256
         try:
@@ -178,7 +212,7 @@ def verify_audit_receipts(
             ):
                 raise EvidenceIntegrityError("stale, unclean or unknown audit receipt")
             payload = _get_event(
-                store,
+                reader,
                 receipt.evidence_ref,
                 kind=EvidenceKind.AUDIT_RECEIPT,
                 run_id=run_id,
@@ -201,11 +235,6 @@ def verify_audit_receipts(
                 raise EvidenceIntegrityError("audit event payload disagrees with receipt")
         except (EvidenceIntegrityError, ValueError, TypeError, json.JSONDecodeError):
             missing.append(receipt.slot_key)
-    return EvidenceGateResult(
-        checked=len(state.receipts),
-        unverified=tuple(sorted(missing)),
-        local_integrity_passed=bool(slots) and not missing,
-    )
 
 
 def record_evidenced_chunk(
@@ -250,11 +279,39 @@ def verify_chunk_coverage(
     quality of a reviewer, independent verification or model comprehension.
     """
     baseline = assess_coverage(manifest, chunks, axes)
+    try:
+        with store.verified_read(expected_head=expected_head) as reader:
+            return _verify_chunk_coverage_in_snapshot(
+                baseline, chunks, axes, reader=reader, run_id=run_id, expected_head=expected_head
+            )
+    except EvidenceIntegrityError:
+        # Invalid ledger, schema or trusted head: every local observation is
+        # unverified. Fail closed without misrepresenting any as authenticated.
+        unverified = [
+            *(f"unverified_chunk:{item.reference_id}:{item.chunk_id}" for item in chunks),
+            *(f"unverified_axis:{axis.axis_id}" for axis in axes),
+        ]
+        return replace(
+            baseline,
+            invalid_receipts=tuple(sorted(set((*baseline.invalid_receipts, *unverified)))),
+        )
+
+
+def _verify_chunk_coverage_in_snapshot(
+    baseline: CoverageAssessment,
+    chunks: tuple[ChunkReceipt, ...],
+    axes: tuple[AxisReceipt, ...],
+    *,
+    reader: VerifiedEvidenceReaderPort,
+    run_id: str,
+    expected_head: str | None,
+) -> CoverageAssessment:
+    """Check each binding with precise errors, amortizing the ledger audit."""
     unexpected: list[str] = list(baseline.invalid_receipts)
     for item in chunks:
         try:
             payload = _get_event(
-                store,
+                reader,
                 item.observation_ref,
                 kind=EvidenceKind.SOURCE_CHUNK,
                 run_id=run_id,
@@ -268,7 +325,7 @@ def verify_chunk_coverage(
     for axis in axes:
         try:
             payload = _get_event(
-                store,
+                reader,
                 axis.evidence_ref,
                 kind=EvidenceKind.AUDIT_RECEIPT,
                 run_id=run_id,
@@ -311,6 +368,34 @@ def verify_progress_claims(
     """Check stage receipts and recheck any READ claim against the live manifest."""
     if not progress.claims:
         return EvidenceGateResult(0, ("no_claims",), False)
+    try:
+        with store.verified_read(expected_head=expected_head) as reader:
+            return _verify_progress_claims_in_snapshot(
+                progress,
+                reader=reader,
+                manifest=manifest,
+                chunks=chunks,
+                axes=axes,
+                expected_head=expected_head,
+            )
+    except EvidenceIntegrityError:
+        return EvidenceGateResult(
+            len(progress.claims),
+            tuple(sorted(claim.stage.value for claim in progress.claims)),
+            False,
+        )
+
+
+def _verify_progress_claims_in_snapshot(
+    progress: KnowledgeProgress,
+    *,
+    reader: VerifiedEvidenceReaderPort,
+    manifest: CanonicalManifest | None,
+    chunks: tuple[ChunkReceipt, ...],
+    axes: tuple[AxisReceipt, ...],
+    expected_head: str | None,
+) -> EvidenceGateResult:
+    """Verify stage claims, coverage and adjudication from the same read snapshot."""
     missing: list[str] = []
     order = list(KnowledgeStage)
     execution = progress.claims[0].context_ref
@@ -324,7 +409,7 @@ def verify_progress_claims(
             ):
                 raise EvidenceIntegrityError("missing, reordered or mixed-context knowledge stage")
             payload = _get_event(
-                store,
+                reader,
                 claim.evidence_ref,
                 kind=_stage_kind(claim.stage),
                 run_id=claim.context_ref,
@@ -340,11 +425,11 @@ def verify_progress_claims(
                     raise EvidenceIntegrityError("READ needs original manifest to reverify")
                 if progress.reference_id not in {ref.reference_id for ref in manifest.sources}:
                     raise EvidenceIntegrityError("stage reference missing from canonical manifest")
-                coverage = verify_chunk_coverage(
-                    manifest,
+                coverage = _verify_chunk_coverage_in_snapshot(
+                    assess_coverage(manifest, chunks, axes),
                     chunks,
                     axes,
-                    store=store,
+                    reader=reader,
                     run_id=claim.context_ref,
                     expected_head=expected_head,
                 )
@@ -362,7 +447,7 @@ def verify_progress_claims(
                     else f"{claim.reference_id}:applicability"
                 )
                 external_payload = _get_event(
-                    store,
+                    reader,
                     proof_ref,
                     kind=kind,
                     run_id=claim.context_ref,

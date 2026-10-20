@@ -92,6 +92,21 @@ _COLUMNS = (
 )
 
 
+class _VerifiedEvidenceReader:
+    """Connection-bound resolver; the owner has already audited this read transaction."""
+
+    def __init__(self, connection: sqlite3.Connection, head_digest: str):
+        self._connection = connection
+        self._head_digest = head_digest
+
+    def resolve_event(
+        self, *, event_digest: str, expected_head: str | None = None
+    ) -> tuple[EvidenceRecord, bytes]:
+        if expected_head is not None and expected_head != self._head_digest:
+            raise EvidenceIntegrityError("trusted head digest does not match ledger")
+        return SQLiteEvidenceLedger._load_verified_event(self._connection, event_digest)
+
+
 class SQLiteEvidenceLedger:
     """Local-first ledger; append and verify operations are synchronous and bounded."""
 
@@ -216,6 +231,32 @@ class SQLiteEvidenceLedger:
             raise EvidenceIntegrityError("invalid evidence event record") from exc
 
     @classmethod
+    def _load_verified_event(
+        cls, conn: sqlite3.Connection, event_digest: str
+    ) -> tuple[EvidenceRecord, bytes]:
+        """Read one event from a transaction whose entire chain was audited first."""
+        if len(event_digest) != 64 or any(c not in "0123456789abcdef" for c in event_digest):
+            raise ValueError("event digest must be lowercase SHA-256")
+        row = conn.execute(
+            f"SELECT {_COLUMNS} FROM events WHERE digest=?", (event_digest,)
+        ).fetchone()
+        if row is None:
+            raise EvidenceIntegrityError("unknown evidence event")
+        record = cls._row_to_record(row)
+        if record.digest != event_digest:
+            raise EvidenceIntegrityError("evidence event identity mismatch")
+        payload_row = conn.execute(
+            "SELECT payload FROM evidence_objects WHERE sha256=?",
+            (record.evidence_sha256,),
+        ).fetchone()
+        if payload_row is None or not isinstance(payload_row[0], bytes):
+            raise EvidenceIntegrityError("missing evidence payload")
+        raw = payload_row[0]
+        if sha256_bytes(raw) != record.evidence_sha256 or len(raw) != record.evidence_bytes:
+            raise EvidenceIntegrityError("evidence bytes no longer match event")
+        return record, raw
+
+    @classmethod
     def _audit_transaction(cls, connection: sqlite3.Connection) -> LedgerAudit:
         status = connection.execute("PRAGMA foreign_key_check").fetchall()
         if status:
@@ -332,35 +373,30 @@ class SQLiteEvidenceLedger:
         """
         if len(event_digest) != 64 or any(c not in "0123456789abcdef" for c in event_digest):
             raise ValueError("event digest must be lowercase SHA-256")
+        with self.verified_read(expected_head=expected_head) as reader:
+            return reader.resolve_event(event_digest=event_digest, expected_head=expected_head)
+
+    @contextmanager
+    def verified_read(
+        self, *, expected_head: str | None = None
+    ) -> Iterator[_VerifiedEvidenceReader]:
+        """Audit the entire chain once and pin all subsequent reads to that SQLite snapshot.
+
+        The caller must close the context: no cached head or partial-chain trust
+        survives it. Concurrent WAL appends are invisible until a new read begins.
+        """
         if not self.database.is_file():
             raise FileNotFoundError("evidence ledger does not exist")
         with self._open() as conn:
-            self._check_schema(conn)
             conn.execute("BEGIN")
             try:
+                self._check_schema(conn)
                 report = self._audit_transaction(conn)
                 if expected_head is not None and report.head_digest != expected_head:
                     raise EvidenceIntegrityError("trusted head digest does not match ledger")
-                row = conn.execute(
-                    f"SELECT {_COLUMNS} FROM events WHERE digest=?", (event_digest,)
-                ).fetchone()
-                if row is None:
-                    raise EvidenceIntegrityError("unknown evidence event")
-                record = self._row_to_record(row)
-                if record.digest != event_digest:
-                    raise EvidenceIntegrityError("evidence event identity mismatch")
-                payload_row = conn.execute(
-                    "SELECT payload FROM evidence_objects WHERE sha256=?",
-                    (record.evidence_sha256,),
-                ).fetchone()
-                if payload_row is None or not isinstance(payload_row[0], bytes):
-                    raise EvidenceIntegrityError("missing evidence payload")
-                raw = payload_row[0]
-                if sha256_bytes(raw) != record.evidence_sha256 or len(raw) != record.evidence_bytes:
-                    raise EvidenceIntegrityError("evidence bytes no longer match event")
+                yield _VerifiedEvidenceReader(conn, report.head_digest)
                 conn.execute("COMMIT")
-                return record, raw
-            except (sqlite3.Error, ValueError):
+            except BaseException:
                 if conn.in_transaction:
                     conn.execute("ROLLBACK")
                 raise

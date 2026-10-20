@@ -1,5 +1,15 @@
 # AWF — transferencia de Sprint 2
 
+## Continuación S2 — lectura de eventos por snapshot verificado (tras PR #24)
+
+- **Base confirmada:** `develop` tras PR #24, merge commit `e32e0ea99e76640133d328548214f0efbae63cfc`; `main` sigue en `a902135b80e96eea17ebb9c229eed065077e809d`. PR #24 cerrada y fusionada con código `dae66ed7057353d521dfab4077b26b9a4a333a86`, [CI 39203570452](https://github.com/David-std/AWF/actions/runs/39203570452) 4/4, 279 Linux y 277 Windows ASUS +2 SKIP, sin modificar worktree original Windows. Rama incremental de esta unidad: `feat/s2-ledger-scaling`, **aún pendiente de PR/CI final**.
+- **Riesgo:** cada `resolve_event` audita O(n) objetos y eventos; en un gate con `m` fragmentos, `m` auditorías repetidas elevan el trabajo aproximadamente a `O(n×m)`. Nunca confiar en un head cacheado entre llamadas para optimizarlo.
+- **Solución:** `VerifiedEvidenceReaderPort` y `SQLiteEvidenceLedger.verified_read` auditan todos los objetos y DDL en una única transacción SQLite; resuelven luego digest+metadatos+bytes por recibo sin mezclar heads ante append concurrente. `verify_chunk_coverage`, `verify_audit_receipts` y `verify_progress_claims` comparten contexto, incluso READ anidado. No se relajan las puertas ni se cambia el `resolve_event` público.
+- **Primer corte Linux local:** 286 pytest PASS Python 3.12 (7 pruebas nuevas de conteo real de auditorías, lectores concurrentes, head antiguo, estado incompleto y esquema corrupto), Ruff y Pyright 0 errores tras formato. Benchmark sintético Linux CPython 3.12.14, mediana de tres repeticiones: 16 eventos 9,199→0,665 ms (13,84×), 64 eventos 78,185→1,762 ms (44,37×), 128 eventos 249,342→3,328 ms (74,92×), 256 eventos 799,826→5,737 ms (139,42×). Es evidencia local, no SLO ni comparación de hardware. [ADR-0019](adr/0019-verified-evidence-read-snapshots.md), [guía y script reproducible](EVIDENCE_READ_SCALING_S2.md).
+- **Pendiente antes de fusionar:** `uv lock --check`, build final, CI Ubuntu/Windows 3.12/3.13 y reproducción del SHA exacto en ASUS mediante worktree aislado. No usar ZIP histórico ni publicar datos privados. Riesgos S2 aún abiertos: barridos de críticos durables, real custodia/rotación de checkpoints, replay a escala, 136 MUST sin propuesta sustantiva y adjudicación humana de las 168 MUST. **0/168 REVIEW_ATTESTED**.
+
+**Actualización vigente: 2026-10-20 (UTC).** Las siguientes secciones documentan cortes anteriores sin alterar su trazabilidad.
+
 ## Continuación S2 — recuperación SQLite ligada a checkpoint firmado (tras PR #23)
 
 - **Base exacta:** `develop` commit de fusión PR #23 `484b911b1b754909786510273cee6218825258d9`, `main` sin tocar `a902135b80e96eea17ebb9c229eed065077e809d`. [PR #24](https://github.com/David-std/AWF/pull/24), rama `feat/s2-verified-sqlite-backups`, sin fusionar hasta validar el último SHA.
