@@ -22,12 +22,14 @@ _DOMAIN = b"AWF/reviewer-authorization/v1\x00"
 
 class ReviewerRole(StrEnum):
     AUDITOR = "AUDITOR"
+    CRITIC = "CRITIC"
     CALIBRATOR = "CALIBRATOR"
     APPLICABILITY_REVIEWER = "APPLICABILITY_REVIEWER"
 
 
 _ROLE_KINDS = {
     ReviewerRole.AUDITOR: EvidenceKind.AUDIT_RECEIPT,
+    ReviewerRole.CRITIC: EvidenceKind.CRITIC_OBSERVATION,
     ReviewerRole.CALIBRATOR: EvidenceKind.CALIBRATION_JUDGMENT,
     ReviewerRole.APPLICABILITY_REVIEWER: EvidenceKind.REVIEW_DECISION,
 }

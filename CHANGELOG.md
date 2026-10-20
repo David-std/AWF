@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — signed authorization of durable critic sweeps (Sprint 2)
+
+- Extend the canonical Ed25519 reviewer-role contract with CRITIC, restricted to CRITIC_OBSERVATION ledger events and an externally SHA-pinned trust policy.
+- Add an application-level authorization gate that loads committed CLEAN_SWEEP intents, checks the exact document and convergence, requires a complete attestation inventory, binds each signature to its original observation and actor, and re-audits the exact head in one verified snapshot.
+- Reject missing/swapped/forged/stale/revoked or scope-mismatched signatures, changed documents, concurrent ledger growth and incompatible causal evidence. Add integration tests, ADR-0023 and AWF-R032.
+- This gate is opt-in for consumers and does not prove reviewer independence, academic correctness or any formal adjudication of the 168 historical MUST rules.
+
 ## Unreleased — durable critic sweeps and external iterations (Sprint 2)
 
 - Persist `CLEAN_SWEEP` and `EXTERNAL_ITERATION` as typed, versioned SQLite intent/commit/snapshot transitions; replays preserve domain gates, idempotency and rollback.
