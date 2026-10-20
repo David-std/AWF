@@ -11,6 +11,7 @@
 - [Agent instructions](AGENTS.md) — how to work here without losing the project history.
 - [Requirement traceability](docs/REQUIREMENT_TRACEABILITY.md) — requirements, provenance, and verifiability plan.
 - [Roadmap](docs/ROADMAP.md) and [current handoff](docs/AGENT_HANDOFF.md).
+- [Revision replay profile (S2)](docs/REVISION_REPLAY_PROFILE_S2.md) — synthetic measurements of journal recovery; no validation shortcuts or production SLOs.
 - [Evidence and source registry](docs/SOURCE_REGISTRY.md) — status and limitations of external references.
 - [Compute plan](docs/COMPUTE_AND_TRAINING.md) — RTX 4050, Qwen baseline, and optional Google-hosted GPU.
 
