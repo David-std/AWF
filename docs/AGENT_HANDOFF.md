@@ -220,3 +220,15 @@ Auditar el dominio `stateful_runtime` (15 requisitos) desde los lotes privados; 
 - **Estado formal inalterado:** 0 de 168 MUST adjudicadas; 16 DEFERRED_LAB
   solo EVAL_ONLY. El ZIP AWS histórico sigue exclusivamente en el equipo
   autorizado, sin publicar.
+
+## S2 — inspección privada de dossiers históricos (PR #31)
+
+- Base desde `develop` fusionado tras PR #30: `c4ee901a34c19f5704b7e6cd9d2c29b9ac6f42ed`; `main` permanece en `a902135b80e96eea17ebb9c229eed065077e809d`. PR #31: https://github.com/David-std/AWF/pull/31.
+- Se agregó `awf knowledge inspect-review`, un lector de solo lectura de los expedientes privados creados por `plan-review`. La fuente canónica se reconstruye desde el ZIP original SHA-pinned; el verificador rechaza adulteraciones de campos inmutables, reemplazo/ausencia de lotes, IDs inválidos y propuestas `DEFERRED_LAB` promovidas.
+- Resultados posibles: `OPEN`, `PARTIAL`, `PROPOSAL_INCOMPLETE`, `PROPOSAL_DOCUMENTED`. El informe exporta **solo identificadores y nombres de lagunas**, sin fuente privada, notas completas ni declaraciones de evidencia.
+- `--require-documented` falla si queda alguna ficha abierta/incompleta. Este gate no es ni pretende ser `REVIEW_ATTESTED`, un derecho de entrenamiento ni verificación científica.
+- Código: `src/awf/knowledge/adjudication_dossiers.py`, `src/awf/cli/main.py`; pruebas unitarias e integración; ADR-0024; `docs/KNOWLEDGE_COMPILER_S2.md`.
+- Evidencia del commit de código `be9df691c667dfcb9db16037f10d4e8ccd99a97f`: [CI PR 39510436138](https://github.com/David-std/AWF/actions/runs/39510436138) **4/4 SUCCESS**, Ubuntu/Windows × Python 3.12/3.13, **364 pytest PASS en Ubuntu/3.12**, lint, Ruff 0.14.0, Pyright 0 errores, build.
+- En ASUS se produjo un directorio **scratch** para comparar formato; la descarga GitHub del worktree aislado falló por conexión HTTPS. No se afirma reproducción local de tests en ASUS. El checkout original en `Downloads/AWF` no se modificó.
+- **Estado epistémico:** 0/168 `MUST` adjudicadas, 16 `DEFERRED_LAB` `EVAL_ONLY`; no autorizado ningún modelo ni entrenamiento. Próxima prioridad: atar los IDs de evidencia con eventos reales y revisión firmada por rol, con comprobación independiente y derechos de fuente antes de avanzar el ledger.
+

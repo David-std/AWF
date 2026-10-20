@@ -26,14 +26,22 @@ from awf.application.commands.authorize_review import (
     append_signed_review_claim,
     verify_signed_review_event,
 )
-from awf.application.commands.checkpoints import propose_checkpoint, verify_signed_checkpoint
+from awf.application.commands.checkpoints import (
+    propose_checkpoint,
+    verify_signed_checkpoint,
+)
 from awf.application.commands.compile_knowledge import import_knowledge
 from awf.application.commands.ingest_document import ingest_document
 from awf.application.commands.prepare_review import prepare_review
 from awf.application.commands.verified_snapshot import create_verified_snapshot
 from awf.domain.checkpoints import SignedLedgerCheckpoint, parse_checkpoint_policy
 from awf.domain.evidence import EvidenceKind
-from awf.domain.reviewer_auth import ReviewerRole, SignedReviewerClaim, parse_trust_policy
+from awf.domain.reviewer_auth import (
+    ReviewerRole,
+    SignedReviewerClaim,
+    parse_trust_policy,
+)
+from awf.knowledge.adjudication_dossiers import audit_private_dossiers
 from awf.knowledge.audit import audit_registry
 
 
@@ -68,7 +76,8 @@ def create_parser() -> argparse.ArgumentParser:
         "--archive", type=Path, help="optionally compare actual local archive hash"
     )
     review_plan = operations.add_parser(
-        "plan-review", help="prepare private, source-bound review batches (not approvals)"
+        "plan-review",
+        help="prepare private, source-bound review batches (not approvals)",
     )
     review_plan.add_argument("archive", type=Path, help="local original AWS ZIP")
     review_plan.add_argument(
@@ -76,6 +85,19 @@ def create_parser() -> argparse.ArgumentParser:
     )
     review_plan.add_argument("--source-id", default="aws-3.19.1")
     review_plan.add_argument("--batch-size", type=int, default=12)
+    dossiers = operations.add_parser(
+        "inspect-review",
+        help="inspect local review annotations without approving rules",
+    )
+    dossiers.add_argument("archive", type=Path, help="original SHA-pinned private AWS ZIP")
+    dossiers.add_argument("--manifest", type=Path, default=Path("provenance/source-manifest.json"))
+    dossiers.add_argument("--source-id", default="aws-3.19.1")
+    dossiers.add_argument("--batch-size", type=int, default=12)
+    dossiers.add_argument(
+        "--require-documented",
+        action="store_true",
+        help="fail if any proposal is open, partial, conflicted or unsupported",
+    )
     evidence = commands.add_parser("evidence", help="private, transactional evidence ledger")
     actions = evidence.add_subparsers(dest="evidence_action")
     writer = actions.add_parser("append", help="store evidence locally and bind an event")
@@ -112,7 +134,8 @@ def create_parser() -> argparse.ArgumentParser:
     reviewer.add_argument("--subject-id", required=True)
     reviewer.add_argument("--expected-head", help="optional externally held current ledger head")
     proposal = actions.add_parser(
-        "checkpoint-propose", help="prepare unsigned ledger head for offline custodian signing"
+        "checkpoint-propose",
+        help="prepare unsigned ledger head for offline custodian signing",
     )
     proposal.add_argument("--database", type=Path, default=Path(".awf/evidence/ledger.sqlite"))
     proposal.add_argument("--ledger-id", required=True)
@@ -129,7 +152,8 @@ def create_parser() -> argparse.ArgumentParser:
     proposal.add_argument("--policy-file", type=Path, help="trusted checkpoint signer policy")
     proposal.add_argument("--expected-policy-sha256", help="independent trusted policy digest")
     checkpoint = actions.add_parser(
-        "checkpoint-verify", help="verify externally anchored signature and ledger ancestry"
+        "checkpoint-verify",
+        help="verify externally anchored signature and ledger ancestry",
     )
     checkpoint.add_argument("source", type=Path, help="signed canonical checkpoint JSON")
     checkpoint.add_argument("--database", type=Path, default=Path(".awf/evidence/ledger.sqlite"))
@@ -145,7 +169,10 @@ def create_parser() -> argparse.ArgumentParser:
     )
     checkpoint.add_argument("--require-current-head", action="store_true")
     for action_name, explanation in (
-        ("snapshot-create", "create a new online SQLite backup bound to a signed current head"),
+        (
+            "snapshot-create",
+            "create a new online SQLite backup bound to a signed current head",
+        ),
         ("snapshot-restore", "restore a signed SQLite snapshot to a NEW empty path"),
     ):
         snapshot = actions.add_parser(action_name, help=explanation)
@@ -194,7 +221,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 or (output.exists() and source.exists() and output.samefile(source))
             ):
                 print(
-                    "AWF_ERROR [SOURCE_PROTECTED] output cannot overwrite source", file=sys.stderr
+                    "AWF_ERROR [SOURCE_PROTECTED] output cannot overwrite source",
+                    file=sys.stderr,
                 )
                 return 2
             store = FileBlobStore(args.store) if args.store is not None else None
@@ -220,6 +248,61 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 2
 
     if args.command == "knowledge":
+        if args.knowledge_action == "inspect-review":
+            try:
+                canonical, packets = prepare_review(
+                    archive_path=args.archive,
+                    manifest_path=args.manifest,
+                    reader=PinnedAwsArchive(),
+                    source_id=args.source_id,
+                    batch_size=args.batch_size,
+                )
+                parent = args.manifest.resolve().parent
+                repo_root = parent.parent if parent.name == "provenance" else parent
+                privacy_root = repo_root / ".awf"
+                output_dir = (
+                    privacy_root
+                    / "knowledge"
+                    / f"review-{canonical['archive_sha256'][:12]}-b{args.batch_size:02d}"
+                )
+                for path in (privacy_root, privacy_root / "knowledge", output_dir):
+                    if path.is_symlink() or not path.is_dir():
+                        raise ValueError("private workbench path is missing or a symbolic link")
+
+                def read_private(path: Path) -> dict[str, object]:
+                    if (
+                        path.is_symlink()
+                        or not path.is_file()
+                        or path.stat().st_size > 4 * 1024 * 1024
+                    ):
+                        raise ValueError("private workbench file missing, linked or oversized")
+                    value = json.loads(path.read_text(encoding="utf-8"))
+                    if not isinstance(value, dict):
+                        raise ValueError("private workbench JSON must contain an object")
+                    return value
+
+                observed = read_private(output_dir / "manifest.json")
+                actual_packets = {name: read_private(output_dir / name) for name in packets}
+                report = audit_private_dossiers(
+                    canonical_manifest=canonical,
+                    canonical_packets=packets,
+                    observed_manifest=observed,
+                    observed_packets=actual_packets,
+                )
+                print(json.dumps(report, ensure_ascii=False))
+                counts = report["status_counts"]
+                if not isinstance(counts, dict):
+                    raise ValueError("invalid dossier status counts")
+                documented = counts.get("PROPOSAL_DOCUMENTED", 0)
+                return (
+                    0
+                    if not args.require_documented or documented == report["requirements_count"]
+                    else 2
+                )
+            except (OSError, ValueError, RuntimeError, KeyError, TypeError) as exc:
+                print(f"AWF_ERROR [DOSSIER_INSPECTION_FAILED] {exc}", file=sys.stderr)
+                return 2
+
         if args.knowledge_action == "plan-review":
             try:
                 overview, packets = prepare_review(
@@ -270,7 +353,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 protected.append(args.review)
             if output is not None and any(output.resolve() == p.resolve() for p in protected):
                 print(
-                    "AWF_ERROR [SOURCE_PROTECTED] output conflicts with an input", file=sys.stderr
+                    "AWF_ERROR [SOURCE_PROTECTED] output conflicts with an input",
+                    file=sys.stderr,
                 )
                 return 2
             try:
@@ -331,7 +415,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 print(f"AWF_ERROR [KNOWLEDGE_AUDIT_FAILED] {exc}", file=sys.stderr)
                 return 2
 
-        parser.error("expected knowledge import, knowledge plan-review or knowledge audit")
+        parser.error("expected knowledge import, plan-review, inspect-review or audit")
         return 2
 
     if args.command == "evidence":

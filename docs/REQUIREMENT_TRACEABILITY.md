@@ -138,3 +138,13 @@ No se promocionan DSR-001..032 ni otras reglas a `REVIEW_ATTESTED`. Véanse [ADR
 Véanse [ADR-0015](adr/0015-durable-edit-and-finding-transitions.md) y
 [guía de recuperación](DURABLE_REVISION_S2.md). **0/168 `MUST` adjudicadas**;
 16 `DEFERRED_LAB` siguen solo `EVAL_ONLY`.
+
+
+## AWF-R033 — Inspección privada de dossiers de revisión (Sprint 2)
+
+- Problema: el workbench privado permitía anotar fichas, pero no auditarlas exhaustivamente contra la fuente inmóvil antes de proponer una clasificación.
+- Entrega: `awf knowledge inspect-review`, `knowledge/adjudication_dossiers.py`, pruebas unitarias/adversariales e integración CLI, [PR #31](https://github.com/David-std/AWF/pull/31), [ADR-0024](adr/0024-private-review-dossier-inspection.md).
+- Verificable: cotejo de los 184 IDs, estructura/sha del ZIP, inventario de lotes, metadatos inmutables, conflictos, derechos declarados, propuestas parciales y escalada lab prohibida.
+- Garantía **LIMITADA A METADATOS**: `PROPOSAL_DOCUMENTED` no equivale a calidad científica ni `REVIEW_ATTESTED`. El estado sustantivo permanece `0/168 MUST` adjudicadas.
+- Evidencia: [CI 39510436138](https://github.com/David-std/AWF/actions/runs/39510436138) 4/4 plataformas/intérpretes, con 364 PASS en Ubuntu 3.12 sobre `be9df691`. La comprobación final del commit documental se registra separadamente.
+

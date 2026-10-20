@@ -1,0 +1,13 @@
+# ADR-0024 — Auditoría privada de expedientes de reglas históricas
+
+- **Estado:** Prototipo de verificación estructural, pendiente de adjudicación externa.
+- **Fecha:** 2026-10-20.
+- **Base:** `develop` tras PR #30 (`c4ee901a34c19f5704b7e6cd9d2c29b9ac6f42ed`).
+- **Problema comprobado:** `knowledge plan-review` entrega 184 fichas privadas y conserva intactas las reglas heredadas, pero no existe un lector capaz de revisar anotaciones posteriores sin confiar ciegamente en campos editables ni publicar la fuente.
+- **Decisión:** introducir `awf knowledge inspect-review`, lectura sin efectos sobre los lotes locales que vuelve a comprobar el ZIP original contra el manifiesto fijado, reconstruye fichas canónicas y exige identidad exacta de metadatos, IDs y texto fuente. Solo `review_template` puede cambiar, dentro de un vocabulario acotado.
+- **Estados:** `OPEN`, `PARTIAL`, `PROPOSAL_INCOMPLETE`, `PROPOSAL_DOCUMENTED`. La salida contiene solo IDs, nombres de campos faltantes, recuentos y digest original; nunca los enunciados, razones ni textos de evidencia.
+- **Evidencia exigida por propuesta:** identidad de quien propone, motivo sustantivo, referencias de evidencia, pruebas propuestas, información de versión y declaración de derechos. No se aceptan referencias a reglas inexistentes ni promotoras de `DEFERRED_LAB`. La presencia de contradicciones impide declarar documentalmente completa una propuesta.
+- **Límite absoluto:** `PROPOSAL_DOCUMENTED` es completitud **de metadatos autodeclarados**, no `REVIEW_ATTESTED`, no permiso de entrenamiento, no validación de la evidencia externa. `TRAIN` permanece incompleto hasta verificar derechos desde una autoridad externa al formulario. Un URL o un `event:hash` escrito en texto no demuestra que exista la evidencia. Ni la persona ni su independencia quedan acreditadas.
+- **Seguridad:** ninguna anotación se escribe de vuelta en el ZIP, ningún lote se copia al repositorio; se exige directorio local privado, límites de tamaño, rechazo de symlinks y rechazo de campos inesperados. El lector es de solo lectura.
+- **Pruebas adversariales:** tampering de regla, status y lote; inventario omitido o intercambiado; conflictos desconocidos; promoción de laboratorio; derechos no acreditados; evidencia repetida; campos ocultos; inspección completa y modo estricto sin adjudicación automática.
+- **Siguiente incremento:** ligar las referencias declaradas con eventos concretos del ledger, permisos fijados y revisiones firmadas por rol, con pruebas de identidad, expiración, revocación y criterios científicos por requisito. No cerrar la cuenta 0/168 antes de esa validación independiente.
