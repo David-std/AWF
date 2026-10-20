@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased — revision recovery profiling (Sprint 2)
+
+- Add a temporary-data benchmark that separates one-revision replay from verified `load` and database-wide recovery, with operation counts, traced memory, latency ranges and Python/SQLite metadata.
+- Record synthetic scaling observations and defer unsafe cache/skip-validation changes pending a real workload and adversarial equivalence tests (ADR-0021). Durable critic sweeps and external iterations remain pending; no historical rule is adjudicated.
+
 ## Unreleased — atomic batched evidence writes (Sprint 2)
 
 - Append ordered bounded evidence batches after one full audit under `BEGIN IMMEDIATE`; check SQLite schema within the locked transaction and roll back every event on any failure or interruption. Single `append` uses the same safe path; revision writes/recovery and direct evidence reads also validate DDL within their snapshots.

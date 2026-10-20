@@ -35,6 +35,7 @@ Estados: `DESIGNED` (especificado), `OPEN` (requiere decisión), `IMPLEMENTED` (
 | AWF-R027 | Recuperar sin pérdida silenciosa de WAL ni snapshots de revisión, nunca sobrescribiendo un ledger activo | Durabilidad/cutover S2 | `sqlite3.backup`, head firmado exacto, replay íntegro de revisiones y publicación create-only; test WAL/race/tamper/fallo | S2 | IMPLEMENTED_PARTIAL |
 | AWF-R028 | Verificar múltiples fragmentos, auditorías y estados sin repetir la validación completa del ledger para cada recibo ni mezclar heads concurrentes | Rendimiento e integridad S2 | `verified_read` en una transacción, auditoría única, pruebas de carreras y medición 16/64/128/256 eventos | S2 | PROTOTYPED_TESTED_CI |
 | AWF-R029 | Registrar lotes de fragmentos observados de forma indivisible sin auditar todo el ledger por cada evento ni aceptar esquemas cambiados entre bloqueo y verificación | Rendimiento y atomicidad S2 | `append_batch` con límite y head esperado, esquema bajo bloqueo, manifest por fragmento, rollback, concurrencia y benchmark | S2 | PROTOTYPED_TESTED_CI |
+| AWF-R030 | Caracterizar latencia y memoria de replay/recovery según revisiones y eventos sin reducir garantías para mejorar throughput | Recuperación S2 posterior a #27 | Benchmark sintético por distribuciones, separación replay/audit, perfil de llamadas y registro de límites | S2 | PROFILED_LOCAL_PENDING_CI |
 
 ## Procedimiento para implementar cada fila
 
@@ -47,6 +48,8 @@ Cada cambio crea relación verificable: `AWF-Rxxx → ADR → código/archivo �
 **AWF-R028:** [ADR-0019](adr/0019-verified-evidence-read-snapshots.md) → `VerifiedEvidenceReaderPort`, `SQLiteEvidenceLedger.verified_read`, lectores compartidos de `application/commands/bind_evidence.py` → `tests/integration/test_verified_evidence_reader.py` y `scripts/benchmark_evidence_reader.py`. El número de recorridos completos queda acotado a uno por comprobación; las mediciones sintéticas se reprodujeron en Linux/Windows con CI 4/4 para el primer SHA de la PR #25. Escalabilidad bajo contención y replay completo por documento siguen abiertos.
 
 **AWF-R029:** [ADR-0020](adr/0020-atomic-batched-evidence-append.md) → `EvidenceAppend`, `EvidenceStorePort.append_batch`, `SQLiteEvidenceLedger.append_batch`, `record_evidenced_chunks` → `tests/integration/test_batch_evidence_append.py` y `scripts/benchmark_evidence_append.py`. Las pruebas cubren atomicidad, esquema bajo lock, carreras, bytes alterados y fragmentos incompatibles; [PR #26](https://github.com/David-std/AWF/pull/26) fusionada con CI multiplataforma 4/4 y reproducción Windows 301 PASS +2 SKIP.
+
+**AWF-R030:** [ADR-0021](adr/0021-revision-replay-profile-before-optimization.md) → `scripts/benchmark_revision_replay.py`, `tests/unit/test_revision_replay_benchmark.py`, [registro de resultados](REVISION_REPLAY_PROFILE_S2.md). La medición describe costes sintéticos, no rendimiento en producción ni autorización para omitir replay.
 
 ## Migración heredada AWS
 
