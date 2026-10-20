@@ -8,7 +8,7 @@ from typing import Protocol
 
 from awf.application.dto import LoadedKnowledgeSource, PersistedRevision, SnapshotReceipt
 from awf.domain.document import DocumentIR
-from awf.domain.evidence import EvidenceKind, EvidenceRecord, LedgerAudit
+from awf.domain.evidence import EvidenceAppend, EvidenceKind, EvidenceRecord, LedgerAudit
 from awf.domain.revision_audit import AuditSlot, AuditStatus, RevisionPolicy
 
 
@@ -59,6 +59,15 @@ class EvidenceStorePort(VerifiedEvidenceReaderPort, Protocol):
         self, *, kind: EvidenceKind, run_id: str, subject_id: str, content: bytes
     ) -> EvidenceRecord:
         """Persist bytes and event in one transaction, returning a source-bound receipt."""
+        ...
+
+    def append_batch(
+        self,
+        *,
+        entries: tuple[EvidenceAppend, ...],
+        expected_head: str | None = None,
+    ) -> tuple[EvidenceRecord, ...]:
+        """Append an ordered, bounded batch atomically after one complete integrity audit."""
         ...
 
     def verify(self, *, expected_head: str | None = None) -> LedgerAudit:

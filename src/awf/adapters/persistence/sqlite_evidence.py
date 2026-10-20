@@ -17,6 +17,9 @@ from pathlib import Path
 
 from awf.domain.evidence import (
     GENESIS_DIGEST,
+    MAX_BATCH_BYTES,
+    MAX_BATCH_EVENTS,
+    EvidenceAppend,
     EvidenceIntegrityError,
     EvidenceKind,
     EvidenceRecord,
@@ -405,22 +408,62 @@ class SQLiteEvidenceLedger:
         self, *, kind: EvidenceKind, run_id: str, subject_id: str, content: bytes
     ) -> EvidenceRecord:
         """Atomically store content bytes and one chain event; reject corrupt histories."""
+        return self.append_batch(entries=(EvidenceAppend(kind, run_id, subject_id, content),))[0]
+
+    def append_batch(
+        self,
+        *,
+        entries: tuple[EvidenceAppend, ...],
+        expected_head: str | None = None,
+    ) -> tuple[EvidenceRecord, ...]:
+        """Atomically append bounded ordered events after one audited write snapshot.
+
+        The caller must pass its own externally trusted head when rejecting
+        intervening appends matters. No integrity verification is cached between
+        operations; each write transaction audits the entire existing ledger.
+        """
+        if not isinstance(entries, tuple) or not 1 <= len(entries) <= MAX_BATCH_EVENTS:
+            raise ValueError("evidence batch must contain 1–512 entries")
+        total = 0
+        for entry in entries:
+            if not isinstance(entry, EvidenceAppend) or not isinstance(entry.content, bytes):
+                raise ValueError("batch entries require immutable evidence bytes")
+            validate_metadata(entry.kind, entry.run_id, entry.subject_id, len(entry.content))
+            total += len(entry.content)
+            if total > MAX_BATCH_BYTES:
+                raise ValueError("evidence batch exceeds total byte limit")
+        if expected_head is not None and (
+            not isinstance(expected_head, str)
+            or re.fullmatch(r"[0-9a-f]{64}", expected_head) is None
+        ):
+            raise ValueError("expected head must be lowercase SHA-256")
+        if not self.database.is_file():
+            raise FileNotFoundError("evidence ledger does not exist")
         with self._open() as conn:
-            self._check_schema(conn)
             conn.execute("BEGIN IMMEDIATE")
             try:
+                # DDL and content must be checked in the same locked transaction.
+                self._check_schema(conn)
                 report = self._audit_transaction(conn)
-                record = self._append_in_transaction(
-                    conn,
-                    report,
-                    kind=kind,
-                    run_id=run_id,
-                    subject_id=subject_id,
-                    content=content,
-                )
+                if expected_head is not None and report.head_digest != expected_head:
+                    raise EvidenceIntegrityError("trusted head digest does not match ledger")
+                records: list[EvidenceRecord] = []
+                for entry in entries:
+                    record = self._append_in_transaction(
+                        conn,
+                        report,
+                        kind=entry.kind,
+                        run_id=entry.run_id,
+                        subject_id=entry.subject_id,
+                        content=entry.content,
+                    )
+                    records.append(record)
+                    # The previous insert belongs to our still-locked transaction:
+                    # the resulting head is known; no second audit is required.
+                    report = LedgerAudit(record.sequence, 0, record.digest)
                 conn.execute("COMMIT")
-                return record
-            except (sqlite3.Error, ValueError):
+                return tuple(records)
+            except BaseException:
                 if conn.in_transaction:
                     conn.execute("ROLLBACK")
                 raise
@@ -491,9 +534,9 @@ class SQLiteEvidenceLedger:
         if not self.database.is_file():
             raise FileNotFoundError("evidence ledger does not exist")
         with self._open() as conn:
-            self._check_schema(conn)
             conn.execute("BEGIN")
             try:
+                self._check_schema(conn)
                 self._audit_transaction(conn)
                 row = conn.execute(
                     "SELECT payload FROM evidence_objects WHERE sha256=?", (evidence_sha256,)

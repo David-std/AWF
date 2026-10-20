@@ -1,5 +1,15 @@
 # AWF — transferencia de Sprint 2
 
+## En progreso S2 — lote atómico de escritura de evidencia tras PR #25
+
+- **Base exacta:** `develop` merge `3f626e2f87e6b17c9e935c95319bdb62777f180d`, PR #25 [CI 39348390792](https://github.com/David-std/AWF/actions/runs/39348390792) 4/4, 287 Linux y 285 Windows +2 SKIP. `main` sigue intacta en `a902135b80e96eea17ebb9c229eed065077e809d`.
+- **Rama de trabajo:** `feat/s2-batch-evidence-append`. Aún no fusionada ni considerada validada en Windows/CI. El corte anterior se interrumpió después de una primera implementación local de lote; como no estaba publicada en GitHub, se reconstruyó sobre el merge exacto de PR #25.
+- **Contrato:** `EvidenceStorePort.append_batch` recibe `EvidenceAppend` tipados, lote de 1–512 eventos y hasta 8 MiB, compara un `expected_head` opcional bajo `BEGIN IMMEDIATE` y audita todo el ledger solo una vez. El `append` individual reutiliza la ruta. Se cotejan esquemas después de bloquear; cualquier fallo, incluida interrupción del intérprete, revierte el lote. Sin caché confiable ni idempotencia de operación implícita.
+- **Vínculo con fuentes:** `record_evidenced_chunks` compara cada `ObservedChunk` con identidad, longitud y SHA del `CanonicalManifest`; la cobertura del total sigue verificándose por separado. No atribuir `READ`, conocimiento ni validez académica a eventos válidos.
+- **Primeras pruebas Linux:** 300 pytest PASS del primer corte, posteriormente se añadió una prueba basada en propiedades y casos de concurrencia/manifest. Microbenchmark local CPython 3.12.14 con 16/64/128/256 eventos, tres repeticiones: mejoras sintéticas 13,23× / 41,09× / 82,93× / 151,41× frente a escrituras individuales; no es SLO. Ruff y Pyright 0 errores tras formato; repetir toda la suite sobre SHA final.
+- **Referencias:** [ADR-0020](adr/0020-atomic-batched-evidence-append.md), [guía de escritura](EVIDENCE_BATCH_APPEND_S2.md), [AWF-R029](REQUIREMENT_TRACEABILITY.md). Antes de fusionar: validar final en Linux y CI 4/4, comprobar Windows en worktree aislado con Desktop Commander, revisar diff/estados y registrar el commit resultante.
+- **Pendientes estructurales S2:** barridos críticos durables, custodia institucional de checkpoints, perfilado de replay, 136 MUST sin análisis sustantivo y 168 MUST sin adjudicación formal. No publicar ZIP privado, ni comenzar entrenamiento.
+
 ## Continuación S2 — lectura de eventos por snapshot verificado (tras PR #24)
 
 - **Base confirmada:** `develop` tras PR #24, merge commit `e32e0ea99e76640133d328548214f0efbae63cfc`; `main` sigue en `a902135b80e96eea17ebb9c229eed065077e809d`. PR #24 cerrada y fusionada con código `dae66ed7057353d521dfab4077b26b9a4a333a86`, [CI 39203570452](https://github.com/David-std/AWF/actions/runs/39203570452) 4/4, 279 Linux y 277 Windows ASUS +2 SKIP, sin modificar worktree original Windows. Incremento actual: [PR #25](https://github.com/David-std/AWF/pull/25), rama `feat/s2-ledger-scaling`, **pendiente de fusionar hasta verificar el SHA final**.

@@ -90,6 +90,31 @@ def test_atomic_snapshot_evidence_and_restart(tmp_path: Path) -> None:
     assert decision(recovered.state, doc) == RevisionVerdict.FRESH_CRITIC_REQUIRED
 
 
+def test_revision_write_and_recovery_validate_schema_inside_transaction(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    store = journal(tmp_path)
+    ledger_check = SQLiteEvidenceLedger._check_schema
+    revision_check = SQLiteRevisionJournal._check_schema
+    observations: list[tuple[str, bool]] = []
+
+    def watched_ledger(conn: sqlite3.Connection) -> None:
+        observations.append(("ledger", conn.in_transaction))
+        ledger_check(conn)
+
+    def watched_revision(conn: sqlite3.Connection) -> None:
+        observations.append(("revision", conn.in_transaction))
+        revision_check(conn)
+
+    monkeypatch.setattr(SQLiteEvidenceLedger, "_check_schema", staticmethod(watched_ledger))
+    monkeypatch.setattr(SQLiteRevisionJournal, "_check_schema", staticmethod(watched_revision))
+    begin(store)
+    assert observations == [("ledger", True), ("revision", True)]
+    observations.clear()
+    store.load(revision_id="revision-1")
+    assert observations == [("ledger", True), ("revision", True)]
+
+
 def test_replay_after_lost_response_is_exactly_once(tmp_path: Path) -> None:
     store = journal(tmp_path)
     begin(store)

@@ -14,6 +14,8 @@ from enum import StrEnum
 
 GENESIS_DIGEST = "0" * 64
 MAX_EVIDENCE_BYTES = 512 * 1024
+MAX_BATCH_EVENTS = 512
+MAX_BATCH_BYTES = 8 * 1024 * 1024
 _SHA_PATTERN = re.compile(r"[a-f0-9]{64}\Z")
 _ID_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}\Z")
 
@@ -46,6 +48,16 @@ class EvidenceRecord:
     @property
     def evidence_ref(self) -> str:
         return f"sha256:{self.evidence_sha256}"
+
+
+@dataclass(frozen=True, slots=True)
+class EvidenceAppend:
+    """One proposed ledger event, still uncommitted and unverified."""
+
+    kind: EvidenceKind
+    run_id: str
+    subject_id: str
+    content: bytes
 
 
 @dataclass(frozen=True, slots=True)

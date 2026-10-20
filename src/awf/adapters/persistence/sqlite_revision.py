@@ -604,10 +604,10 @@ class SQLiteRevisionJournal:
         if not self.ledger.database.is_file():
             raise FileNotFoundError("revision journal does not exist")
         with self.ledger._open() as conn:
-            self.ledger._check_schema(conn)
-            self._check_schema(conn)
             conn.execute("BEGIN")
             try:
+                self.ledger._check_schema(conn)
+                self._check_schema(conn)
                 report = self.ledger._audit_transaction(conn)
                 if expected_head is not None and report.head_digest != expected_head:
                     raise EvidenceIntegrityError("trusted head digest does not match ledger")
@@ -702,10 +702,10 @@ class SQLiteRevisionJournal:
         validate_metadata(EvidenceKind.REVISION_TRANSITION, run_id, revision_id, 1)
         validate_metadata(EvidenceKind.REVISION_TRANSITION, run_id, operation_id, 1)
         with self.ledger._open() as conn:
-            self.ledger._check_schema(conn)
-            self._check_schema(conn)
             conn.execute("BEGIN IMMEDIATE")
             try:
+                self.ledger._check_schema(conn)
+                self._check_schema(conn)
                 report = self.ledger._audit_transaction(conn)
                 history = self._recover(conn, revision_id, report.head_digest)
                 for snapshot in history:
