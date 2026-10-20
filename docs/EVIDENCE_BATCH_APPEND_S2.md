@@ -82,4 +82,18 @@ No son SLO ni comparaciones entre máquinas. Falta medir contención, múltiples
 procesos, tamaños variados y miles de eventos; también queda pendiente
 el perfilado del replay de revisiones.
 
+Reproducción independiente en ASUS ROG STRIX, Windows / CPython 3.12.10,
+feature SHA `9ce48a64f7afd2a3ca37bb48112a4608290b959a`, medianas de tres
+repeticiones:
+
+| Eventos | N `append` | Un lote | Mejora observada |
+|---:|---:|---:|---:|
+| 16 | 192,135 ms | 11,108 ms | 17,30× |
+| 64 | 529,264 ms | 11,153 ms | 47,45× |
+| 128 | 2213,688 ms | 18,440 ms | 120,05× |
+
+Pruebas en esa copia: 301 PASS, 2 SKIP de plataforma, sin fallos. El árbol
+original del usuario no se modificó. No comparar estos tiempos entre sistemas
+como una medición causal de hardware.
+
 Decisión: [ADR-0020](adr/0020-atomic-batched-evidence-append.md).

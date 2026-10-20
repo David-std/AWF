@@ -1,6 +1,6 @@
 # ADR-0020 — Lotes atómicos de evidencia con auditoría de escritura única
 
-- **Estado:** implementado y probado en rama S2; integración condicionada a CI y Windows.
+- **Estado:** integrado en `develop` mediante PR #26, commit `c8d77a250683bb77655bb6899bb749cfc5985c61`.
 - **Fecha:** 2026-10-20 (UTC).
 - **Base:** PR #25 en `develop`; ADR-0012, ADR-0013, ADR-0017 y ADR-0019.
 
