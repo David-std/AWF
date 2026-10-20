@@ -2,7 +2,7 @@
 
 **AWF Neural Engine** is an engineering and machine-learning project for traceable academic text revision in Spanish and English. The goal is to preserve meaning, citations, evidence, and author intent while comparing pretrained editors, fine-tuned models, and explicit verification policies.
 
-**Status on `develop` (2026-10-20): architecture, S0, S1 and S2 increments through PR #26 are merged and verified.** Atomic evidence batches now reduce repeated ledger audits while retaining write-time schema checks and rollback. `main` remains at its pre-integration baseline; Sprint 2 is still open. None of the 168 mandatory historic rules has been formally adjudicated. The neural editor, independent semantic verifier, training and external API are **not implemented**. This repository maintains research provenance without claiming detector performance.
+**Status on `develop` (2026-10-20): architecture, S0, S1 and S2 increments through PR #28 are merged and verified.** Synthetic replay profiling and atomic evidence batches are integrated. A subsequent Sprint 2 increment adds recoverable critic sweeps and external iterations; it is not a scientific evaluator. `main` remains at its pre-integration baseline; Sprint 2 is still open. None of the 168 mandatory historic rules has been formally adjudicated. The neural editor, independent semantic verifier, training and external API are **not implemented**. This repository maintains research provenance without claiming detector performance.
 
 ## Start here
 
@@ -12,14 +12,15 @@
 - [Requirement traceability](docs/REQUIREMENT_TRACEABILITY.md) — requirements, provenance, and verifiability plan.
 - [Roadmap](docs/ROADMAP.md) and [current handoff](docs/AGENT_HANDOFF.md).
 - [Revision replay profile (S2)](docs/REVISION_REPLAY_PROFILE_S2.md) — synthetic measurements of journal recovery; no validation shortcuts or production SLOs.
+- [Durable revision transitions (S2)](docs/DURABLE_REVISION_S2.md) — atomic critic sweeps and external iterations, event ordering, recovery and academic limits.
 - [Evidence and source registry](docs/SOURCE_REGISTRY.md) — status and limitations of external references.
 - [Compute plan](docs/COMPUTE_AND_TRAINING.md) — RTX 4050, Qwen baseline, and optional Google-hosted GPU.
 
 ## Integration status and current limits
 
-PRs [#10–#26](https://github.com/David-std/AWF/pulls?q=is%3Apr+is%3Amerged+base%3Adevelop) were reviewed and merged **in sequence into `develop`**, preserving their merge commits. The last completed increment is [PR #26](https://github.com/David-std/AWF/pull/26), merged as `c8d77a250683bb77655bb6899bb749cfc5985c61`: 303 Linux tests and 301 Windows tests (+2 platform-specific skips), with 4/4 GitHub Actions jobs Linux/Windows Python 3.12/3.13 passing ([run 39365271054](https://github.com/David-std/AWF/actions/runs/39365271054)). See [the current handoff](docs/AGENT_HANDOFF.md).
+PRs [#10–#28](https://github.com/David-std/AWF/pulls?q=is%3Apr+is%3Amerged+base%3Adevelop) were reviewed and merged **in sequence into `develop`**, preserving their merge commits. The latest completed increment is [PR #28](https://github.com/David-std/AWF/pull/28), merged as `96fd77f89aa6a46a2cdeb437964230f0de78b2df`: 310 Linux tests and 308 Windows tests (+2 platform-specific skips), with 4/4 GitHub Actions jobs Linux/Windows Python 3.12/3.13 passing ([run 39374937394](https://github.com/David-std/AWF/actions/runs/39374937394)). See [the current handoff](docs/AGENT_HANDOFF.md).
 
-Integrity is **not** independent scholarly assessment: externally verified human independence, actual external checkpoint custody, full durable critic sweeps, recovery benchmarks and the 168 rule adjudications remain incomplete. Do not promote `REVIEW_ATTESTED`, publish the historical ZIP or authorize model training based on these infrastructure tests.
+Integrity is **not** independent scholarly assessment: externally verified independence, actual external checkpoint custody, policy-backed reviewer authority and the 168 rule adjudications remain incomplete. The synthetic recovery profile is not an operational SLO. Do not promote `REVIEW_ATTESTED`, publish the historical ZIP or authorize model training based on these infrastructure tests.
 
 ## Implemented core (S0–S1)
 
@@ -94,7 +95,7 @@ The prototype does **not** establish semantic correctness, genuine independent c
 
 ## Atomic revision journal — Sprint 2 incremental prototype
 
-The `SQLiteRevisionJournal` Python API persists versioned `RevisionState` snapshots and their evidence events together in **one local SQLite transaction**. A stable operation ID supports idempotent retry; stale writers fail closed, and recovery checks the event/snapshot chain. A subsequent S2 increment adds durable edits and finding open/resolution with exact event-bound intentions, compatible with previous commits. Critic sweeps and academic acceptance are not durable. See [ADR-0014](docs/adr/0014-atomic-revision-journal.md), [ADR-0015](docs/adr/0015-durable-edit-and-finding-transitions.md) and [the recovery guide](docs/DURABLE_REVISION_S2.md).
+The `SQLiteRevisionJournal` Python API persists versioned `RevisionState` snapshots and their evidence events together in **one local SQLite transaction**. A stable operation ID supports idempotent retry; stale writers fail closed, and recovery checks the event/snapshot chain. Durable edits, findings, critic sweeps and external iterations use exact event-bound intentions, compatible with previous commits. Sweep context/observation events are checked for type, run, revision and causal freshness. **Scientific acceptance is not implemented.** See [ADR-0014](docs/adr/0014-atomic-revision-journal.md), [ADR-0015](docs/adr/0015-durable-edit-and-finding-transitions.md), [ADR-0022](docs/adr/0022-durable-critic-and-external-iterations.md) and [the recovery guide](docs/DURABLE_REVISION_S2.md).
 
 No historical requirement is automatically adjudicated by this infrastructure, and no locally stored audit is independent proof of academic accuracy or evaluator authority. The original AWS archive stays private.
 
@@ -102,7 +103,7 @@ No historical requirement is automatically adjudicated by this infrastructure, a
 
 The application can now verify detached Ed25519 reviewer statements over **one exact ledger event** against an externally SHA-pinned reviewer allowlist (actor/key, roles, run/subject, expiry, revocation). The `awf evidence attest` and `attest-verify` commands do not generate or hold reviewer private keys. Audit and knowledge-stage gates can require signed statements in addition to local integrity; legacy receipts are not silently upgraded. See [ADR-0016](docs/adr/0016-signed-reviewer-authorization.md) and [the authorization guide](docs/REVIEWER_AUTH_S2.md).
 
-This is **cryptographic key/role authorization only**, not third-party identity vetting, independent human judgment, trustworthy timestamping, or permission to accept a manuscript. Durable critic sweeps remain open.
+This is **cryptographic key/role authorization only**, not third-party identity vetting, independent human judgment, trustworthy timestamping, or permission to accept a manuscript. Durable sweep events do not automatically require signed independent assessors.
 
 ## Verified evidence reads and scaling — Sprint 2 integrated increment
 

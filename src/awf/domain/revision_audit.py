@@ -388,9 +388,26 @@ def add_clean_sweep(
     _assert_document(state, doc)
     if decision(state, doc, policy) != RevisionVerdict.FRESH_CRITIC_REQUIRED:
         raise ValueError("a clean sweep requires complete current audits and zero open findings")
-    if inherited_diagnosis or not all(
-        value.strip() for value in (critic_id, evidence_ref, isolated_context_ref)
-    ):
+    if inherited_diagnosis:
+        raise ValueError("critic sweep requires isolated context without inherited diagnosis")
+    return _append_clean_sweep(
+        state,
+        artifact_sha256=doc.sha256,
+        critic_id=critic_id,
+        evidence_ref=evidence_ref,
+        isolated_context_ref=isolated_context_ref,
+    )
+
+
+def _append_clean_sweep(
+    state: RevisionState,
+    *,
+    artifact_sha256: str,
+    critic_id: str,
+    evidence_ref: str,
+    isolated_context_ref: str,
+) -> RevisionState:
+    if not all(value.strip() for value in (critic_id, evidence_ref, isolated_context_ref)):
         raise ValueError("critic sweep requires isolated context and documented evidence")
     if any(s.critic_id == critic_id for s in state.clean_sweeps):
         raise ValueError("duplicate critic identity is not an independent clean sweep")
@@ -399,8 +416,58 @@ def add_clean_sweep(
     return replace(
         state,
         clean_sweeps=state.clean_sweeps
-        + (CleanSweep(critic_id, doc.sha256, evidence_ref, isolated_context_ref),),
-        event_log=state.event_log + (f"CLEAN_SWEEP:{critic_id}:{doc.sha256}",),
+        + (CleanSweep(critic_id, artifact_sha256, evidence_ref, isolated_context_ref),),
+        event_log=state.event_log + (f"CLEAN_SWEEP:{critic_id}:{artifact_sha256}",),
+    )
+
+
+def _replay_clean_sweep(
+    state: RevisionState,
+    *,
+    artifact_sha256: str,
+    scope_hashes: dict[str, str],
+    policy: RevisionPolicy,
+    critic_id: str,
+    evidence_ref: str,
+    isolated_context_ref: str,
+    inherited_diagnosis: bool,
+) -> RevisionState:
+    """Replay a sweep gate from bound hashes when manuscript bytes are unavailable.
+
+    Write-time checks calculate these hashes from the actual DocumentIR and
+    independently run add_clean_sweep. Recovery verifies this metadata against
+    the preceding immutable receipts; neither path proves critic independence.
+    """
+    keys = {slot.key for slot in state.slots}
+    receipts = {receipt.slot_key: receipt for receipt in state.receipts}
+    if (
+        state.artifact_sha256 != artifact_sha256
+        or set(scope_hashes) != keys
+        or not keys
+        or bool(state.dirty_keys)
+        or state.revision_cycles >= policy.max_revision_cycles
+        or state.external_iterations >= policy.max_external_iterations
+        or len(state.clean_sweeps) >= policy.clean_sweeps_required
+        or any(finding.material and finding.status == "OPEN" for finding in state.findings)
+        or any(sweep.artifact_sha256 != artifact_sha256 for sweep in state.clean_sweeps)
+        or any(
+            (receipt := receipts.get(slot.key)) is None
+            or receipt.status != AuditStatus.CLEAN
+            or receipt.checks_executed != slot.required_checks
+            or receipt.artifact_sha256 != artifact_sha256
+            or receipt.scope_sha256 != scope_hashes[slot.key]
+            for slot in state.slots
+        )
+    ):
+        raise ValueError("critic sweep has stale, incomplete or blocked audit prerequisites")
+    if inherited_diagnosis:
+        raise ValueError("critic sweep requires isolated context without inherited diagnosis")
+    return _append_clean_sweep(
+        state,
+        artifact_sha256=artifact_sha256,
+        critic_id=critic_id,
+        evidence_ref=evidence_ref,
+        isolated_context_ref=isolated_context_ref,
     )
 
 

@@ -2,9 +2,9 @@
 
 `SQLiteRevisionJournal` coordina dos clases de información bajo una transacción
 SQLite: los eventos de evidencia y los estados inmutables `RevisionState`.
-Su alcance incluye `START`, `AUDIT`, `EDIT`, `FINDING_OPEN` y
-`FINDING_RESOLVE`; no reemplaza la API previa en memoria ni habilita
-convergencia autónoma.
+Su alcance incluye `START`, `AUDIT`, `EDIT`, `FINDING_OPEN`,
+`FINDING_RESOLVE`, `CLEAN_SWEEP` y `EXTERNAL_ITERATION`; no reemplaza
+la API previa en memoria ni habilita convergencia autónoma.
 
 ## Uso del contrato Python
 
@@ -93,6 +93,69 @@ scope, no texto del manuscrito ni prueba de consentimiento humano.
 La referencia `event:<digest>` demuestra que quedó registrada, no que sea
 científicamente correcta.
 
+## Barridos críticos e iteraciones externas durables
+
+La aplicación debe registrar observaciones y contextos **como eventos reales**
+del mismo ledger antes de iniciar cada transición. Cada evento debe usar el
+`run_id` de la revisión y su `revision_id` como `subject_id`. Debe aparecer
+después del último commit de esa revisión; una observación antigua no puede
+servir para un ciclo nuevo. Ejemplo sintético a partir de `committed` del
+primer fragmento de código (sin editar ni abrir hallazgos):
+
+```python
+from awf.application.commands.bind_evidence import event_reference
+from awf.domain.evidence import EvidenceKind
+from awf.domain.revision_audit import RevisionPolicy
+
+def observation(kind, payload):
+    return event_reference(journal.ledger.append(
+        kind=kind, run_id="run-1", subject_id="revision-1",
+        content=payload.encode(),
+    ))
+
+context_1 = observation(EvidenceKind.CRITIC_CONTEXT, "synthetic:isolated-context-1")
+observation_1 = observation(EvidenceKind.CRITIC_OBSERVATION, "synthetic:critic-1")
+sweep_1 = journal.record_clean_sweep(
+    revision_id="revision-1", operation_id="sweep-1", run_id="run-1",
+    document=document, expected_version=committed.version,
+    policy=RevisionPolicy(), critic_id="critic-1",
+    isolated_context_ref=context_1, observation_ref=observation_1,
+)
+
+context_2 = observation(EvidenceKind.CRITIC_CONTEXT, "synthetic:isolated-context-2")
+observation_2 = observation(EvidenceKind.CRITIC_OBSERVATION, "synthetic:critic-2")
+sweep_2 = journal.record_clean_sweep(
+    revision_id="revision-1", operation_id="sweep-2", run_id="run-1",
+    document=document, expected_version=sweep_1.version,
+    policy=RevisionPolicy(), critic_id="critic-2",
+    isolated_context_ref=context_2, observation_ref=observation_2,
+)
+
+iteration_observation = observation(
+    EvidenceKind.EXTERNAL_ITERATION_OBSERVATION, "synthetic:external-cycle"
+)
+iteration = journal.record_external_iteration(
+    revision_id="revision-1", operation_id="external-1", run_id="run-1",
+    expected_version=sweep_2.version, policy=RevisionPolicy(),
+    observation_ref=iteration_observation,
+)
+assert journal.load(revision_id="revision-1").state == iteration.state
+```
+
+Cada operación graba intención y commit con un snapshot nuevo, con los mismos
+controles transaccionales e idempotentes de la edición. El barrido exige
+`DocumentIR` del artefacto auditado, todos los scopes actuales limpios, cero
+hallazgos materiales abiertos, identidad y contexto distintos, límite no
+agotado y `inherited_diagnosis=False`. El replay comprueba esas condiciones
+contra recibos/snapshots previos, sin almacenar texto completo. La iteración
+externa solo registra el ciclo y consume presupuesto; no declara éxito.
+
+**Límite de confianza:** los contenidos de esos eventos son declaraciones
+locales. Un actor puede registrar dos IDs distintos sin que hayan intervenido
+dos personas o modelos realmente independientes. La validez del manuscrito,
+autoridad, revisión aislada y aceptación académica exigen controles externos.
+No asumir que `RevisionVerdict.CONVERGED` constituye certificación.
+
 ## Restricciones deliberadas
 
 - Los snapshots guardan metadatos, hashes, referencias y hallazgos, no el texto
@@ -100,14 +163,17 @@ científicamente correcta.
 - `record_evidenced_audit` de PR #18 sigue existiendo para prototipos en memoria;
   no promete coordinación transaccional de estado. El camino durable es
   `SQLiteRevisionJournal.record_audit`.
-- No hay comandos durables para barridos de críticos, iteraciones externas ni
-  aprobación académica. El estado `CONVERGED` no se autoriza por integridad SQLite.
+- Hay operaciones durables para barridos de críticos e iteraciones externas,
+  **no** comandos que aprueben científicamente un documento. El estado local
+  `CONVERGED` no autoriza aceptación académica por integridad SQLite.
 - Una comprobación positiva de la cadena y de los recibos no prueba competencia,
   identidad, independencia o corrección de los juicios académicos.
-- Coste actual O(historial) para integridad; faltan benchmark, backup/restore,
-  checkpoint externo firmado, permisos de evaluadores y pruebas de cortes de
-  energía sobre el equipo y almacenamiento reales.
+- Integridad y replay completos tienen coste ligado al historial; existe un
+  [perfil sintético](REVISION_REPLAY_PROFILE_S2.md). Hay prototipos de
+  checkpoint firmado y backup/restore verificado, pero faltan custodia externa
+  real, pruebas de energía física y verificaciones de independencia.
 
 Consulta [ADR-0014](adr/0014-atomic-revision-journal.md) para la transacción
 original y [ADR-0015](adr/0015-durable-edit-and-finding-transitions.md) para
-la extensión y sus límites.
+la extensión inicial, y [ADR-0022](adr/0022-durable-critic-and-external-iterations.md)
+para los barridos e iteraciones externas.

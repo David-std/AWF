@@ -172,4 +172,30 @@ class RevisionJournalPort(Protocol):
         observation_ref: str,
     ) -> PersistedRevision: ...
 
+    def record_clean_sweep(
+        self,
+        *,
+        revision_id: str,
+        operation_id: str,
+        run_id: str,
+        document: DocumentIR,
+        expected_version: int,
+        policy: RevisionPolicy,
+        critic_id: str,
+        isolated_context_ref: str,
+        observation_ref: str,
+        inherited_diagnosis: bool = False,
+    ) -> PersistedRevision: ...
+
+    def record_external_iteration(
+        self,
+        *,
+        revision_id: str,
+        operation_id: str,
+        run_id: str,
+        expected_version: int,
+        policy: RevisionPolicy,
+        observation_ref: str,
+    ) -> PersistedRevision: ...
+
     def load(self, *, revision_id: str, expected_head: str | None = None) -> PersistedRevision: ...
