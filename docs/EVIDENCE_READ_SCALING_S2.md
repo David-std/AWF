@@ -29,6 +29,17 @@ Primer resultado local observado el 2026-10-20, Linux / CPython 3.12.14:
 | 128 | 249,342 ms | 3,328 ms | 74,92× |
 | 256 | 799,826 ms | 5,737 ms | 139,42× |
 
+Reproducción independiente en ASUS ROG STRIX, Windows / CPython 3.12.10,
+mismo commit de código `bc5d0fdb1d0ff40e24a514562fb9dd8485d75939`, tres
+repeticiones por caso:
+
+| Eventos | Auditoría por llamada | Un snapshot auditado | Mejora observada |
+|---:|---:|---:|---:|
+| 16 | 21,498 ms | 1,419 ms | 15,15× |
+| 64 | 108,685 ms | 2,184 ms | 49,76× |
+| 128 | 726,954 ms | 20,331 ms | 35,76× |
+| 256 | 5306,414 ms | 34,630 ms | 153,23× |
+
 Las cifras son de un equipo y un conjunto artificial pequeños; no son una
 garantía de throughput, p95 ni rendimiento con WAL bajo contención. Para un
 objetivo operativo real faltan perfilar equipos, discos, WAL grande, miles de
