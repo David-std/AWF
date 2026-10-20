@@ -33,11 +33,11 @@ def _text(value: object, *, minimum: int = 1) -> bool:
 
 
 def _strings(value: object) -> bool:
-    return (
-        isinstance(value, list)
-        and len(value) <= 64
-        and len(value) == len(set(value)) if isinstance(value, list) and all(isinstance(v, str) for v in value) else False
-    ) and all(_text(entry) for entry in value)
+    if not isinstance(value, list) or len(value) > 64:
+        return False
+    if not all(isinstance(entry, str) for entry in value):
+        return False
+    return len(value) == len(set(value)) and all(_text(entry) for entry in value)
 
 
 def _inspect_rule(
@@ -65,7 +65,7 @@ def _inspect_rule(
     if not set(template["conflicting_rule_ids"]) <= known_ids - {identifier}:
         raise ValueError(f"unknown or self-referential conflict ID: {identifier}")
     rights = template["source_rights_status"]
-    if rights not in _RIGHTS:
+    if not isinstance(rights, str) or rights not in _RIGHTS:
         raise ValueError(f"invalid rights declaration: {identifier}")
     disposition = template["desired_disposition"]
     if disposition is None:

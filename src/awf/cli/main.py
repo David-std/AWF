@@ -34,8 +34,8 @@ from awf.application.commands.verified_snapshot import create_verified_snapshot
 from awf.domain.checkpoints import SignedLedgerCheckpoint, parse_checkpoint_policy
 from awf.domain.evidence import EvidenceKind
 from awf.domain.reviewer_auth import ReviewerRole, SignedReviewerClaim, parse_trust_policy
-from awf.knowledge.audit import audit_registry
 from awf.knowledge.adjudication_dossiers import audit_private_dossiers
+from awf.knowledge.audit import audit_registry
 
 
 def create_parser() -> argparse.ArgumentParser:
