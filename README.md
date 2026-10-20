@@ -2,7 +2,7 @@
 
 **AWF Neural Engine** is an engineering and machine-learning project for traceable academic text revision in Spanish and English. The goal is to preserve meaning, citations, evidence, and author intent while comparing pretrained editors, fine-tuned models, and explicit verification policies.
 
-**Status on `develop` (2026-10-20): architecture, S0, S1 and S2 increments through PR #25 are merged and verified.** This feature branch proposes bounded atomic evidence batches to reduce repeated ledger audits while retaining write-time schema checks and rollback. `main` remains at its pre-integration baseline; Sprint 2 is still open. None of the 168 mandatory historic rules has been formally adjudicated. The neural editor, independent semantic verifier, training and external API are **not implemented**. This repository maintains research provenance without claiming detector performance.
+**Status on `develop` (2026-10-20): architecture, S0, S1 and S2 increments through PR #26 are merged and verified.** Atomic evidence batches now reduce repeated ledger audits while retaining write-time schema checks and rollback. `main` remains at its pre-integration baseline; Sprint 2 is still open. None of the 168 mandatory historic rules has been formally adjudicated. The neural editor, independent semantic verifier, training and external API are **not implemented**. This repository maintains research provenance without claiming detector performance.
 
 ## Start here
 
@@ -16,7 +16,7 @@
 
 ## Integration status and current limits
 
-PRs [#10–#25](https://github.com/David-std/AWF/pulls?q=is%3Apr+is%3Amerged+base%3Adevelop) were reviewed and merged **in sequence into `develop`**, preserving their merge commits. The last completed increment is [PR #25](https://github.com/David-std/AWF/pull/25), merged as `3f626e2f87e6b17c9e935c95319bdb62777f180d`: 287 Linux tests and 285 Windows tests (+2 platform-specific skips), with 4/4 GitHub Actions jobs Linux/Windows Python 3.12/3.13 passing ([run 39348390792](https://github.com/David-std/AWF/actions/runs/39348390792)). The current branch extends this work with transactionally validated evidence batches, pending its own CI and Windows review. See [the current handoff](docs/AGENT_HANDOFF.md).
+PRs [#10–#26](https://github.com/David-std/AWF/pulls?q=is%3Apr+is%3Amerged+base%3Adevelop) were reviewed and merged **in sequence into `develop`**, preserving their merge commits. The last completed increment is [PR #26](https://github.com/David-std/AWF/pull/26), merged as `c8d77a250683bb77655bb6899bb749cfc5985c61`: 303 Linux tests and 301 Windows tests (+2 platform-specific skips), with 4/4 GitHub Actions jobs Linux/Windows Python 3.12/3.13 passing ([run 39365271054](https://github.com/David-std/AWF/actions/runs/39365271054)). See [the current handoff](docs/AGENT_HANDOFF.md).
 
 Integrity is **not** independent scholarly assessment: externally verified human independence, actual external checkpoint custody, full durable critic sweeps, recovery benchmarks and the 168 rule adjudications remain incomplete. Do not promote `REVIEW_ATTESTED`, publish the historical ZIP or authorize model training based on these infrastructure tests.
 
@@ -103,11 +103,11 @@ The application can now verify detached Ed25519 reviewer statements over **one e
 
 This is **cryptographic key/role authorization only**, not third-party identity vetting, independent human judgment, trustworthy timestamping, or permission to accept a manuscript. Durable critic sweeps remain open.
 
-## Verified evidence reads and scaling — Sprint 2 proposed increment
+## Verified evidence reads and scaling — Sprint 2 integrated increment
 
 Source-chunk coverage, audit receipt checks and knowledge-stage verification can share **one fully audited SQLite read transaction** across their receipts, avoiding repeated full-ledger audits while preserving exact event/run/subject/bytes checks. [ADR-0019](docs/adr/0019-verified-evidence-read-snapshots.md) and the [benchmark guide](docs/EVIDENCE_READ_SCALING_S2.md) document concurrency, negative tests, reproducible synthetic measurements and the remaining `O(n)` per-operation cost. No signature, custody or academic truth is inferred from higher throughput.
 
-## Atomic evidence append batches — Sprint 2 pending increment
+## Atomic evidence append batches — Sprint 2 integrated increment
 
 `SQLiteEvidenceLedger.append_batch` accepts a bounded, ordered group of new
 evidence events and commits them in **one** SQLite write transaction after a
@@ -117,7 +117,8 @@ source chunks to their canonical manifest before writing; full coverage
 must still pass a separate gate. [ADR-0020](docs/adr/0020-atomic-batched-evidence-append.md)
 and the [write benchmark guide](docs/EVIDENCE_BATCH_APPEND_S2.md) explain
 failure/rollback behavior, limits and measured synthetic throughput. This
-branch is not integrated or academically adjudicated by this description.
+increment is integrated in [PR #26](https://github.com/David-std/AWF/pull/26),
+but not academically adjudicated by this description.
 
 ## Signed ledger checkpoints — Sprint 2 incremental prototype
 
