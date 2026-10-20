@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — durable critic sweeps and external iterations (Sprint 2)
+
+- Persist `CLEAN_SWEEP` and `EXTERNAL_ITERATION` as typed, versioned SQLite intent/commit/snapshot transitions; replays preserve domain gates, idempotency and rollback.
+- Bind observations to actual, properly typed ledger events for the same run and revision, written after the preceding commit. Reject stale, swapped or reused context across critics and cycles.
+- Replay current-scope audit prerequisites from committed hashes without storing document text. Add synthetic failure, concurrency, recovery and tamper-path integration tests (ADR-0022 / AWF-R031).
+- Local state convergence is not scholarly acceptance; no historical rule is newly adjudicated and no critic independence is verified.
+- The initial code SHA `4aa5d5e8` passed 329 Linux tests, 4/4 GitHub Actions quality-gate matrix and 327 Windows ASUS tests (+2 documented platform skips); the final documentation commit is subject to the same CI gate before merge.
+
 ## Unreleased — revision recovery profiling (Sprint 2)
 
 - Add a temporary-data benchmark that separates one-revision replay from verified `load` and database-wide recovery, with operation counts, traced memory, latency ranges and Python/SQLite metadata.

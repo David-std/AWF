@@ -1,7 +1,7 @@
 """Atomic local revision snapshots coordinated with the existing evidence ledger.
 
-START, AUDIT, EDIT, FINDING_OPEN and FINDING_RESOLVE are durable. Critic sweeps
-and external iterations remain in memory; no journal result certifies a critic.
+START, AUDIT, EDIT, FINDING_OPEN, FINDING_RESOLVE, CLEAN_SWEEP and
+EXTERNAL_ITERATION are durable; no journal result certifies a critic.
 """
 
 from __future__ import annotations
@@ -32,8 +32,11 @@ from awf.domain.revision_audit import (
     RevisionPolicy,
     RevisionState,
     _accept_edit_scopes,
+    _replay_clean_sweep,
     accept_edit,
+    add_clean_sweep,
     open_finding,
+    record_external_iteration,
     resolve_finding,
     scope_fingerprint,
     start_revision,
@@ -73,7 +76,9 @@ _SELECT = (
     "version, operation_id, run_id, request_sha256, previous_state_sha256, "
     "state_sha256, state_bytes, transition_digest"
 )
-_DURABLE_KINDS = frozenset({"EDIT", "FINDING_OPEN", "FINDING_RESOLVE"})
+_DURABLE_KINDS = frozenset(
+    {"EDIT", "FINDING_OPEN", "FINDING_RESOLVE", "CLEAN_SWEEP", "EXTERNAL_ITERATION"}
+)
 
 
 class RevisionConflictError(ValueError):
@@ -114,6 +119,46 @@ def _event_sequence(conn: sqlite3.Connection, digest: str) -> int:
     return row[0]
 
 
+def _previous_commit_sequence(conn: sqlite3.Connection, revision_id: str, version: int) -> int:
+    row = conn.execute(
+        "SELECT transition_digest FROM revision_snapshots WHERE revision_id=? AND version=?",
+        (revision_id, version),
+    ).fetchone()
+    if row is None:
+        raise EvidenceIntegrityError("prior revision commit missing during evidence binding")
+    return _event_sequence(conn, str(row[0]))
+
+
+def _check_transition_observations(
+    conn: sqlite3.Connection,
+    *,
+    run_id: str,
+    revision_id: str,
+    previous_commit_sequence: int,
+    intent_sequence: int,
+    references: tuple[tuple[object, EvidenceKind], ...],
+) -> None:
+    """Reject foreign, stale or reused local evidence before the transition intent."""
+    identities: list[str] = []
+    for ref, expected_kind in references:
+        if (
+            not isinstance(ref, str)
+            or not ref.startswith("event:")
+            or not re.fullmatch("[a-f0-9]{64}", ref[6:])
+        ):
+            raise EvidenceIntegrityError("transition observation must reference an evidence event")
+        digest = ref[6:]
+        kind, event_run, subject, _ = _event_payload(conn, digest)
+        sequence = _event_sequence(conn, digest)
+        if (kind, event_run, subject) != (expected_kind.value, run_id, revision_id) or not (
+            previous_commit_sequence < sequence < intent_sequence
+        ):
+            raise EvidenceIntegrityError("transition observation has wrong identity or age")
+        identities.append(digest)
+    if len(identities) != len(set(identities)):
+        raise EvidenceIntegrityError("transition observations cannot reuse the same event")
+
+
 def _after_event(report: LedgerAudit, digest: str) -> LedgerAudit:
     return LedgerAudit(
         events_checked=report.events_checked + 1,
@@ -125,10 +170,14 @@ def _after_event(report: LedgerAudit, digest: str) -> LedgerAudit:
 def _revision_request(
     kind: str, revision_id: str, run_id: str, expected_version: int, details: dict[str, object]
 ) -> str:
-    # EDIT scope digests derive from the frozen inventory inside the write lock.
+    # Scope digests derive from the frozen inventory inside the write lock.
     request_details = (
-        {key: value for key, value in details.items() if key not in {"old_scopes", "new_scopes"}}
-        if kind == "EDIT"
+        {
+            key: value
+            for key, value in details.items()
+            if key not in ({"old_scopes", "new_scopes"} if kind == "EDIT" else {"scope_hashes"})
+        }
+        if kind in {"EDIT", "CLEAN_SWEEP"}
         else details
     )
     return _request_hash(
@@ -140,6 +189,24 @@ def _revision_request(
             "details": request_details,
         }
     )
+
+
+def _policy_data(policy: RevisionPolicy) -> dict[str, int]:
+    return {
+        "max_revision_cycles": policy.max_revision_cycles,
+        "max_external_iterations": policy.max_external_iterations,
+        "clean_sweeps_required": policy.clean_sweeps_required,
+    }
+
+
+def _restored_policy(raw: object) -> RevisionPolicy:
+    if (
+        not isinstance(raw, dict)
+        or set(raw) != set(_policy_data(RevisionPolicy()))
+        or any(type(value) is not int for value in raw.values())
+    ):
+        raise ValueError("invalid persisted revision policy")
+    return RevisionPolicy(**raw)
 
 
 class SQLiteRevisionJournal:
@@ -366,6 +433,9 @@ class SQLiteRevisionJournal:
                 claimed_intents.add(intent_ref[6:])
                 if previous_state is None:
                     raise EvidenceIntegrityError("revision intent cannot be initial commit")
+                intent_sequence = _event_sequence(conn, intent_ref[6:])
+                if not previous_commit_sequence < intent_sequence < commit_sequence:
+                    raise EvidenceIntegrityError("revision intent event order is inconsistent")
                 self._check_intent_link(
                     conn,
                     previous_state,
@@ -375,12 +445,11 @@ class SQLiteRevisionJournal:
                     operation_id=str(op_id),
                     request_sha256=str(req_sha),
                     expected_version=index - 1,
+                    previous_commit_sequence=previous_commit_sequence,
+                    intent_sequence=intent_sequence,
                     kind=expected["operation_kind"],
                     intent_ref=intent_ref,
                 )
-                intent_sequence = _event_sequence(conn, intent_ref[6:])
-                if not previous_commit_sequence < intent_sequence < commit_sequence:
-                    raise EvidenceIntegrityError("revision intent event order is inconsistent")
             snapshots.append(
                 PersistedRevision(revision_id, str(run_id), version, state, str(op_id), head)
             )
@@ -445,6 +514,8 @@ class SQLiteRevisionJournal:
         operation_id: str,
         request_sha256: str,
         expected_version: int,
+        previous_commit_sequence: int,
+        intent_sequence: int,
         kind: object,
         intent_ref: str,
     ) -> None:
@@ -497,14 +568,7 @@ class SQLiteRevisionJournal:
                     for name in ("old_sha256", "new_sha256", "old_ir_sha256", "new_ir_sha256")
                 ):
                     raise ValueError("invalid edit document fingerprint")
-                policy_raw = details["policy"]
-                if (
-                    not isinstance(policy_raw, dict)
-                    or any(type(value) is not int for value in policy_raw.values())
-                    or set(policy_raw)
-                    != {"max_revision_cycles", "max_external_iterations", "clean_sweeps_required"}
-                ):
-                    raise ValueError("invalid persisted edit policy")
+                policy = _restored_policy(details["policy"])
                 old_scopes = details["old_scopes"]
                 new_scopes = details["new_scopes"]
                 if not isinstance(old_scopes, dict) or not isinstance(new_scopes, dict):
@@ -522,7 +586,7 @@ class SQLiteRevisionJournal:
                     new_sha256=details["new_sha256"],
                     old_scopes=old_scopes,
                     new_scopes=new_scopes,
-                    policy=RevisionPolicy(**policy_raw),
+                    policy=policy,
                     operation_ref=intent_ref,
                 )
                 if (
@@ -546,7 +610,7 @@ class SQLiteRevisionJournal:
                     or not details["observation_ref"].strip()
                 ):
                     raise ValueError("missing finding observation")
-            else:
+            elif kind == "FINDING_RESOLVE":
                 if set(details) != {"finding_id", "observation_ref"}:
                     raise ValueError("unknown or missing resolution metadata")
                 expected_state = resolve_finding(
@@ -559,6 +623,80 @@ class SQLiteRevisionJournal:
                     or not details["observation_ref"].strip()
                 ):
                     raise ValueError("missing resolution observation")
+            elif kind == "CLEAN_SWEEP":
+                if set(details) != {
+                    "artifact_sha256",
+                    "document_ir_sha256",
+                    "scope_hashes",
+                    "critic_id",
+                    "isolated_context_ref",
+                    "observation_ref",
+                    "inherited_diagnosis",
+                    "policy",
+                }:
+                    raise ValueError("unknown or missing clean sweep metadata")
+                for name in ("artifact_sha256", "document_ir_sha256"):
+                    if (
+                        not isinstance(details[name], str)
+                        or re.fullmatch("[a-f0-9]{64}", details[name]) is None
+                    ):
+                        raise ValueError("invalid clean sweep document identity")
+                scope_hashes = details["scope_hashes"]
+                if not isinstance(scope_hashes, dict) or not all(
+                    isinstance(value, str) and re.fullmatch("[a-f0-9]{64}", value)
+                    for value in scope_hashes.values()
+                ):
+                    raise ValueError("invalid clean sweep scope fingerprints")
+                if details["inherited_diagnosis"] is not False or not all(
+                    isinstance(details[name], str) and details[name].strip()
+                    for name in ("critic_id", "isolated_context_ref", "observation_ref")
+                ):
+                    raise ValueError("clean sweep requires independent-context declarations")
+                _check_transition_observations(
+                    conn,
+                    run_id=run_id,
+                    revision_id=revision_id,
+                    previous_commit_sequence=previous_commit_sequence,
+                    intent_sequence=intent_sequence,
+                    references=(
+                        (details["observation_ref"], EvidenceKind.CRITIC_OBSERVATION),
+                        (details["isolated_context_ref"], EvidenceKind.CRITIC_CONTEXT),
+                    ),
+                )
+                expected_state = _replay_clean_sweep(
+                    previous,
+                    artifact_sha256=details["artifact_sha256"],
+                    scope_hashes=scope_hashes,
+                    policy=_restored_policy(details["policy"]),
+                    critic_id=details["critic_id"],
+                    evidence_ref=intent_ref,
+                    isolated_context_ref=details["isolated_context_ref"],
+                    inherited_diagnosis=False,
+                )
+            elif kind == "EXTERNAL_ITERATION":
+                if (
+                    set(details) != {"observation_ref", "policy"}
+                    or not isinstance(details["observation_ref"], str)
+                    or not details["observation_ref"].strip()
+                ):
+                    raise ValueError("invalid external iteration observation")
+                _check_transition_observations(
+                    conn,
+                    run_id=run_id,
+                    revision_id=revision_id,
+                    previous_commit_sequence=previous_commit_sequence,
+                    intent_sequence=intent_sequence,
+                    references=(
+                        (details["observation_ref"], EvidenceKind.EXTERNAL_ITERATION_OBSERVATION),
+                    ),
+                )
+                expected_state = record_external_iteration(
+                    previous,
+                    policy=_restored_policy(details["policy"]),
+                    evidence_ref=intent_ref,
+                )
+            else:
+                raise ValueError("unknown committed revision operation")
         except (KeyError, TypeError, ValueError, AttributeError) as exc:
             raise EvidenceIntegrityError("invalid committed revision intent") from exc
         if expected_state != state:
@@ -910,11 +1048,7 @@ class SQLiteRevisionJournal:
         """Atomically invalidate checks for an edited artifact; no academic approval."""
         if not observation_ref.strip():
             raise ValueError("edit requires a nonempty observation reference")
-        policy_data: dict[str, object] = {
-            "max_revision_cycles": policy.max_revision_cycles,
-            "max_external_iterations": policy.max_external_iterations,
-            "clean_sweeps_required": policy.clean_sweeps_required,
-        }
+        policy_data = _policy_data(policy)
         input_data: dict[str, object] = {
             "old_sha256": old_document.sha256,
             "new_sha256": new_document.sha256,
@@ -1069,5 +1203,160 @@ class SQLiteRevisionJournal:
             expected_version,
             build,
             operation_kind="FINDING_RESOLVE",
+            details=details,
+        )
+
+    def record_clean_sweep(
+        self,
+        *,
+        revision_id: str,
+        operation_id: str,
+        run_id: str,
+        document: DocumentIR,
+        expected_version: int,
+        policy: RevisionPolicy,
+        critic_id: str,
+        isolated_context_ref: str,
+        observation_ref: str,
+        inherited_diagnosis: bool = False,
+    ) -> PersistedRevision:
+        """Persist a declared critic sweep; never certify evaluator independence."""
+        if (
+            not isinstance(policy, RevisionPolicy)
+            or inherited_diagnosis is not False
+            or not all(
+                isinstance(value, str) and value.strip()
+                for value in (critic_id, isolated_context_ref, observation_ref)
+            )
+        ):
+            raise ValueError("clean sweep needs current policy, isolated context and observation")
+        input_data: dict[str, object] = {
+            "artifact_sha256": document.sha256,
+            "document_ir_sha256": sha256_bytes(_canonical(document.to_dict())),
+            "critic_id": critic_id,
+            "isolated_context_ref": isolated_context_ref,
+            "observation_ref": observation_ref,
+            "inherited_diagnosis": False,
+            "policy": _policy_data(policy),
+        }
+        request_sha = _revision_request(
+            "CLEAN_SWEEP", revision_id, run_id, expected_version, input_data
+        )
+
+        def details(previous: RevisionState | None) -> dict[str, object]:
+            if previous is None:
+                raise RevisionConflictError("revision must exist before recording a clean sweep")
+            return {
+                **input_data,
+                "scope_hashes": {
+                    slot.key: scope_fingerprint(document, slot) for slot in previous.slots
+                },
+            }
+
+        def build(
+            conn: sqlite3.Connection,
+            report: LedgerAudit,
+            previous: RevisionState | None,
+            intent_ref: str | None,
+        ) -> tuple[RevisionState, LedgerAudit, str | None, str | None]:
+            if previous is None or intent_ref is None:
+                raise RevisionConflictError("revision must exist before recording a clean sweep")
+            _check_transition_observations(
+                conn,
+                run_id=run_id,
+                revision_id=revision_id,
+                previous_commit_sequence=_previous_commit_sequence(
+                    conn, revision_id, expected_version
+                ),
+                intent_sequence=_event_sequence(conn, intent_ref[6:]),
+                references=(
+                    (observation_ref, EvidenceKind.CRITIC_OBSERVATION),
+                    (isolated_context_ref, EvidenceKind.CRITIC_CONTEXT),
+                ),
+            )
+            return (
+                add_clean_sweep(
+                    previous,
+                    document,
+                    critic_id=critic_id,
+                    evidence_ref=intent_ref,
+                    isolated_context_ref=isolated_context_ref,
+                    inherited_diagnosis=False,
+                    policy=policy,
+                ),
+                report,
+                None,
+                None,
+            )
+
+        return self._write(
+            revision_id,
+            operation_id,
+            run_id,
+            request_sha,
+            expected_version,
+            build,
+            operation_kind="CLEAN_SWEEP",
+            details=details,
+        )
+
+    def record_external_iteration(
+        self,
+        *,
+        revision_id: str,
+        operation_id: str,
+        run_id: str,
+        expected_version: int,
+        policy: RevisionPolicy,
+        observation_ref: str,
+    ) -> PersistedRevision:
+        """Commit one external cycle, without advancing scholarly acceptance."""
+        if (
+            not isinstance(policy, RevisionPolicy)
+            or not isinstance(observation_ref, str)
+            or not observation_ref.strip()
+        ):
+            raise ValueError("external iteration requires a policy and observation")
+        details: dict[str, object] = {
+            "policy": _policy_data(policy),
+            "observation_ref": observation_ref,
+        }
+        request_sha = _revision_request(
+            "EXTERNAL_ITERATION", revision_id, run_id, expected_version, details
+        )
+
+        def build(
+            conn: sqlite3.Connection,
+            report: LedgerAudit,
+            previous: RevisionState | None,
+            intent_ref: str | None,
+        ) -> tuple[RevisionState, LedgerAudit, str | None, str | None]:
+            if previous is None or intent_ref is None:
+                raise RevisionConflictError("revision must exist before an external iteration")
+            _check_transition_observations(
+                conn,
+                run_id=run_id,
+                revision_id=revision_id,
+                previous_commit_sequence=_previous_commit_sequence(
+                    conn, revision_id, expected_version
+                ),
+                intent_sequence=_event_sequence(conn, intent_ref[6:]),
+                references=((observation_ref, EvidenceKind.EXTERNAL_ITERATION_OBSERVATION),),
+            )
+            return (
+                record_external_iteration(previous, policy=policy, evidence_ref=intent_ref),
+                report,
+                None,
+                None,
+            )
+
+        return self._write(
+            revision_id,
+            operation_id,
+            run_id,
+            request_sha,
+            expected_version,
+            build,
+            operation_kind="EXTERNAL_ITERATION",
             details=details,
         )
