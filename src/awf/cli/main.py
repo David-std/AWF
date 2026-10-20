@@ -26,14 +26,21 @@ from awf.application.commands.authorize_review import (
     append_signed_review_claim,
     verify_signed_review_event,
 )
-from awf.application.commands.checkpoints import propose_checkpoint, verify_signed_checkpoint
+from awf.application.commands.checkpoints import (
+    propose_checkpoint,
+    verify_signed_checkpoint,
+)
 from awf.application.commands.compile_knowledge import import_knowledge
 from awf.application.commands.ingest_document import ingest_document
 from awf.application.commands.prepare_review import prepare_review
 from awf.application.commands.verified_snapshot import create_verified_snapshot
 from awf.domain.checkpoints import SignedLedgerCheckpoint, parse_checkpoint_policy
 from awf.domain.evidence import EvidenceKind
-from awf.domain.reviewer_auth import ReviewerRole, SignedReviewerClaim, parse_trust_policy
+from awf.domain.reviewer_auth import (
+    ReviewerRole,
+    SignedReviewerClaim,
+    parse_trust_policy,
+)
 from awf.knowledge.adjudication_dossiers import audit_private_dossiers
 from awf.knowledge.audit import audit_registry
 
@@ -51,25 +58,42 @@ def create_parser() -> argparse.ArgumentParser:
         help="show the installed package version and exit",
     )
     commands = parser.add_subparsers(dest="command")
-    ingest = commands.add_parser("ingest", help="parse UTF-8 Markdown to immutable DocumentIR")
+    ingest = commands.add_parser(
+        "ingest", help="parse UTF-8 Markdown to immutable DocumentIR"
+    )
     ingest.add_argument("source", type=Path, help="input .md/.markdown source")
     ingest.add_argument("--output", type=Path, help="optional JSON output path")
-    ingest.add_argument("--store", type=Path, help="optional private content-addressed blob root")
-    knowledge = commands.add_parser("knowledge", help="local-only knowledge registry operations")
+    ingest.add_argument(
+        "--store", type=Path, help="optional private content-addressed blob root"
+    )
+    knowledge = commands.add_parser(
+        "knowledge", help="local-only knowledge registry operations"
+    )
     operations = knowledge.add_subparsers(dest="knowledge_action")
-    importer = operations.add_parser("import", help="compile a pinned local archive to metadata")
-    importer.add_argument("archive", type=Path, help="local AWS 3.19.1 ZIP, never uploaded")
-    importer.add_argument("--manifest", type=Path, default=Path("provenance/source-manifest.json"))
+    importer = operations.add_parser(
+        "import", help="compile a pinned local archive to metadata"
+    )
+    importer.add_argument(
+        "archive", type=Path, help="local AWS 3.19.1 ZIP, never uploaded"
+    )
+    importer.add_argument(
+        "--manifest", type=Path, default=Path("provenance/source-manifest.json")
+    )
     importer.add_argument("--source-id", default="aws-3.19.1")
-    importer.add_argument("--review", type=Path, help="optional private, SHA-bound review overlay")
+    importer.add_argument(
+        "--review", type=Path, help="optional private, SHA-bound review overlay"
+    )
     importer.add_argument("--output", type=Path, help="private JSON report destination")
-    auditor = operations.add_parser("audit", help="validate a private registry's consistency")
+    auditor = operations.add_parser(
+        "audit", help="validate a private registry's consistency"
+    )
     auditor.add_argument("registry", type=Path)
     auditor.add_argument(
         "--archive", type=Path, help="optionally compare actual local archive hash"
     )
     review_plan = operations.add_parser(
-        "plan-review", help="prepare private, source-bound review batches (not approvals)"
+        "plan-review",
+        help="prepare private, source-bound review batches (not approvals)",
     )
     review_plan.add_argument("archive", type=Path, help="local original AWS ZIP")
     review_plan.add_argument(
@@ -78,9 +102,12 @@ def create_parser() -> argparse.ArgumentParser:
     review_plan.add_argument("--source-id", default="aws-3.19.1")
     review_plan.add_argument("--batch-size", type=int, default=12)
     dossiers = operations.add_parser(
-        "inspect-review", help="inspect local review annotations without approving rules"
+        "inspect-review",
+        help="inspect local review annotations without approving rules",
     )
-    dossiers.add_argument("archive", type=Path, help="original SHA-pinned private AWS ZIP")
+    dossiers.add_argument(
+        "archive", type=Path, help="original SHA-pinned private AWS ZIP"
+    )
     dossiers.add_argument(
         "--manifest", type=Path, default=Path("provenance/source-manifest.json")
     )
@@ -91,9 +118,13 @@ def create_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="fail if any proposal is open, partial, conflicted or unsupported",
     )
-    evidence = commands.add_parser("evidence", help="private, transactional evidence ledger")
+    evidence = commands.add_parser(
+        "evidence", help="private, transactional evidence ledger"
+    )
     actions = evidence.add_subparsers(dest="evidence_action")
-    writer = actions.add_parser("append", help="store evidence locally and bind an event")
+    writer = actions.add_parser(
+        "append", help="store evidence locally and bind an event"
+    )
     writer.add_argument("source", type=Path, help="local evidence file (max 512 KiB)")
     writer.add_argument(
         "--kind",
@@ -102,37 +133,62 @@ def create_parser() -> argparse.ArgumentParser:
     )
     writer.add_argument("--run-id", required=True)
     writer.add_argument("--subject-id", required=True)
-    writer.add_argument("--database", type=Path, default=Path(".awf/evidence/ledger.sqlite"))
-    audit = actions.add_parser("verify", help="verify evidence chain and all stored bytes")
-    audit.add_argument("--database", type=Path, default=Path(".awf/evidence/ledger.sqlite"))
+    writer.add_argument(
+        "--database", type=Path, default=Path(".awf/evidence/ledger.sqlite")
+    )
+    audit = actions.add_parser(
+        "verify", help="verify evidence chain and all stored bytes"
+    )
+    audit.add_argument(
+        "--database", type=Path, default=Path(".awf/evidence/ledger.sqlite")
+    )
     audit.add_argument(
         "--expected-head", help="head digest retained independently from this database"
     )
     attestor = actions.add_parser(
         "attest", help="verify and store an offline-signed reviewer claim"
     )
-    attestor.add_argument("source", type=Path, help="canonical signed JSON, never a private key")
-    attestor.add_argument("--database", type=Path, default=Path(".awf/evidence/ledger.sqlite"))
+    attestor.add_argument(
+        "source", type=Path, help="canonical signed JSON, never a private key"
+    )
+    attestor.add_argument(
+        "--database", type=Path, default=Path(".awf/evidence/ledger.sqlite")
+    )
     attestor.add_argument("--policy-file", type=Path, required=True)
     attestor.add_argument("--expected-policy-sha256", required=True)
-    attestor.add_argument("--expected-head", help="optional externally held current ledger head")
-    reviewer = actions.add_parser("attest-verify", help="recheck role, signature and event binding")
-    reviewer.add_argument("--database", type=Path, default=Path(".awf/evidence/ledger.sqlite"))
+    attestor.add_argument(
+        "--expected-head", help="optional externally held current ledger head"
+    )
+    reviewer = actions.add_parser(
+        "attest-verify", help="recheck role, signature and event binding"
+    )
+    reviewer.add_argument(
+        "--database", type=Path, default=Path(".awf/evidence/ledger.sqlite")
+    )
     reviewer.add_argument("--policy-file", type=Path, required=True)
     reviewer.add_argument("--expected-policy-sha256", required=True)
     reviewer.add_argument("--attestation-ref", required=True)
     reviewer.add_argument("--target-ref", required=True)
-    reviewer.add_argument("--role", required=True, choices=[role.value for role in ReviewerRole])
+    reviewer.add_argument(
+        "--role", required=True, choices=[role.value for role in ReviewerRole]
+    )
     reviewer.add_argument("--run-id", required=True)
     reviewer.add_argument("--subject-id", required=True)
-    reviewer.add_argument("--expected-head", help="optional externally held current ledger head")
-    proposal = actions.add_parser(
-        "checkpoint-propose", help="prepare unsigned ledger head for offline custodian signing"
+    reviewer.add_argument(
+        "--expected-head", help="optional externally held current ledger head"
     )
-    proposal.add_argument("--database", type=Path, default=Path(".awf/evidence/ledger.sqlite"))
+    proposal = actions.add_parser(
+        "checkpoint-propose",
+        help="prepare unsigned ledger head for offline custodian signing",
+    )
+    proposal.add_argument(
+        "--database", type=Path, default=Path(".awf/evidence/ledger.sqlite")
+    )
     proposal.add_argument("--ledger-id", required=True)
     proposal.add_argument("--key-id", required=True)
-    proposal.add_argument("--previous-file", type=Path, help="prior signed checkpoint, if any")
+    proposal.add_argument(
+        "--previous-file", type=Path, help="prior signed checkpoint, if any"
+    )
     proposal.add_argument(
         "--history-file",
         type=Path,
@@ -140,14 +196,25 @@ def create_parser() -> argparse.ArgumentParser:
         default=[],
         help="older signed checkpoint; repeat in chronological order",
     )
-    proposal.add_argument("--expected-previous-sha256", help="independent witness of prior file")
-    proposal.add_argument("--policy-file", type=Path, help="trusted checkpoint signer policy")
-    proposal.add_argument("--expected-policy-sha256", help="independent trusted policy digest")
-    checkpoint = actions.add_parser(
-        "checkpoint-verify", help="verify externally anchored signature and ledger ancestry"
+    proposal.add_argument(
+        "--expected-previous-sha256", help="independent witness of prior file"
     )
-    checkpoint.add_argument("source", type=Path, help="signed canonical checkpoint JSON")
-    checkpoint.add_argument("--database", type=Path, default=Path(".awf/evidence/ledger.sqlite"))
+    proposal.add_argument(
+        "--policy-file", type=Path, help="trusted checkpoint signer policy"
+    )
+    proposal.add_argument(
+        "--expected-policy-sha256", help="independent trusted policy digest"
+    )
+    checkpoint = actions.add_parser(
+        "checkpoint-verify",
+        help="verify externally anchored signature and ledger ancestry",
+    )
+    checkpoint.add_argument(
+        "source", type=Path, help="signed canonical checkpoint JSON"
+    )
+    checkpoint.add_argument(
+        "--database", type=Path, default=Path(".awf/evidence/ledger.sqlite")
+    )
     checkpoint.add_argument("--expected-checkpoint-sha256", required=True)
     checkpoint.add_argument("--policy-file", type=Path, required=True)
     checkpoint.add_argument("--expected-policy-sha256", required=True)
@@ -160,12 +227,17 @@ def create_parser() -> argparse.ArgumentParser:
     )
     checkpoint.add_argument("--require-current-head", action="store_true")
     for action_name, explanation in (
-        ("snapshot-create", "create a new online SQLite backup bound to a signed current head"),
+        (
+            "snapshot-create",
+            "create a new online SQLite backup bound to a signed current head",
+        ),
         ("snapshot-restore", "restore a signed SQLite snapshot to a NEW empty path"),
     ):
         snapshot = actions.add_parser(action_name, help=explanation)
         snapshot.add_argument("source", type=Path, help="live SQLite or prior snapshot")
-        snapshot.add_argument("destination", type=Path, help="must be a nonexistent SQLite path")
+        snapshot.add_argument(
+            "destination", type=Path, help="must be a nonexistent SQLite path"
+        )
         snapshot.add_argument("--checkpoint-file", type=Path, required=True)
         snapshot.add_argument("--expected-checkpoint-sha256", required=True)
         snapshot.add_argument("--policy-file", type=Path, required=True)
@@ -188,7 +260,9 @@ def create_parser() -> argparse.ArgumentParser:
 
 def _read_private_auth_file(path: Path) -> bytes:
     if path.is_symlink() or not path.is_file() or path.stat().st_size > 64 * 1024:
-        raise ValueError("authorization input must be a bounded regular non-symlinked file")
+        raise ValueError(
+            "authorization input must be a bounded regular non-symlinked file"
+        )
     return path.read_bytes()
 
 
@@ -209,12 +283,17 @@ def main(argv: Sequence[str] | None = None) -> int:
                 or (output.exists() and source.exists() and output.samefile(source))
             ):
                 print(
-                    "AWF_ERROR [SOURCE_PROTECTED] output cannot overwrite source", file=sys.stderr
+                    "AWF_ERROR [SOURCE_PROTECTED] output cannot overwrite source",
+                    file=sys.stderr,
                 )
                 return 2
             store = FileBlobStore(args.store) if args.store is not None else None
-            document = ingest_document(source, parser=MarkdownAdapter(), blob_store=store)
-            representation = json.dumps(document.to_dict(), ensure_ascii=False, indent=2) + "\n"
+            document = ingest_document(
+                source, parser=MarkdownAdapter(), blob_store=store
+            )
+            representation = (
+                json.dumps(document.to_dict(), ensure_ascii=False, indent=2) + "\n"
+            )
             if output is not None:
                 output.parent.mkdir(parents=True, exist_ok=True)
                 # A crash while writing must leave the prior output complete.
@@ -254,18 +333,30 @@ def main(argv: Sequence[str] | None = None) -> int:
                 )
                 for path in (privacy_root, privacy_root / "knowledge", output_dir):
                     if path.is_symlink() or not path.is_dir():
-                        raise ValueError("private workbench path is missing or a symbolic link")
+                        raise ValueError(
+                            "private workbench path is missing or a symbolic link"
+                        )
 
                 def read_private(path: Path) -> dict[str, object]:
-                    if path.is_symlink() or not path.is_file() or path.stat().st_size > 4 * 1024 * 1024:
-                        raise ValueError("private workbench file missing, linked or oversized")
+                    if (
+                        path.is_symlink()
+                        or not path.is_file()
+                        or path.stat().st_size > 4 * 1024 * 1024
+                    ):
+                        raise ValueError(
+                            "private workbench file missing, linked or oversized"
+                        )
                     value = json.loads(path.read_text(encoding="utf-8"))
                     if not isinstance(value, dict):
-                        raise ValueError("private workbench JSON must contain an object")
+                        raise ValueError(
+                            "private workbench JSON must contain an object"
+                        )
                     return value
 
                 observed = read_private(output_dir / "manifest.json")
-                actual_packets = {name: read_private(output_dir / name) for name in packets}
+                actual_packets = {
+                    name: read_private(output_dir / name) for name in packets
+                }
                 report = audit_private_dossiers(
                     canonical_manifest=canonical,
                     canonical_packets=packets,
@@ -274,7 +365,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                 )
                 print(json.dumps(report, ensure_ascii=False))
                 documented = report["status_counts"].get("PROPOSAL_DOCUMENTED", 0)
-                return 0 if not args.require_documented or documented == report["requirements_count"] else 2
+                return (
+                    0
+                    if not args.require_documented
+                    or documented == report["requirements_count"]
+                    else 2
+                )
             except (OSError, ValueError, RuntimeError, KeyError, TypeError) as exc:
                 print(f"AWF_ERROR [DOSSIER_INSPECTION_FAILED] {exc}", file=sys.stderr)
                 return 2
@@ -295,11 +391,15 @@ def main(argv: Sequence[str] | None = None) -> int:
                 output_dir = (
                     privacy_root
                     / "knowledge"
-                    / (f"review-{overview['archive_sha256'][:12]}-b{args.batch_size:02d}")
+                    / (
+                        f"review-{overview['archive_sha256'][:12]}-b{args.batch_size:02d}"
+                    )
                 )
                 for path in (privacy_root, privacy_root / "knowledge", output_dir):
                     if path.is_symlink():
-                        raise ValueError("private review path cannot be a symbolic link")
+                        raise ValueError(
+                            "private review path cannot be a symbolic link"
+                        )
                 save_review_workbench(output_dir, overview=overview, packets=packets)
                 print(
                     json.dumps(
@@ -327,9 +427,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             protected = [args.archive, args.manifest]
             if args.review is not None:
                 protected.append(args.review)
-            if output is not None and any(output.resolve() == p.resolve() for p in protected):
+            if output is not None and any(
+                output.resolve() == p.resolve() for p in protected
+            ):
                 print(
-                    "AWF_ERROR [SOURCE_PROTECTED] output conflicts with an input", file=sys.stderr
+                    "AWF_ERROR [SOURCE_PROTECTED] output conflicts with an input",
+                    file=sys.stderr,
                 )
                 return 2
             try:
@@ -376,9 +479,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                     raise ValueError("registry report must be a JSON object")
                 summary = audit_registry(report)
                 if args.archive is not None:
-                    summary["archive_sha256_verified"] = checksum_file(args.archive) == report.get(
-                        "archive_sha256"
-                    )
+                    summary["archive_sha256_verified"] = checksum_file(
+                        args.archive
+                    ) == report.get("archive_sha256")
                     if not summary["archive_sha256_verified"]:
                         summary["valid"] = False
                         errors = summary.get("errors")
@@ -402,7 +505,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                     args.policy_file,
                     *args.history_file,
                 )
-                if any(args.destination.resolve() == path.resolve() for path in protected):
+                if any(
+                    args.destination.resolve() == path.resolve() for path in protected
+                ):
                     raise ValueError("snapshot destination would overwrite an input")
                 signed = SignedLedgerCheckpoint.from_bytes(
                     _read_private_auth_file(args.checkpoint_file)
@@ -417,7 +522,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 )
                 result = create_verified_snapshot(
                     store=SQLiteEvidenceLedger(args.source),
-                    writer=SQLiteSnapshotWriter(args.source, timeout_seconds=args.timeout_seconds),
+                    writer=SQLiteSnapshotWriter(
+                        args.source, timeout_seconds=args.timeout_seconds
+                    ),
                     destination=args.destination,
                     signed=signed,
                     expected_signed_sha256=args.expected_checkpoint_sha256,
@@ -510,8 +617,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                         args.database.resolve(),
                         args.policy_file.resolve(),
                     }:
-                        raise ValueError("signed checkpoint file must differ from inputs")
-                    signed = SignedLedgerCheckpoint.from_bytes(_read_private_auth_file(args.source))
+                        raise ValueError(
+                            "signed checkpoint file must differ from inputs"
+                        )
+                    signed = SignedLedgerCheckpoint.from_bytes(
+                        _read_private_auth_file(args.source)
+                    )
                     policy = parse_checkpoint_policy(
                         _read_private_auth_file(args.policy_file),
                         expected_sha256=args.expected_policy_sha256,
@@ -549,7 +660,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                     args.database.resolve(),
                     args.policy_file.resolve(),
                 }:
-                    raise ValueError("signed statement must not overwrite another input")
+                    raise ValueError(
+                        "signed statement must not overwrite another input"
+                    )
                 policy = parse_trust_policy(
                     _read_private_auth_file(args.policy_file),
                     expected_sha256=args.expected_policy_sha256,
@@ -558,7 +671,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 verifier = Ed25519ReviewerVerifier()
                 now = int(datetime.now(UTC).timestamp())
                 if args.evidence_action == "attest":
-                    signed = SignedReviewerClaim.from_bytes(_read_private_auth_file(args.source))
+                    signed = SignedReviewerClaim.from_bytes(
+                        _read_private_auth_file(args.source)
+                    )
                     record = append_signed_review_claim(
                         store=store,
                         signed=signed,
@@ -611,7 +726,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 if args.source.resolve() == args.database.resolve():
                     raise ValueError("evidence input cannot be the ledger database")
                 if args.source.is_symlink() or not args.source.is_file():
-                    raise ValueError("evidence input must be a regular, non-symlinked file")
+                    raise ValueError(
+                        "evidence input must be a regular, non-symlinked file"
+                    )
                 if args.source.stat().st_size > 512 * 1024:
                     raise ValueError("evidence exceeds 512 KiB limit")
                 raw = args.source.read_bytes()

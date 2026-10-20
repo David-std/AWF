@@ -25,7 +25,9 @@ _FIELDS = frozenset(
         "current_model_or_version_evidence",
     }
 )
-_RIGHTS = frozenset({"NOT_EVALUATED", "NOT_APPLICABLE", "RESTRICTED", "PERMISSION_VERIFIED"})
+_RIGHTS = frozenset(
+    {"NOT_EVALUATED", "NOT_APPLICABLE", "RESTRICTED", "PERMISSION_VERIFIED"}
+)
 
 
 def _text(value: object, *, minimum: int = 1) -> bool:
@@ -51,17 +53,26 @@ def _inspect_rule(
         raise ValueError(f"immutable review rule shape changed for {identifier}")
     for key in canonical:
         if key != "review_template" and actual[key] != canonical[key]:
-            raise ValueError(f"immutable source-bound rule field changed: {identifier}:{key}")
+            raise ValueError(
+                f"immutable source-bound rule field changed: {identifier}:{key}"
+            )
     template = actual["review_template"]
     if not isinstance(template, dict) or set(template) != _FIELDS:
         raise ValueError(f"unknown or missing private review fields: {identifier}")
-    if any(type(template[k]) is not type(canonical["review_template"][k]) for k in (
-        "evidence_ids", "conflicting_rule_ids", "proposed_tests",
-    )):
+    if any(
+        type(template[k]) is not type(canonical["review_template"][k])
+        for k in (
+            "evidence_ids",
+            "conflicting_rule_ids",
+            "proposed_tests",
+        )
+    ):
         raise ValueError(f"review list field shape changed: {identifier}")
     for k in ("evidence_ids", "conflicting_rule_ids", "proposed_tests"):
         if not _strings(template[k]):
-            raise ValueError(f"invalid duplicate or overlong review list: {identifier}:{k}")
+            raise ValueError(
+                f"invalid duplicate or overlong review list: {identifier}:{k}"
+            )
     if not set(template["conflicting_rule_ids"]) <= known_ids - {identifier}:
         raise ValueError(f"unknown or self-referential conflict ID: {identifier}")
     rights = template["source_rights_status"]
@@ -70,16 +81,24 @@ def _inspect_rule(
     disposition = template["desired_disposition"]
     if disposition is None:
         if template != canonical["review_template"]:
-            return {"id": identifier, "status": "PARTIAL", "missing": ["desired_disposition"]}
+            return {
+                "id": identifier,
+                "status": "PARTIAL",
+                "missing": ["desired_disposition"],
+            }
         return {"id": identifier, "status": "OPEN", "missing": []}
     try:
         selected = Disposition(disposition)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"invalid requested disposition: {identifier}") from exc
     if selected == Disposition.UNRESOLVED:
-        raise ValueError(f"unresolved cannot be claimed as an adjudicated choice: {identifier}")
+        raise ValueError(
+            f"unresolved cannot be claimed as an adjudicated choice: {identifier}"
+        )
     if canonical["priority"] == "DEFERRED_LAB" and selected != Disposition.EVAL_ONLY:
-        raise ValueError(f"deferred laboratory material cannot be promoted: {identifier}")
+        raise ValueError(
+            f"deferred laboratory material cannot be promoted: {identifier}"
+        )
     missing = []
     if not _text(template["reviewer"], minimum=2):
         missing.append("reviewer")
@@ -133,7 +152,9 @@ def audit_private_dossiers(
         expected = canonical_packets[filename]
         actual = observed_packets[filename]
         if set(actual) != set(expected) or any(
-            actual[field] != value for field, value in expected.items() if field != "rules"
+            actual[field] != value
+            for field, value in expected.items()
+            if field != "rules"
         ):
             raise ValueError(f"private batch metadata changed: {filename}")
         originals = expected["rules"]
