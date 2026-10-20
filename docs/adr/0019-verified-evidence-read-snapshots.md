@@ -23,8 +23,10 @@ mezclar varios heads mientras otros procesos escriben.
 1. `EvidenceStorePort.verified_read` entrega un
    `VerifiedEvidenceReaderPort` **solo durante** un contexto acotado. La
    implementación SQLite abre una transacción `BEGIN`, comprueba la definición
-   real de tablas/triggers y audita todos los eventos, objetos, hashes y claves
-   externas esperadas **dentro de esa misma transacción**.
+   real de tablas/triggers, audita todos los eventos y bytes, y contrasta el
+   `expected_head` si se proporcionó **dentro de esa misma transacción**.
+   La procedencia externa y la firma de ese head deben verificarse por los
+   casos de uso de checkpoints; este puerto no las certifica.
 2. Después de la auditoría, la lectura individual del contexto consulta un
    evento por digest y vuelve a contrastar identidad, payload, longitud y
    hash, sin repetir el recorrido completo. Sigue rechazando un digest

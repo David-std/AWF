@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 
 import pytest
@@ -174,6 +175,20 @@ def test_verified_reader_keeps_snapshot_consistent_through_concurrent_append(tmp
             pytest.fail("outdated checkpoint must never authorize a new snapshot")
 
 
+def test_verified_reader_cannot_be_reused_after_context_closes(tmp_path: Path):
+    store = _ledger(tmp_path)
+    event = store.append(
+        kind=EvidenceKind.AUDIT_RECEIPT,
+        run_id="run-a",
+        subject_id="subject",
+        content=b"synthetic",
+    )
+    with store.verified_read() as reader:
+        assert reader.resolve_event(event_digest=event.digest)[1] == b"synthetic"
+    with pytest.raises(sqlite3.ProgrammingError, match="closed database"):
+        reader.resolve_event(event_digest=event.digest)
+
+
 def test_progress_gate_does_not_mix_heads_when_writer_appends_mid_check(
     tmp_path: Path, monkeypatch
 ):
@@ -233,8 +248,6 @@ def test_progress_gate_does_not_mix_heads_when_writer_appends_mid_check(
 
 
 def test_corrupted_schema_never_grants_verified_read(tmp_path: Path):
-    import sqlite3
-
     store = _ledger(tmp_path)
     first = store.append(
         kind=EvidenceKind.AUDIT_RECEIPT,
