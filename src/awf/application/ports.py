@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import AbstractContextManager
 from pathlib import Path
 from typing import Protocol
 
@@ -37,7 +38,17 @@ class KnowledgeReviewPort(Protocol):
         ...
 
 
-class EvidenceStorePort(Protocol):
+class VerifiedEvidenceReaderPort(Protocol):
+    """Read event bytes from one fully audited, immutable transaction snapshot."""
+
+    def resolve_event(
+        self, *, event_digest: str, expected_head: str | None = None
+    ) -> tuple[EvidenceRecord, bytes]:
+        """Resolve a single event within the previously audited snapshot."""
+        ...
+
+
+class EvidenceStorePort(VerifiedEvidenceReaderPort, Protocol):
     """Port for a durable, locally verifiable evidence repository."""
 
     def initialize(self) -> None:
@@ -58,10 +69,10 @@ class EvidenceStorePort(Protocol):
         """Audit the full chain and all signed (sequence, digest) prefixes atomically."""
         ...
 
-    def resolve_event(
-        self, *, event_digest: str, expected_head: str | None = None
-    ) -> tuple[EvidenceRecord, bytes]:
-        """Verify the entire chain and resolve exactly one event and its bytes."""
+    def verified_read(
+        self, *, expected_head: str | None = None
+    ) -> AbstractContextManager[VerifiedEvidenceReaderPort]:
+        """Audit once, then resolve multiple events in that same read transaction."""
         ...
 
 

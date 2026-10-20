@@ -2,7 +2,7 @@
 
 **AWF Neural Engine** is an engineering and machine-learning project for traceable academic text revision in Spanish and English. The goal is to preserve meaning, citations, evidence, and author intent while comparing pretrained editors, fine-tuned models, and explicit verification policies.
 
-**Status on `develop` (2026-10-19): architecture, S0, S1 and S2 increments through PR #23 are merged and verified.** This branch proposes WAL-aware signed backup/restore for review. `main` remains at its pre-integration baseline; Sprint 2 is still open. None of the 168 mandatory historic rules has been formally adjudicated. The neural editor, independent semantic verifier, training and external API are **not implemented**. This repository maintains research provenance without claiming detector performance.
+**Status on `develop` (2026-10-20): architecture, S0, S1 and S2 increments through PR #24 are merged and verified.** This feature branch proposes one-audit verified evidence reads and a reproducible scaling benchmark. `main` remains at its pre-integration baseline; Sprint 2 is still open. None of the 168 mandatory historic rules has been formally adjudicated. The neural editor, independent semantic verifier, training and external API are **not implemented**. This repository maintains research provenance without claiming detector performance.
 
 ## Start here
 
@@ -16,7 +16,7 @@
 
 ## Integration status and current limits
 
-PRs [#10–#23](https://github.com/David-std/AWF/pulls?q=is%3Apr+is%3Amerged+base%3Adevelop) were reviewed and merged **in sequence into `develop`**, preserving their merge commits. The last completed increment is [PR #23](https://github.com/David-std/AWF/pull/23), merged as `484b911b1b754909786510273cee6218825258d9`: 260 Linux tests and 258 Windows tests (+2 platform-specific skips), with 4/4 GitHub Actions jobs Linux/Windows Python 3.12/3.13 passing, plus Ruff and Pyright ([run 39197320026](https://github.com/David-std/AWF/actions/runs/39197320026)). The new recovery increment requires its own CI before merge. See [the current handoff](docs/AGENT_HANDOFF.md).
+PRs [#10–#24](https://github.com/David-std/AWF/pulls?q=is%3Apr+is%3Amerged+base%3Adevelop) were reviewed and merged **in sequence into `develop`**, preserving their merge commits. The last completed increment is [PR #24](https://github.com/David-std/AWF/pull/24), merged as `e32e0ea99e76640133d328548214f0efbae63cfc`: 279 Linux tests and 277 Windows tests (+2 platform-specific skips), with 4/4 GitHub Actions jobs Linux/Windows Python 3.12/3.13 passing, plus Ruff and Pyright ([run 39203570452](https://github.com/David-std/AWF/actions/runs/39203570452)). [PR #25](https://github.com/David-std/AWF/pull/25) passed its initial 4/4 CI ([run 39347741248](https://github.com/David-std/AWF/actions/runs/39347741248)) and isolated authorized Windows reproduction; it still requires verification of its final documentation SHA before merger. See [the current handoff](docs/AGENT_HANDOFF.md).
 
 Integrity is **not** independent scholarly assessment: externally verified human independence, actual external checkpoint custody, full durable critic sweeps, recovery benchmarks and the 168 rule adjudications remain incomplete. Do not promote `REVIEW_ATTESTED`, publish the historical ZIP or authorize model training based on these infrastructure tests.
 
@@ -102,6 +102,10 @@ No historical requirement is automatically adjudicated by this infrastructure, a
 The application can now verify detached Ed25519 reviewer statements over **one exact ledger event** against an externally SHA-pinned reviewer allowlist (actor/key, roles, run/subject, expiry, revocation). The `awf evidence attest` and `attest-verify` commands do not generate or hold reviewer private keys. Audit and knowledge-stage gates can require signed statements in addition to local integrity; legacy receipts are not silently upgraded. See [ADR-0016](docs/adr/0016-signed-reviewer-authorization.md) and [the authorization guide](docs/REVIEWER_AUTH_S2.md).
 
 This is **cryptographic key/role authorization only**, not third-party identity vetting, independent human judgment, trustworthy timestamping, or permission to accept a manuscript. Durable critic sweeps remain open.
+
+## Verified evidence reads and scaling — Sprint 2 proposed increment
+
+Source-chunk coverage, audit receipt checks and knowledge-stage verification can share **one fully audited SQLite read transaction** across their receipts, avoiding repeated full-ledger audits while preserving exact event/run/subject/bytes checks. [ADR-0019](docs/adr/0019-verified-evidence-read-snapshots.md) and the [benchmark guide](docs/EVIDENCE_READ_SCALING_S2.md) document concurrency, negative tests, reproducible synthetic measurements and the remaining `O(n)` per-operation cost. No signature, custody or academic truth is inferred from higher throughput.
 
 ## Signed ledger checkpoints — Sprint 2 incremental prototype
 
