@@ -119,3 +119,12 @@
 - Introduce installable Python package `academic-writing-forge`, `awf --version`, project-only `uv.lock` and cross-platform quality workflow.
 - Record ADR-0006 on dependency-free CLI and temporary dev-tool lock gap.
 - AWS 3.19.1 stays local; public Git contains provenance metadata only.
+
+
+## Unreleased — S2 private historical dossier inspection (PR #31)
+
+- Added `awf knowledge inspect-review` for exhaustive, read-only assessment of private annotations against the SHA-pinned historical archive and original review packets.
+- Rejects source-field modifications, missing/swapped batches, invalid conflict references, deferred-lab promotion, and incomplete evidence.
+- Preserves `OPEN`/`PARTIAL`/`PROPOSAL_INCOMPLETE`/`PROPOSAL_DOCUMENTED` as metadata states only; no automatic review attestation or training rights.
+- Added adversarial tests, integration CLI tests, and ADR-0024. Historical archive and review annotations remain private.
+
