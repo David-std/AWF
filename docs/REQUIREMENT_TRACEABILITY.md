@@ -36,7 +36,7 @@ Estados: `DESIGNED` (especificado), `OPEN` (requiere decisión), `IMPLEMENTED` (
 | AWF-R028 | Verificar múltiples fragmentos, auditorías y estados sin repetir la validación completa del ledger para cada recibo ni mezclar heads concurrentes | Rendimiento e integridad S2 | `verified_read` en una transacción, auditoría única, pruebas de carreras y medición 16/64/128/256 eventos | S2 | PROTOTYPED_TESTED_CI |
 | AWF-R029 | Registrar lotes de fragmentos observados de forma indivisible sin auditar todo el ledger por cada evento ni aceptar esquemas cambiados entre bloqueo y verificación | Rendimiento y atomicidad S2 | `append_batch` con límite y head esperado, esquema bajo bloqueo, manifest por fragmento, rollback, concurrencia y benchmark | S2 | PROTOTYPED_TESTED_CI |
 | AWF-R030 | Caracterizar latencia y memoria de replay/recovery según revisiones y eventos sin reducir garantías para mejorar throughput | Recuperación S2 posterior a #27 | Benchmark sintético por distribuciones, separación replay/audit, perfil de llamadas y registro de límites | S2 | PROFILED_TESTED_CI |
-| AWF-R031 | Persistir barridos críticos e iteraciones externas con observación actual, replay tipado e idempotencia, sin atribuir independencia científica a la identidad local | Continuidad S2 posterior a #28 | Intent/commit/snapshot atómicos, eventos run/revisión/tipo/orden, scopes actuales, CAS, reinicio, rollback y pruebas adversariales | S2 | PROTOTYPED_TESTED_LOCAL |
+| AWF-R031 | Persistir barridos críticos e iteraciones externas con observación actual, replay tipado e idempotencia, sin atribuir independencia científica a la identidad local | Continuidad S2 posterior a #28 | Intent/commit/snapshot atómicos, eventos run/revisión/tipo/orden, scopes actuales, CAS, reinicio, rollback y pruebas adversariales | S2 | PROTOTYPED_TESTED_CI |
 
 ## Procedimiento para implementar cada fila
 
@@ -52,7 +52,7 @@ Cada cambio crea relación verificable: `AWF-Rxxx → ADR → código/archivo �
 
 **AWF-R030:** [ADR-0021](adr/0021-revision-replay-profile-before-optimization.md) → `scripts/benchmark_revision_replay.py`, `tests/unit/test_revision_replay_benchmark.py`, [registro de resultados](REVISION_REPLAY_PROFILE_S2.md). La medición describe costes sintéticos, no rendimiento en producción ni autorización para omitir replay.
 
-**AWF-R031:** [ADR-0022](adr/0022-durable-critic-and-external-iterations.md) → `domain/revision_audit.py`, `SQLiteRevisionJournal.record_clean_sweep` / `.record_external_iteration`, `RevisionJournalPort`, tipos de eventos críticos en `domain/evidence.py` → `tests/integration/test_durable_critic_transitions.py`. Comprueba causalidad y recuperación del estado local, **no** existencia ni independencia de un revisor real. CI/Windows y SHA de fusión se anotarán tras la integración.
+**AWF-R031:** [ADR-0022](adr/0022-durable-critic-and-external-iterations.md) → `domain/revision_audit.py`, `SQLiteRevisionJournal.record_clean_sweep` / `.record_external_iteration`, `RevisionJournalPort`, tipos de eventos críticos en `domain/evidence.py` → `tests/integration/test_durable_critic_transitions.py`. Comprueba causalidad y recuperación del estado local, **no** existencia ni independencia de un revisor real. [PR #29](https://github.com/David-std/AWF/pull/29), primer SHA `4aa5d5e8`, [CI 39377288572](https://github.com/David-std/AWF/actions/runs/39377288572) **4/4** y ASUS Windows **327 PASS +2 SKIP**. La discusión de PR conserva la validación del SHA documental final.
 
 ## Migración heredada AWS
 

@@ -6,6 +6,7 @@
 - Bind observations to actual, properly typed ledger events for the same run and revision, written after the preceding commit. Reject stale, swapped or reused context across critics and cycles.
 - Replay current-scope audit prerequisites from committed hashes without storing document text. Add synthetic failure, concurrency, recovery and tamper-path integration tests (ADR-0022 / AWF-R031).
 - Local state convergence is not scholarly acceptance; no historical rule is newly adjudicated and no critic independence is verified.
+- The initial code SHA `4aa5d5e8` passed 329 Linux tests, 4/4 GitHub Actions quality-gate matrix and 327 Windows ASUS tests (+2 documented platform skips); the final documentation commit is subject to the same CI gate before merge.
 
 ## Unreleased — revision recovery profiling (Sprint 2)
 

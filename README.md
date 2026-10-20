@@ -2,7 +2,7 @@
 
 **AWF Neural Engine** is an engineering and machine-learning project for traceable academic text revision in Spanish and English. The goal is to preserve meaning, citations, evidence, and author intent while comparing pretrained editors, fine-tuned models, and explicit verification policies.
 
-**Status on `develop` (2026-10-20): architecture, S0, S1 and S2 increments through PR #28 are merged and verified.** Synthetic replay profiling and atomic evidence batches are integrated. A subsequent Sprint 2 increment adds recoverable critic sweeps and external iterations; it is not a scientific evaluator. `main` remains at its pre-integration baseline; Sprint 2 is still open. None of the 168 mandatory historic rules has been formally adjudicated. The neural editor, independent semantic verifier, training and external API are **not implemented**. This repository maintains research provenance without claiming detector performance.
+**Status (2026-10-20): S0/S1 and Sprint 2 infrastructure through PR #28 are integrated, and PR #29 adds verified durable critic sweeps and external iterations to `develop` when merged.** Synthetic replay profiling and atomic evidence batches are already integrated; the new transitions are not a scientific evaluator. `main` remains at its pre-integration baseline; Sprint 2 is still open. None of the 168 mandatory historic rules has been formally adjudicated. The neural editor, independent semantic verifier, training and external API are **not implemented**. This repository maintains research provenance without claiming detector performance.
 
 ## Start here
 
@@ -18,7 +18,7 @@
 
 ## Integration status and current limits
 
-PRs [#10–#28](https://github.com/David-std/AWF/pulls?q=is%3Apr+is%3Amerged+base%3Adevelop) were reviewed and merged **in sequence into `develop`**, preserving their merge commits. The latest completed increment is [PR #28](https://github.com/David-std/AWF/pull/28), merged as `96fd77f89aa6a46a2cdeb437964230f0de78b2df`: 310 Linux tests and 308 Windows tests (+2 platform-specific skips), with 4/4 GitHub Actions jobs Linux/Windows Python 3.12/3.13 passing ([run 39374937394](https://github.com/David-std/AWF/actions/runs/39374937394)). See [the current handoff](docs/AGENT_HANDOFF.md).
+PRs [#10–#28](https://github.com/David-std/AWF/pulls?q=is%3Apr+is%3Amerged+base%3Adevelop) were reviewed and merged **in sequence into `develop`**, preserving their merge commits. [PR #28](https://github.com/David-std/AWF/pull/28) merged as `96fd77f89aa6a46a2cdeb437964230f0de78b2df` with 4/4 CI. The next [PR #29](https://github.com/David-std/AWF/pull/29) passed 329 Linux tests, 327 Windows ASUS tests (+2 platform skips), and 4/4 GitHub Actions jobs on its initial SHA ([run 39377288572](https://github.com/David-std/AWF/actions/runs/39377288572)). See [the current handoff](docs/AGENT_HANDOFF.md) for final merge verification.
 
 Integrity is **not** independent scholarly assessment: externally verified independence, actual external checkpoint custody, policy-backed reviewer authority and the 168 rule adjudications remain incomplete. The synthetic recovery profile is not an operational SLO. Do not promote `REVIEW_ATTESTED`, publish the historical ZIP or authorize model training based on these infrastructure tests.
 
