@@ -449,3 +449,53 @@ def test_review_plan_rejects_modified_manifest(
     assert main(args) == 2
     assert "manifest.json" in capsys.readouterr().err
     assert overview_path.read_text(encoding="utf-8") == "manual review summary\n"
+
+
+def test_private_review_inspection_does_not_attest_open_rules(
+    local_source: tuple[Path, Path, str], capsys
+) -> None:
+    archive, manifest, _ = local_source
+    params = [str(archive), "--manifest", str(manifest), "--batch-size", "1"]
+    assert main(["knowledge", "plan-review", *params]) == 0
+    capsys.readouterr()
+    assert main(["knowledge", "inspect-review", *params]) == 0
+    summary = json.loads(capsys.readouterr().out)
+    assert summary["requirements_count"] == 2
+    assert summary["status_counts"] == {"OPEN": 2}
+    assert summary["review_attestation_authorized"] is False
+    assert summary["independent_evidence_verified"] is False
+    assert "Preserve provenance" not in str(summary)
+    assert main(["knowledge", "inspect-review", *params, "--require-documented"]) == 2
+
+
+def test_private_review_inspector_rejects_modified_source_bound_rule(
+    local_source: tuple[Path, Path, str], capsys
+) -> None:
+    archive, manifest, _ = local_source
+    params = [str(archive), "--manifest", str(manifest), "--batch-size", "1"]
+    assert main(["knowledge", "plan-review", *params]) == 0
+    output = json.loads(capsys.readouterr().out)
+    location = Path(output["manifest"])
+    overview = json.loads(location.read_text(encoding="utf-8"))
+    batch = location.parent / overview["batches"][0]["file"]
+    packet = json.loads(batch.read_text(encoding="utf-8"))
+    packet["rules"][0]["review_status"] = "REVIEW_ATTESTED"
+    batch.write_text(json.dumps(packet), encoding="utf-8")
+    assert main(["knowledge", "inspect-review", *params]) == 2
+    stderr = capsys.readouterr().err
+    assert "immutable source-bound" in stderr
+    assert "Preserve provenance" not in stderr
+
+
+def test_private_review_inspector_rejects_missing_batch(
+    local_source: tuple[Path, Path, str], capsys
+) -> None:
+    archive, manifest, _ = local_source
+    params = [str(archive), "--manifest", str(manifest), "--batch-size", "1"]
+    assert main(["knowledge", "plan-review", *params]) == 0
+    output = json.loads(capsys.readouterr().out)
+    location = Path(output["manifest"])
+    overview = json.loads(location.read_text(encoding="utf-8"))
+    (location.parent / overview["batches"][0]["file"]).unlink()
+    assert main(["knowledge", "inspect-review", *params]) == 2
+    assert "DOSSIER_INSPECTION_FAILED" in capsys.readouterr().err

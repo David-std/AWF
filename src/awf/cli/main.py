@@ -35,6 +35,7 @@ from awf.domain.checkpoints import SignedLedgerCheckpoint, parse_checkpoint_poli
 from awf.domain.evidence import EvidenceKind
 from awf.domain.reviewer_auth import ReviewerRole, SignedReviewerClaim, parse_trust_policy
 from awf.knowledge.audit import audit_registry
+from awf.knowledge.adjudication_dossiers import audit_private_dossiers
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -76,6 +77,20 @@ def create_parser() -> argparse.ArgumentParser:
     )
     review_plan.add_argument("--source-id", default="aws-3.19.1")
     review_plan.add_argument("--batch-size", type=int, default=12)
+    dossiers = operations.add_parser(
+        "inspect-review", help="inspect local review annotations without approving rules"
+    )
+    dossiers.add_argument("archive", type=Path, help="original SHA-pinned private AWS ZIP")
+    dossiers.add_argument(
+        "--manifest", type=Path, default=Path("provenance/source-manifest.json")
+    )
+    dossiers.add_argument("--source-id", default="aws-3.19.1")
+    dossiers.add_argument("--batch-size", type=int, default=12)
+    dossiers.add_argument(
+        "--require-documented",
+        action="store_true",
+        help="fail if any proposal is open, partial, conflicted or unsupported",
+    )
     evidence = commands.add_parser("evidence", help="private, transactional evidence ledger")
     actions = evidence.add_subparsers(dest="evidence_action")
     writer = actions.add_parser("append", help="store evidence locally and bind an event")
@@ -220,6 +235,50 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 2
 
     if args.command == "knowledge":
+        if args.knowledge_action == "inspect-review":
+            try:
+                canonical, packets = prepare_review(
+                    archive_path=args.archive,
+                    manifest_path=args.manifest,
+                    reader=PinnedAwsArchive(),
+                    source_id=args.source_id,
+                    batch_size=args.batch_size,
+                )
+                parent = args.manifest.resolve().parent
+                repo_root = parent.parent if parent.name == "provenance" else parent
+                privacy_root = repo_root / ".awf"
+                output_dir = (
+                    privacy_root
+                    / "knowledge"
+                    / f"review-{canonical['archive_sha256'][:12]}-b{args.batch_size:02d}"
+                )
+                for path in (privacy_root, privacy_root / "knowledge", output_dir):
+                    if path.is_symlink() or not path.is_dir():
+                        raise ValueError("private workbench path is missing or a symbolic link")
+
+                def read_private(path: Path) -> dict[str, object]:
+                    if path.is_symlink() or not path.is_file() or path.stat().st_size > 4 * 1024 * 1024:
+                        raise ValueError("private workbench file missing, linked or oversized")
+                    value = json.loads(path.read_text(encoding="utf-8"))
+                    if not isinstance(value, dict):
+                        raise ValueError("private workbench JSON must contain an object")
+                    return value
+
+                observed = read_private(output_dir / "manifest.json")
+                actual_packets = {name: read_private(output_dir / name) for name in packets}
+                report = audit_private_dossiers(
+                    canonical_manifest=canonical,
+                    canonical_packets=packets,
+                    observed_manifest=observed,
+                    observed_packets=actual_packets,
+                )
+                print(json.dumps(report, ensure_ascii=False))
+                documented = report["status_counts"].get("PROPOSAL_DOCUMENTED", 0)
+                return 0 if not args.require_documented or documented == report["requirements_count"] else 2
+            except (OSError, ValueError, RuntimeError, KeyError, TypeError) as exc:
+                print(f"AWF_ERROR [DOSSIER_INSPECTION_FAILED] {exc}", file=sys.stderr)
+                return 2
+
         if args.knowledge_action == "plan-review":
             try:
                 overview, packets = prepare_review(
@@ -331,7 +390,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 print(f"AWF_ERROR [KNOWLEDGE_AUDIT_FAILED] {exc}", file=sys.stderr)
                 return 2
 
-        parser.error("expected knowledge import, knowledge plan-review or knowledge audit")
+        parser.error("expected knowledge import, plan-review, inspect-review or audit")
         return 2
 
     if args.command == "evidence":

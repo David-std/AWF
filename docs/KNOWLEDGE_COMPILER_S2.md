@@ -67,3 +67,16 @@ Cada entrada conserva explícitamente la diferencia entre `legacy_status_claim: 
 Revisar evidencia primaria y fecha/versiones; resolver si la política pertenece a código, contexto, entrenamiento, evaluación exclusiva, eliminación justificada o queda sin resolver; documentar dependencia, posibles conflictos, casos negativos, derechos/licencias y una prueba falsable. El workbench es una **cola de revisión** y no un detector de contradicciones semánticas.
 
 No subir `.awf/`, ni reutilizar el texto de las fichas como dataset por el mero hecho de haber sido importado. La revisión debe registrar el juicio humano y evidencia independiente cuando corresponda.
+
+## Inspección de fichas privadas sin adjudicación (ADR-0024)
+
+Después de `awf knowledge plan-review <zip> --batch-size 12`, se pueden editar **solo** los campos de `review_template` en los JSON privados de `.awf/knowledge/review-<hash>-b12/`. No editar el manifiesto ni los campos de origen.
+
+```shell
+awf knowledge inspect-review "/ruta/privada/aws.zip" --batch-size 12
+awf knowledge inspect-review "/ruta/privada/aws.zip" --batch-size 12 --require-documented
+```
+
+La CLI vuelve a abrir la fuente fijada y comprueba los 184 requisitos, sus hashes y los lotes canónicos. Produce únicamente IDs, estados de propuesta y nombres de evidencias faltantes. El segundo comando sale con código 2 si queda alguna ficha sin una propuesta documentalmente completa; **no** declara aceptación científica. Los resultados no se publican como prueba de identidad de revisor o titularidad de fuentes y nunca habilitan entrenamiento.
+
+Los expedientes con `TRAIN` se mantienen bloqueados hasta que una autoridad externa verifique derechos. Las entradas `DEFERRED_LAB` no pueden promoverse a reglas de producción. Una evidencia declarada, aun con forma de hash, todavía necesita contraste con el ledger y revisión de contenido.
