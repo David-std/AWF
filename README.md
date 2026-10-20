@@ -2,7 +2,7 @@
 
 **AWF Neural Engine** is an engineering and machine-learning project for traceable academic text revision in Spanish and English. The goal is to preserve meaning, citations, evidence, and author intent while comparing pretrained editors, fine-tuned models, and explicit verification policies.
 
-**Status (2026-10-20): S0/S1 and Sprint 2 infrastructure through PR #29 are integrated into `develop`; the next increment verifies authorization for signed durable critic sweeps.** Synthetic replay profiling and atomic evidence batches are already integrated; the new transitions are not a scientific evaluator. `main` remains at its pre-integration baseline; Sprint 2 is still open. None of the 168 mandatory historic rules has been formally adjudicated. The neural editor, independent semantic verifier, training and external API are **not implemented**. This repository maintains research provenance without claiming detector performance.
+**Status (2026-10-20): S0/S1 and Sprint 2 infrastructure through PR #29 are integrated into `develop`; PR #30 introduces signed authorization of durable critic sweeps.** Synthetic replay profiling and atomic evidence batches are already integrated; the new transitions are not a scientific evaluator. `main` remains at its pre-integration baseline; Sprint 2 is still open. None of the 168 mandatory historic rules has been formally adjudicated. The neural editor, independent semantic verifier, training and external API are **not implemented**. This repository maintains research provenance without claiming detector performance.
 
 ## Start here
 
@@ -18,7 +18,7 @@
 
 ## Integration status and current limits
 
-PRs [#10–#29](https://github.com/David-std/AWF/pulls?q=is%3Apr+is%3Amerged+base%3Adevelop) were reviewed and merged **in sequence into `develop`**, preserving their merge commits. [PR #29](https://github.com/David-std/AWF/pull/29) merged as `2275d0018f17de8559a72d8c6cae4e248a1627c0`, with 329 Linux tests, 327 Windows ASUS tests (+2 platform skips) and 4/4 GitHub Actions checks ([run 39377697531](https://github.com/David-std/AWF/actions/runs/39377697531)). The next increment adds an [application-level signed-critic gate](docs/REVIEWER_AUTH_S2.md) without claiming proof of independence. See [the current handoff](docs/AGENT_HANDOFF.md).
+PRs [#10–#29](https://github.com/David-std/AWF/pulls?q=is%3Apr+is%3Amerged+base%3Adevelop) were reviewed and merged **in sequence into `develop`**, preserving their merge commits. [PR #29](https://github.com/David-std/AWF/pull/29) merged as `2275d0018f17de8559a72d8c6cae4e248a1627c0`, with 329 Linux tests, 327 Windows ASUS tests (+2 platform skips) and 4/4 GitHub Actions checks ([run 39377697531](https://github.com/David-std/AWF/actions/runs/39377697531)). [PR #30](https://github.com/David-std/AWF/pull/30) adds an [application-level signed-critic gate](docs/REVIEWER_AUTH_S2.md) with 4/4 CI on the first code SHA, without claiming proof of independence. See [the current handoff](docs/AGENT_HANDOFF.md).
 
 Integrity is **not** independent scholarly assessment: externally verified independence, actual external checkpoint custody, policy-backed reviewer authority and the 168 rule adjudications remain incomplete. The synthetic recovery profile is not an operational SLO. Do not promote `REVIEW_ATTESTED`, publish the historical ZIP or authorize model training based on these infrastructure tests.
 
