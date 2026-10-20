@@ -35,7 +35,7 @@ Estados: `DESIGNED` (especificado), `OPEN` (requiere decisión), `IMPLEMENTED` (
 | AWF-R027 | Recuperar sin pérdida silenciosa de WAL ni snapshots de revisión, nunca sobrescribiendo un ledger activo | Durabilidad/cutover S2 | `sqlite3.backup`, head firmado exacto, replay íntegro de revisiones y publicación create-only; test WAL/race/tamper/fallo | S2 | IMPLEMENTED_PARTIAL |
 | AWF-R028 | Verificar múltiples fragmentos, auditorías y estados sin repetir la validación completa del ledger para cada recibo ni mezclar heads concurrentes | Rendimiento e integridad S2 | `verified_read` en una transacción, auditoría única, pruebas de carreras y medición 16/64/128/256 eventos | S2 | PROTOTYPED_TESTED_CI |
 | AWF-R029 | Registrar lotes de fragmentos observados de forma indivisible sin auditar todo el ledger por cada evento ni aceptar esquemas cambiados entre bloqueo y verificación | Rendimiento y atomicidad S2 | `append_batch` con límite y head esperado, esquema bajo bloqueo, manifest por fragmento, rollback, concurrencia y benchmark | S2 | PROTOTYPED_TESTED_CI |
-| AWF-R030 | Caracterizar latencia y memoria de replay/recovery según revisiones y eventos sin reducir garantías para mejorar throughput | Recuperación S2 posterior a #27 | Benchmark sintético por distribuciones, separación replay/audit, perfil de llamadas y registro de límites | S2 | PROFILED_LOCAL_PENDING_CI |
+| AWF-R030 | Caracterizar latencia y memoria de replay/recovery según revisiones y eventos sin reducir garantías para mejorar throughput | Recuperación S2 posterior a #27 | Benchmark sintético por distribuciones, separación replay/audit, perfil de llamadas y registro de límites | S2 | PROFILED_TESTED_CI |
 
 ## Procedimiento para implementar cada fila
 

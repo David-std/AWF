@@ -1,11 +1,11 @@
 # AWF — transferencia de Sprint 2
 
-## En validación — perfil de recuperación después de PR #27
+## Perfil de recuperación S2 — PR #28 en revisión de integración
 
 - Base: `develop` `f55ae6cde1443cc6dcd7e9e5024c27a1d10954aa` (PR #27 fusionada). `main` `a902135b80e96eea17ebb9c229eed065077e809d` sin cambios al iniciar. Rama: `feat/s2-revision-replay-profile`.
-- Entrega propuesta: `scripts/benchmark_revision_replay.py`, pruebas sintéticas, [ADR-0021](adr/0021-revision-replay-profile-before-optimization.md), [resultados y reproducción](REVISION_REPLAY_PROFILE_S2.md), trazabilidad AWF-R030. No se modifica el código de producción ni la semántica de integridad/replay.
+- Entrega: [PR #28](https://github.com/David-std/AWF/pull/28), código `d8bce83a476186eb9f2bc30f37814990df34a5c7`; `scripts/benchmark_revision_replay.py`, pruebas sintéticas, [ADR-0021](adr/0021-revision-replay-profile-before-optimization.md), [resultados y reproducción](REVISION_REPLAY_PROFILE_S2.md), trazabilidad AWF-R030. No se modifica el código de producción ni la semántica de integridad/replay.
 - Diagnóstico Linux Python 3.12.14, SQLite 3.53.1: `load` de 1×128 auditorías tuvo mediana 36,434 ms (257 eventos); verificación íntegra 16×16, 52,481 ms mediana (528 eventos), con un outlier de 318,187 ms. Son tres repeticiones sintéticas, no SLO. Codec/replay domina una revisión muy larga; auditoría global domina una lectura puntual con muchas revisiones.
-- Validación Linux local: script en seis casos, **310 pytest PASS**, Ruff lint/formato PASS, Pyright 0 errores, `uv lock --check --offline` PASS, `uv build --offline` PASS y `git diff --check` PASS. **Aún falta** CI Windows/Linux y revisión del SHA antes de merge; no reportar integración hasta pasar esas puertas.
+- Validación Linux local: script en seis casos, **310 pytest PASS**, Ruff lint/formato PASS, Pyright 0 errores, `uv lock --check --offline` PASS, `uv build --offline` PASS y `git diff --check` PASS. [Actions run 39374446476](https://github.com/David-std/AWF/actions/runs/39374446476) para `d8bce83`: **4/4** Linux/Windows × Python 3.12/3.13, incluido pytest, formato, tipos y build. ASUS Windows Python 3.12.10 en worktree separado de `d8bce83`: **308 PASS, 2 SKIP** conocidos, y benchmark 1×32 y 4×16 reproducido; checkout original sin cambios. El commit documental de cierre de esta PR requiere su propia CI antes de fusionar.
 - Siguiente PR distinto: persistir `CleanSweep` e iteración externa con intent/commit/snapshot, CAS e idempotencia, replay del gate y negativos. S2 continúa abierto: 0/168 MUST adjudicadas, 16 `DEFERRED_LAB` solo `EVAL_ONLY`; corpus histórico privado.
 
 ## Integrado S2 — lote atómico de escritura de evidencia (PR #26)

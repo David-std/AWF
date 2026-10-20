@@ -48,6 +48,24 @@ representó parte sustancial del tiempo. Para 16 × 16, la auditoría del ledger
 global dominó `load` de una sola revisión. Esas proporciones dependen de la
 distribución de revisiones, no solo del número total de eventos.
 
+## Reproducción adicional en Windows
+
+En el ASUS ROG STRIX autorizado, un **worktree aislado** del commit de código
+`d8bce83a476186eb9f2bc30f37814990df34a5c7` ejecutó 308 pruebas
+satisfactorias y 2 omisiones previamente documentadas (bloqueo ZIP abierto y
+permisos POSIX). Windows 11, CPython 3.12.10 y SQLite 3.49.1. Medianas de tres
+repeticiones sintéticas:
+
+| Revisiones × auditorías | Eventos | Replay una revisión | `load` completo | Verificar todas |
+|---|---:|---:|---:|---:|
+| 1 × 32 | 65 | 3,593 | 4,488 | 4,744 |
+| 4 × 16 | 132 | 2,287 | 4,111 | 7,259 |
+
+La diferencia entre los ensayos no es una comparación causal de hardware ni
+una garantía de mejora. El checkout original de Descargas permaneció en su
+rama `feat/s2-evidence-binding` y no fue modificado; los comandos se ejecutaron
+desde `AWF_s2_replay_audit_20261020`.
+
 ## Conclusión operativa
 
 No hay aún presupuesto de latencia ni distribución real de trabajo que permita
