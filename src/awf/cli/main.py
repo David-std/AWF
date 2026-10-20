@@ -290,7 +290,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                     observed_packets=actual_packets,
                 )
                 print(json.dumps(report, ensure_ascii=False))
-                documented = report["status_counts"].get("PROPOSAL_DOCUMENTED", 0)
+                counts = report["status_counts"]
+                if not isinstance(counts, dict):
+                    raise ValueError("invalid dossier status counts")
+                documented = counts.get("PROPOSAL_DOCUMENTED", 0)
                 return (
                     0
                     if not args.require_documented or documented == report["requirements_count"]
