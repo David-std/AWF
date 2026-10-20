@@ -34,6 +34,7 @@ Estados: `DESIGNED` (especificado), `OPEN` (requiere decisión), `IMPLEMENTED` (
 | AWF-R026 | Detectar truncamiento/reconstrucción SQLite aunque conserve hashes internos | Riesgo de rollback del ledger tras firma de auditoría | Checkpoint externo Ed25519 con policy SHA-pinned, cadena de prefijos y pruebas de rollback/replay; custodia real sigue externa | S2 | IMPLEMENTED_PARTIAL |
 | AWF-R027 | Recuperar sin pérdida silenciosa de WAL ni snapshots de revisión, nunca sobrescribiendo un ledger activo | Durabilidad/cutover S2 | `sqlite3.backup`, head firmado exacto, replay íntegro de revisiones y publicación create-only; test WAL/race/tamper/fallo | S2 | IMPLEMENTED_PARTIAL |
 | AWF-R028 | Verificar múltiples fragmentos, auditorías y estados sin repetir la validación completa del ledger para cada recibo ni mezclar heads concurrentes | Rendimiento e integridad S2 | `verified_read` en una transacción, auditoría única, pruebas de carreras y medición 16/64/128/256 eventos | S2 | PROTOTYPED_TESTED_CI |
+| AWF-R029 | Registrar lotes de fragmentos observados de forma indivisible sin auditar todo el ledger por cada evento ni aceptar esquemas cambiados entre bloqueo y verificación | Rendimiento y atomicidad S2 | `append_batch` con límite y head esperado, esquema bajo bloqueo, manifest por fragmento, rollback, concurrencia y benchmark | S2 | PROTOTYPED_TESTED_LOCAL |
 
 ## Procedimiento para implementar cada fila
 
@@ -44,6 +45,8 @@ Cada cambio crea relación verificable: `AWF-Rxxx → ADR → código/archivo �
 **AWF-R027:** [ADR-0018](adr/0018-wal-aware-signed-backup-recovery.md) → `SnapshotWriterPort`, `application/commands/verified_snapshot.py`, `adapters/persistence/sqlite_snapshots.py`, `SQLiteRevisionJournal.verify_all_revisions` → `tests/integration/test_verified_sqlite_snapshots.py` (WAL con lector retenido, race de append, estados huérfanos, tamper, destino existente, symlink, error de publicación y CLI). No implica gestor remoto de backups ni cutover seguro automático.
 
 **AWF-R028:** [ADR-0019](adr/0019-verified-evidence-read-snapshots.md) → `VerifiedEvidenceReaderPort`, `SQLiteEvidenceLedger.verified_read`, lectores compartidos de `application/commands/bind_evidence.py` → `tests/integration/test_verified_evidence_reader.py` y `scripts/benchmark_evidence_reader.py`. El número de recorridos completos queda acotado a uno por comprobación; las mediciones sintéticas se reprodujeron en Linux/Windows con CI 4/4 para el primer SHA de la PR #25. Escalabilidad bajo contención y replay completo por documento siguen abiertos.
+
+**AWF-R029:** [ADR-0020](adr/0020-atomic-batched-evidence-append.md) → `EvidenceAppend`, `EvidenceStorePort.append_batch`, `SQLiteEvidenceLedger.append_batch`, `record_evidenced_chunks` → `tests/integration/test_batch_evidence_append.py` y `scripts/benchmark_evidence_append.py`. Las pruebas cubren atomicidad, esquema bajo lock, carreras, bytes alterados y fragmentos incompatibles; integración multiplataforma pendiente hasta CI del SHA definitivo.
 
 ## Migración heredada AWS
 

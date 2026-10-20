@@ -13,6 +13,7 @@ from dataclasses import dataclass, replace
 from awf.application.ports import EvidenceStorePort, VerifiedEvidenceReaderPort
 from awf.domain.document import DocumentIR
 from awf.domain.evidence import (
+    EvidenceAppend,
     EvidenceIntegrityError,
     EvidenceKind,
     EvidenceRecord,
@@ -138,6 +139,15 @@ class EvidenceGateResult:
     independent_adjudication_proven: bool = False
 
 
+@dataclass(frozen=True, slots=True)
+class ObservedChunk:
+    """Private bytes for one chunk declared in a canonical source manifest."""
+
+    reference_id: str
+    chunk_id: str
+    content: bytes
+
+
 def verify_audit_receipts(
     state: RevisionState,
     document: DocumentIR,
@@ -261,6 +271,66 @@ def record_evidenced_chunk(
         sha256=sha256_bytes(chunk_bytes),
         reader_ref=reader_ref,
         observation_ref=event_reference(record),
+    )
+
+
+def record_evidenced_chunks(
+    *,
+    store: EvidenceStorePort,
+    manifest: CanonicalManifest,
+    observations: tuple[ObservedChunk, ...],
+    run_id: str,
+    reader_ref: str,
+    expected_head: str | None = None,
+) -> tuple[ChunkReceipt, ...]:
+    """Commit an ordered subset of observed manifest chunks as one ledger transaction.
+
+    Every item is checked against canonical identity, offsets and content hash
+    *before* writing. Partial batches are allowed; full source coverage remains
+    the responsibility of ``verify_chunk_coverage`` after all batches complete.
+    """
+    if not isinstance(reader_ref, str) or not reader_ref.strip():
+        raise ValueError("reader reference is required")
+    expected = {
+        (source.reference_id, chunk.chunk_id): (chunk.sha256, chunk.offset_end - chunk.offset_start)
+        for source in manifest.sources
+        for chunk in source.chunks
+    }
+    seen: set[tuple[str, str]] = set()
+    entries: list[EvidenceAppend] = []
+    for observation in observations:
+        if not isinstance(observation, ObservedChunk):
+            raise ValueError("invalid observed chunk")
+        key = (observation.reference_id, observation.chunk_id)
+        if key in seen:
+            raise ValueError("duplicate observed chunk")
+        seen.add(key)
+        matched = expected.get(key)
+        if (
+            matched is None
+            or not isinstance(observation.content, bytes)
+            or len(observation.content) != matched[1]
+            or sha256_bytes(observation.content) != matched[0]
+        ):
+            raise EvidenceIntegrityError("observed chunk differs from canonical manifest")
+        entries.append(
+            EvidenceAppend(
+                EvidenceKind.SOURCE_CHUNK,
+                run_id,
+                f"{observation.reference_id}:{observation.chunk_id}",
+                observation.content,
+            )
+        )
+    records = store.append_batch(entries=tuple(entries), expected_head=expected_head)
+    return tuple(
+        ChunkReceipt(
+            reference_id=observation.reference_id,
+            chunk_id=observation.chunk_id,
+            sha256=sha256_bytes(observation.content),
+            reader_ref=reader_ref,
+            observation_ref=event_reference(record),
+        )
+        for observation, record in zip(observations, records, strict=True)
     )
 
 

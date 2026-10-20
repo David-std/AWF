@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — atomic batched evidence writes (Sprint 2)
+
+- Append ordered bounded evidence batches after one full audit under `BEGIN IMMEDIATE`; check SQLite schema within the locked transaction and roll back every event on any failure or interruption. Single `append` uses the same safe path; revision writes/recovery and direct evidence reads also validate DDL within their snapshots.
+- Bind observed source chunks to their canonical manifest before storing, while preserving separate full-coverage and reviewer gates; reject stale externally supplied heads and retain payload deduplication.
+- Add synthetic concurrency, corruption, interruption, property and performance tests, ADR-0020 and a reproducible append benchmark. No persistent trusted-head cache, external custody, auto-idempotent retry or academic adjudication is claimed.
+
 ## Unreleased — single-snapshot verified evidence reads (Sprint 2)
 
 - Add `VerifiedEvidenceReaderPort` and transaction-scoped `SQLiteEvidenceLedger.verified_read` to amortize a complete integrity audit across multiple receipt resolutions without caching trusted heads.
