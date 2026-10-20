@@ -136,9 +136,7 @@ def test_unverified_training_rights_block_structural_completeness() -> None:
     manifest, packets = _workbench()
     actual = copy.deepcopy(packets)
     _propose(actual, identifier="DSR-001", disposition="TRAIN")
-    _rule(actual, "DSR-001")["review_template"]["source_rights_status"] = (
-        "PERMISSION_VERIFIED"
-    )
+    _rule(actual, "DSR-001")["review_template"]["source_rights_status"] = "PERMISSION_VERIFIED"
     report = _checked(manifest, actual, manifest, packets)
     row = next(r for r in report["rules"] if r["id"] == "DSR-001")
     assert row["status"] == "PROPOSAL_INCOMPLETE"

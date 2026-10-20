@@ -104,24 +104,18 @@ def test_local_compilation_is_metadata_only(
     assert "Preserve provenance" not in registry_path.read_text(encoding="utf-8")
     assert registry_path.stat().st_size < 10_000
     assert json.loads(capsys.readouterr().out)["status"] == "IMPORTED_WITH_OPEN_REVIEWS"
-    assert (
-        main(["knowledge", "audit", str(registry_path), "--archive", str(archive)]) == 0
-    )
+    assert main(["knowledge", "audit", str(registry_path), "--archive", str(archive)]) == 0
     assert json.loads(capsys.readouterr().out)["valid"] is True
 
 
-def test_archive_hash_mismatch_rejected(
-    local_source: tuple[Path, Path, str], capsys
-) -> None:
+def test_archive_hash_mismatch_rejected(local_source: tuple[Path, Path, str], capsys) -> None:
     archive, manifest, _ = local_source
     archive.write_bytes(archive.read_bytes() + b"tampering")
     assert main(["knowledge", "import", str(archive), "--manifest", str(manifest)]) == 2
     assert "SHA-256" in capsys.readouterr().err
 
 
-def test_output_cannot_overwrite_archive(
-    local_source: tuple[Path, Path, str], capsys
-) -> None:
+def test_output_cannot_overwrite_archive(local_source: tuple[Path, Path, str], capsys) -> None:
     archive, manifest, _ = local_source
     original = archive.read_bytes()
     assert (
@@ -206,9 +200,7 @@ def test_unreviewed_promotion_in_report_fails_audit(
     local_source: tuple[Path, Path, str],
 ) -> None:
     archive, manifest, _ = local_source
-    report = import_test_knowledge(
-        archive_path=archive, manifest_path=manifest
-    ).to_dict()
+    report = import_test_knowledge(archive_path=archive, manifest_path=manifest).to_dict()
     records = report["records"]
     assert isinstance(records, list)
     records[0]["disposition"] = "TRAIN"
@@ -241,18 +233,14 @@ def test_review_overlay_fails_when_bound_to_wrong_archive(
         encoding="utf-8",
     )
     with pytest.raises(ValueError, match="bound"):
-        import_test_knowledge(
-            archive_path=archive, manifest_path=manifest, review_path=overlay
-        )
+        import_test_knowledge(archive_path=archive, manifest_path=manifest, review_path=overlay)
 
 
 def test_audit_detects_mismatched_report_totals(
     local_source: tuple[Path, Path, str],
 ) -> None:
     archive, manifest, _ = local_source
-    report = import_test_knowledge(
-        archive_path=archive, manifest_path=manifest
-    ).to_dict()
+    report = import_test_knowledge(archive_path=archive, manifest_path=manifest).to_dict()
     report["requirements_count"] = 184
     assert audit_registry(report)["valid"] is False
 
@@ -290,9 +278,7 @@ def test_audit_rejects_forged_attestation_even_with_plausible_identity(
     local_source: tuple[Path, Path, str],
 ) -> None:
     archive, manifest, _ = local_source
-    report = import_test_knowledge(
-        archive_path=archive, manifest_path=manifest
-    ).to_dict()
+    report = import_test_knowledge(archive_path=archive, manifest_path=manifest).to_dict()
     report["records"][0].update(
         disposition="KEEP_AS_CODE",
         review_status="REVIEW_ATTESTED",
@@ -310,9 +296,7 @@ def test_audit_rejects_deferred_lab_promotion_even_with_proposal(
     local_source: tuple[Path, Path, str],
 ) -> None:
     archive, manifest, _ = local_source
-    report = import_test_knowledge(
-        archive_path=archive, manifest_path=manifest
-    ).to_dict()
+    report = import_test_knowledge(archive_path=archive, manifest_path=manifest).to_dict()
     report["records"][1].update(
         disposition="TRAIN",
         review_status="REVIEW_PROPOSED",
@@ -330,9 +314,7 @@ def test_audit_rejects_undeclared_review_status(
     local_source: tuple[Path, Path, str], value: object
 ) -> None:
     archive, manifest, _ = local_source
-    report = import_test_knowledge(
-        archive_path=archive, manifest_path=manifest
-    ).to_dict()
+    report = import_test_knowledge(archive_path=archive, manifest_path=manifest).to_dict()
     report["records"][0]["review_status"] = value
     verdict = audit_registry(report)
     assert verdict["valid"] is False
@@ -365,9 +347,7 @@ def test_private_review_plan_has_complete_coverage_and_no_stdout_source_text(
     assert overview["archive_sha256"] == digest
     assert overview["source_text_in_manifest"] is False
     assert len(overview["batches"]) == 2
-    first = json.loads(
-        (path.parent / overview["batches"][0]["file"]).read_text("utf-8")
-    )
+    first = json.loads((path.parent / overview["batches"][0]["file"]).read_text("utf-8"))
     assert first["contains_private_source_text"] is True
     assert first["rules"][0]["review_status"] == "OPEN"
     assert first["rules"][0]["review_template"]["desired_disposition"] is None
