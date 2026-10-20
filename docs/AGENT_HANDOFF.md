@@ -1,5 +1,13 @@
 # AWF — transferencia de Sprint 2
 
+## Incremento en curso — autorización firmada de barridos críticos (posterior a PR #29)
+
+- **Base remota verificada:** PR #29 fusionada a `develop` en `2275d0018f17de8559a72d8c6cae4e248a1627c0`; `main` sigue en `a902135b80e96eea17ebb9c229eed065077e809d`. Trabajo aislado en Windows, sin modificar checkout original.
+- **Contrato:** `ReviewerRole.CRITIC` firma CRITIC_OBSERVATION exclusivamente. `application/commands/authorize_critics.py` recupera CLEAN_SWEEP, exige convergencia e inventario completo, vincula firma con la observación del intento y actor, y usa un snapshot verificado único sobre head externo. Política Ed25519 SHA-pinned, permisos/caducidad/revocación; un head obsoleto falla.
+- **Archivos:** [ADR-0023](adr/0023-signed-critic-sweep-authorization.md), [contrato](REVIEWER_AUTH_S2.md), [AWF-R032](REQUIREMENT_TRACEABILITY.md), `tests/integration/test_authorized_critic_sweeps.py`. Pruebas sintéticas específicas: 19 PASS; suite completa ASUS Windows Python 3.12.10 **346 PASS +2 SKIP** (archivo ZIP abierto y permisos POSIX), exit 0; Ruff de archivos modificados y `git diff --check` PASS. Este resultado local no reemplaza CI del SHA definitivo.
+- **Límites:** firma obligatoria solo al invocar el gate de autorización; el journal aún admite barridos no firmados para compatibilidad. Verificación de clave, no persona real, aislamiento, competencia o dictamen científico. **0/168 MUST** históricas adjudicadas y 16 DEFERRED_LAB EVAL_ONLY; Sprint 2 abierto. No publicar ZIP AWS privado.
+- **Fusión condicionada:** suite completa, Ruff/Pyright, árbol publicado idéntico al worktree, CI Linux/Windows 4/4 en SHA final, repetir pruebas ASUS sobre ese SHA, revisión de diff y merge exclusivo a `develop`. Actualizar el registro con SHA, run, riesgos y nuevo head al cerrar.
+
 ## Incremento vigente — transiciones críticas durables (PR #29)
 
 - **Base comprobada:** [PR #28](https://github.com/David-std/AWF/pull/28) fusionada a `develop` en `96fd77f89aa6a46a2cdeb437964230f0de78b2df`; código `d8bce83`, documentación final `85d29c1`, [CI 39374937394](https://github.com/David-std/AWF/actions/runs/39374937394) 4/4 Linux/Windows Python 3.12/3.13; ASUS aislada 308 PASS +2 SKIP. Rama de este incremento: `feat/s2-durable-critic-transitions`, derivada de ese merge. `main` sigue en `a902135b80e96eea17ebb9c229eed065077e809d`, sin cambios.

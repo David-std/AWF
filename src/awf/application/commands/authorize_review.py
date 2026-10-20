@@ -12,7 +12,11 @@ from awf.application.commands.bind_evidence import (
     verify_audit_receipts,
     verify_progress_claims,
 )
-from awf.application.ports import EvidenceStorePort, ReviewerSignatureVerifierPort
+from awf.application.ports import (
+    EvidenceStorePort,
+    ReviewerSignatureVerifierPort,
+    VerifiedEvidenceReaderPort,
+)
 from awf.domain.document import DocumentIR
 from awf.domain.evidence import EvidenceIntegrityError, EvidenceKind, EvidenceRecord
 from awf.domain.knowledge_integrity import (
@@ -41,7 +45,7 @@ class AuthorizationGateResult:
 def _verify_claim(
     signed: SignedReviewerClaim,
     *,
-    store: EvidenceStorePort,
+    store: VerifiedEvidenceReaderPort,
     policy: ReviewerTrustPolicy,
     verifier: ReviewerSignatureVerifierPort,
     now: int,
@@ -94,7 +98,7 @@ def append_signed_review_claim(
 
 def verify_signed_review_event(
     *,
-    store: EvidenceStorePort,
+    store: VerifiedEvidenceReaderPort,
     attestation_ref: str,
     target_ref: str,
     expected_role: ReviewerRole,

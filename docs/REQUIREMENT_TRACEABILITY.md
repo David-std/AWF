@@ -37,6 +37,7 @@ Estados: `DESIGNED` (especificado), `OPEN` (requiere decisión), `IMPLEMENTED` (
 | AWF-R029 | Registrar lotes de fragmentos observados de forma indivisible sin auditar todo el ledger por cada evento ni aceptar esquemas cambiados entre bloqueo y verificación | Rendimiento y atomicidad S2 | `append_batch` con límite y head esperado, esquema bajo bloqueo, manifest por fragmento, rollback, concurrencia y benchmark | S2 | PROTOTYPED_TESTED_CI |
 | AWF-R030 | Caracterizar latencia y memoria de replay/recovery según revisiones y eventos sin reducir garantías para mejorar throughput | Recuperación S2 posterior a #27 | Benchmark sintético por distribuciones, separación replay/audit, perfil de llamadas y registro de límites | S2 | PROFILED_TESTED_CI |
 | AWF-R031 | Persistir barridos críticos e iteraciones externas con observación actual, replay tipado e idempotencia, sin atribuir independencia científica a la identidad local | Continuidad S2 posterior a #28 | Intent/commit/snapshot atómicos, eventos run/revisión/tipo/orden, scopes actuales, CAS, reinicio, rollback y pruebas adversariales | S2 | PROTOTYPED_TESTED_CI |
+| AWF-R032 | Autorizar barridos críticos durables mediante atestaciones Ed25519 ligadas a observaciones reales, actores y política externa, sin equiparar firma con independencia | S2 posterior a PR #29, riesgo de suplantación de críticos | Inventario completo de atestaciones; head fijado, replay causal, firma/rol/run/subject/actor, caducidad/revocación, reinicio, carreras y snapshot único | S2 | PROTOTYPED_TESTED_LOCAL |
 
 ## Procedimiento para implementar cada fila
 
@@ -53,6 +54,8 @@ Cada cambio crea relación verificable: `AWF-Rxxx → ADR → código/archivo �
 **AWF-R030:** [ADR-0021](adr/0021-revision-replay-profile-before-optimization.md) → `scripts/benchmark_revision_replay.py`, `tests/unit/test_revision_replay_benchmark.py`, [registro de resultados](REVISION_REPLAY_PROFILE_S2.md). La medición describe costes sintéticos, no rendimiento en producción ni autorización para omitir replay.
 
 **AWF-R031:** [ADR-0022](adr/0022-durable-critic-and-external-iterations.md) → `domain/revision_audit.py`, `SQLiteRevisionJournal.record_clean_sweep` / `.record_external_iteration`, `RevisionJournalPort`, tipos de eventos críticos en `domain/evidence.py` → `tests/integration/test_durable_critic_transitions.py`. Comprueba causalidad y recuperación del estado local, **no** existencia ni independencia de un revisor real. [PR #29](https://github.com/David-std/AWF/pull/29), primer SHA `4aa5d5e8`, [CI 39377288572](https://github.com/David-std/AWF/actions/runs/39377288572) **4/4** y ASUS Windows **327 PASS +2 SKIP**. La discusión de PR conserva la validación del SHA documental final.
+
+**AWF-R032:** [ADR-0023](adr/0023-signed-critic-sweep-authorization.md) → `domain/reviewer_auth.py` (`ReviewerRole.CRITIC`), `application/commands/authorize_critics.py`, `verify_signed_review_event` con lector verificado y `tests/integration/test_authorized_critic_sweeps.py`. Autoriza claves y evidencias de un barrido local; no demuestra persona real, aislamiento, validez científica o adjudicación de las 168 reglas históricas.
 
 ## Migración heredada AWS
 

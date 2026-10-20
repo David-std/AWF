@@ -59,6 +59,51 @@ awf evidence attest-verify --database .awf/evidence/ledger.sqlite \
    `APPLICABLE` exigen roles `CALIBRATOR` y `APPLICABILITY_REVIEWER`, además de
    la verificación previa del registro y cobertura READ.
 
+## Autorización de barridos críticos durables
+
+La transición CLEAN_SWEEP registra de forma atómica la observación
+CRITIC_OBSERVATION y la referencia de contexto de un supuesto crítico.
+Su persistencia local no es autorización. El nuevo rol Ed25519 CRITIC
+solo puede firmar una observación del mismo run y revisión; la firma
+vincula ese evento con el actor declarado al grabar el barrido.
+
+El operador debe fijar fuera de SQLite tanto el SHA-256 de la política
+de confianza como el head del ledger. Se invoca en la capa de aplicación:
+
+~~~python
+result = verify_authorized_critic_sweeps(
+    journal=journal,
+    store=ledger,
+    revision_id=revision_id,
+    run_id=run_id,
+    document=document,
+    revision_policy=RevisionPolicy(),
+    attestation_refs={
+        sweep.evidence_ref: signed_ref
+        for sweep, signed_ref in inventory
+    },
+    policy=trusted_policy,
+    verifier=signature_verifier,
+    now=current_time,
+    expected_head=externally_pinned_ledger_head,
+)
+~~~
+
+El inventario usa **referencias del intento CLEAN_SWEEP**, no de la
+observación. El gate reconstruye esa relación desde el evento durable,
+comprueba actor/rol/run/sujeto y vigencia del grant, y exige todas las firmas.
+Requiere convergencia local sobre el documento exacto y una sola auditoría
+del ledger en una instantánea consistente. Una atestación posterior a la
+revisión cambia el head y obliga al operador a volver a fijarlo externamente.
+
+Este gate **debe ser invocado por el consumidor**; no exige firmas durante
+la escritura ni convierte convergencia en juicio científico. Si caduca un
+permiso, cambia el documento o reaparecen hallazgos, no hay autorización.
+Incluso con firma válida, independent_adjudication_proven=false:
+dos nombres o claves diferentes no prueban independencia. Ver
+[ADR-0023](adr/0023-signed-critic-sweep-authorization.md) y
+[AWF-R032](REQUIREMENT_TRACEABILITY.md).
+
 ## Semántica de fallos
 
 - Permiso revocado/vencido o clave desconocida: **no autorizado**.
