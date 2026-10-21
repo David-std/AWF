@@ -1,0 +1,3 @@
+# Colab QLoRA NF4 dependencies. CUDA Torch comes from the selected runtime.
+-r requirements-neural.txt
+bitsandbytes==0.50.2

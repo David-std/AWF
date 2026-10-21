@@ -18,7 +18,7 @@ For real owner-authored source: a separate explicit `--owner-authorized` is requ
 
 ## Local reproducibility
 
-Create an isolated Python 3.12 environment **outside global packages** and install a CUDA-enabled PyTorch build that matches your GPU/driver according to the official [PyTorch installer](https://pytorch.org/get-started/locally/). Then install `requirements-neural.txt`. ML dependencies are not imported by AWF's normal CLI or CI. Keep CUDA packages and model cache on local disk.
+Create an isolated Python 3.12 environment **outside global packages** and install a CUDA-enabled PyTorch build that matches your GPU/driver according to the official [PyTorch installer](https://pytorch.org/get-started/locally/). Then install `requirements-neural.txt`. In Colab use `requirements-neural-colab.txt` (pinned bitsandbytes added for NF4). ML dependencies are not imported by AWF's normal CLI or CI. Keep CUDA packages and model cache on local disk.
 
 ```bash
 python -m awf.training.synthetic_smoke --output .awf/neural-smoke
