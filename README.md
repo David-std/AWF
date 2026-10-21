@@ -185,3 +185,15 @@ No ZIP or private evidence is committed. See [ADR-0028](docs/adr/0028-source-rig
 and [guide](docs/SOURCE_RIGHTS_GATE_S2.md).
 
 **PR #35 code verification:** `cd6c2c8` passed [push CI 39540058673](https://github.com/David-std/AWF/actions/runs/39540058673), 4/4 matrix jobs (Ubuntu/Windows × Python 3.12/3.13), 440 tests passed on Ubuntu 3.12 and Pyright 0 errors. This does not establish external legal authority or scientific acceptance.
+
+## Signed scientific disagreement triage (S2 stacked draft PR #36)
+
+The `verify_disagreement_protocol` application service compares **two distinct,
+role-scoped, Ed25519-signed** scientific assessments of the same exact proposal,
+reusing PR #34's signed-review gates and the same externally pinned ledger head.
+Opposing or inconclusive verdicts require a private, canonical, SHA-pinned case
+plan recording the issue, missing evidence, methodological divergence and next
+action. It does not perform a third-party scientific adjudication, accept a rule,
+grant source rights or enable model training. No extra signature role or key
+system is introduced. See [ADR-0029](docs/adr/0029-scientific-disagreement-triage.md)
+and [private guide](docs/SCIENTIFIC_DISAGREEMENTS_S2.md).

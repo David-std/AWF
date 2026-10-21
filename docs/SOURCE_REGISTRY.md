@@ -42,3 +42,18 @@ Cada entrada indica qué justifica, qué **no** demuestra y en qué etapa debe r
 
 These references justify **not inferring rights** in AWF; they are not an external
 legal opinion or certification of the old AWS ZIP.
+
+## Scientific disagreement methodology (S2 PR #36)
+
+- [JBI Manual for Evidence Synthesis, Critical appraisal (2024)](https://jbi-global.atlassian.net/wiki/spaces/MANUAL/pages/355828247/4.2.7%2BCritical%2Bappraisal).
+  Supports independent critical appraisal and consensus/third-reviewer procedures;
+  does not certify AWF reviewer credentials or adjudicated scientific claims.
+- [JBI Manual, methodological-quality assessment](https://jbi-global.atlassian.net/wiki/spaces/MANUAL/pages/355598976/7.3.6.3%2BAssessment%2Bof%2Bmethodological%2Bquality).
+  Requires pre-specified appraisal criteria and documenting reviewer disagreement.
+- [PRISMA 2020 expanded checklist](https://www.prisma-statement.org/s/PRISMA_2020_expanded_checklist-yc78.pdf),
+  items 8–9. Supports reporting the number and independence of reviewers and how
+  disagreement was handled; not evidence for any particular AWF review outcome.
+
+These recommendations inform a **governance analogy**, not validation that two
+signing keys represent two independently qualified people. AWF must not
+equate a signature with a correct decision or rights grant.
