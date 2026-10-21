@@ -22,18 +22,37 @@ _EVENT = re.compile(r"event:([a-f0-9]{64})\Z")
 _ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}\Z")
 _REPORT_FIELDS = frozenset(
     {
-        "schema", "type", "source_id", "archive_sha256",
-        "requirement_id", "requirement_sha256", "proposal_ref",
-        "agent_id", "execution_id", "model_id", "task_sha256",
-        "verdict", "evidence_refs", "reasoned_assessment", "limitations",
+        "schema",
+        "type",
+        "source_id",
+        "archive_sha256",
+        "requirement_id",
+        "requirement_sha256",
+        "proposal_ref",
+        "agent_id",
+        "execution_id",
+        "model_id",
+        "task_sha256",
+        "verdict",
+        "evidence_refs",
+        "reasoned_assessment",
+        "limitations",
     }
 )
 _DECISION_FIELDS = frozenset(
     {
-        "schema", "type", "source_id", "archive_sha256",
-        "requirement_id", "requirement_sha256", "proposal_ref",
-        "task_sha256", "owner_actor_id", "agent_report_refs",
-        "action", "reason",
+        "schema",
+        "type",
+        "source_id",
+        "archive_sha256",
+        "requirement_id",
+        "requirement_sha256",
+        "proposal_ref",
+        "task_sha256",
+        "owner_actor_id",
+        "agent_report_refs",
+        "action",
+        "reason",
     }
 )
 
@@ -225,10 +244,16 @@ def verify_owner_review(
     historical science.
     """
     if (
-        not all(_sha(v) for v in (
-            archive_sha256, requirement_sha256, task_sha256,
-            expected_reviewer_policy_sha256, expected_head,
-        ))
+        not all(
+            _sha(v)
+            for v in (
+                archive_sha256,
+                requirement_sha256,
+                task_sha256,
+                expected_reviewer_policy_sha256,
+                expected_head,
+            )
+        )
         or policy.policy_sha256 != expected_reviewer_policy_sha256
         or not _identity(expected_owner_actor_id)
         or not _identity(source_id)
@@ -251,9 +276,15 @@ def verify_owner_review(
     models: set[str] = set()
     with store.verified_read(expected_head=expected_head) as reader:
         signed_proposer = verify_signed_review_event(
-            store=reader, attestation_ref=proposal_sig, target_ref=proposal_ref,
-            expected_role=ReviewerRole.KNOWLEDGE_REVIEWER, run_id=run_id,
-            subject_id=rule_id, policy=policy, verifier=verifier, now=now,
+            store=reader,
+            attestation_ref=proposal_sig,
+            target_ref=proposal_ref,
+            expected_role=ReviewerRole.KNOWLEDGE_REVIEWER,
+            run_id=run_id,
+            subject_id=rule_id,
+            policy=policy,
+            verifier=verifier,
+            now=now,
             expected_head=expected_head,
         )
         proposal_record, proposal_data = reader.resolve_event(
@@ -265,18 +296,18 @@ def verify_owner_review(
             or proposal_record.run_id != run_id
             or proposal_record.subject_id != rule_id
             or proposal.get("type") != "private_dossier_review_proposal"
-            or tuple(proposal.get(key) for key in (
-                "source_id", "archive_sha256", "requirement_id", "requirement_sha256"
-            )) != identities
+            or tuple(
+                proposal.get(key)
+                for key in ("source_id", "archive_sha256", "requirement_id", "requirement_sha256")
+            )
+            != identities
             or proposal.get("reviewer_actor_id") != signed_proposer
         ):
             raise EvidenceIntegrityError("owner workflow proposal identity/source mismatch")
 
         latest_report_sequence = proposal_record.sequence
         for ref in agent_report_refs:
-            record, data = reader.resolve_event(
-                event_digest=_ref(ref), expected_head=expected_head
-            )
+            record, data = reader.resolve_event(event_digest=_ref(ref), expected_head=expected_head)
             if (
                 record.kind != EvidenceKind.AGENT_REVIEW_REPORT
                 or record.run_id != run_id
@@ -285,10 +316,18 @@ def verify_owner_review(
             ):
                 raise EvidenceIntegrityError("agent report run or chronology mismatch")
             row = strict_json(data)
-            if _rebuild_report(row) != data or (
-                row["source_id"], row["archive_sha256"], row["requirement_id"],
-                row["requirement_sha256"],
-            ) != identities or row["proposal_ref"] != proposal_ref or row["task_sha256"] != task_sha256:
+            if (
+                _rebuild_report(row) != data
+                or (
+                    row["source_id"],
+                    row["archive_sha256"],
+                    row["requirement_id"],
+                    row["requirement_sha256"],
+                )
+                != identities
+                or row["proposal_ref"] != proposal_ref
+                or row["task_sha256"] != task_sha256
+            ):
                 raise EvidenceIntegrityError("agent report source/task binding mismatch")
             agent = cast(str, row["agent_id"])
             execution = cast(str, row["execution_id"])
@@ -321,9 +360,11 @@ def verify_owner_review(
             or decision_record.subject_id != rule_id
             or decision_record.sequence <= latest_report_sequence
             or _rebuild_decision(decision) != data
-            or tuple(decision[key] for key in (
-                "source_id", "archive_sha256", "requirement_id", "requirement_sha256"
-            )) != identities
+            or tuple(
+                decision[key]
+                for key in ("source_id", "archive_sha256", "requirement_id", "requirement_sha256")
+            )
+            != identities
             or decision["proposal_ref"] != proposal_ref
             or decision["task_sha256"] != task_sha256
             or decision["agent_report_refs"] != list(agent_report_refs)
@@ -331,9 +372,15 @@ def verify_owner_review(
         ):
             raise EvidenceIntegrityError("owner decision binds wrong reports/task/source")
         signed_owner = verify_signed_review_event(
-            store=reader, attestation_ref=decision_sig, target_ref=decision_ref,
-            expected_role=ReviewerRole.PROJECT_OWNER, run_id=run_id,
-            subject_id=rule_id, policy=policy, verifier=verifier, now=now,
+            store=reader,
+            attestation_ref=decision_sig,
+            target_ref=decision_ref,
+            expected_role=ReviewerRole.PROJECT_OWNER,
+            run_id=run_id,
+            subject_id=rule_id,
+            policy=policy,
+            verifier=verifier,
+            now=now,
             expected_head=expected_head,
         )
         if signed_owner != expected_owner_actor_id or signed_owner in agent_ids:

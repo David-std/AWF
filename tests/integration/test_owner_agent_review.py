@@ -35,9 +35,11 @@ NOW = 1_800_000_000
 
 
 def _pub(key: Ed25519PrivateKey) -> str:
-    return key.public_key().public_bytes(
-        serialization.Encoding.Raw, serialization.PublicFormat.Raw
-    ).hex()
+    return (
+        key.public_key()
+        .public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)
+        .hex()
+    )
 
 
 def _attest(store, *, target, key, actor, key_id, role, policy):
@@ -52,14 +54,23 @@ def _attest(store, *, target, key, actor, key_id, role, policy):
     )
     signed = SignedReviewerClaim(claim, key.sign(claim.signing_bytes).hex())
     event = append_signed_review_claim(
-        store=store, signed=signed, policy=policy,
-        verifier=Ed25519ReviewerVerifier(), now=NOW,
+        store=store,
+        signed=signed,
+        policy=policy,
+        verifier=Ed25519ReviewerVerifier(),
+        now=NOW,
     )
     return f"event:{event.digest}"
 
 
-def _fixture(tmp_path: Path, *, action=OwnerAction.APPROVE_PILOT_EVALUATION,
-             same_agent=False, wrong_source=False, owner_is_proposer=True):
+def _fixture(
+    tmp_path: Path,
+    *,
+    action=OwnerAction.APPROVE_PILOT_EVALUATION,
+    same_agent=False,
+    wrong_source=False,
+    owner_is_proposer=True,
+):
     store = SQLiteEvidenceLedger(tmp_path / "owner-review.sqlite")
     store.initialize()
     proposer_key = Ed25519PrivateKey.generate()
@@ -71,7 +82,8 @@ def _fixture(tmp_path: Path, *, action=OwnerAction.APPROVE_PILOT_EVALUATION,
             "key_id": "proposer-key",
             "public_key_hex": _pub(proposer_key),
             "roles": ["KNOWLEDGE_REVIEWER", "PROJECT_OWNER"]
-            if owner_is_proposer else ["KNOWLEDGE_REVIEWER"],
+            if owner_is_proposer
+            else ["KNOWLEDGE_REVIEWER"],
             "runs": [RUN],
             "subjects": [RULE],
             "valid_from": NOW - 100,
@@ -94,21 +106,26 @@ def _fixture(tmp_path: Path, *, action=OwnerAction.APPROVE_PILOT_EVALUATION,
             }
         )
     raw_policy = canonical_json_bytes({"schema": 1, "grants": grants})
-    policy = parse_trust_policy(
-        raw_policy, expected_sha256=sha256_bytes(raw_policy)
-    )
+    policy = parse_trust_policy(raw_policy, expected_sha256=sha256_bytes(raw_policy))
     support = store.append(
-        kind=EvidenceKind.RULE_SUPPORT, run_id=RUN, subject_id=RULE,
+        kind=EvidenceKind.RULE_SUPPORT,
+        run_id=RUN,
+        subject_id=RULE,
         content=b"synthetic source-linked evaluation reference",
     )
     evidence_ref = f"event:{support.digest}"
     proposal = store.append(
-        kind=EvidenceKind.KNOWLEDGE_REVIEW_PROPOSAL, run_id=RUN, subject_id=RULE,
+        kind=EvidenceKind.KNOWLEDGE_REVIEW_PROPOSAL,
+        run_id=RUN,
+        subject_id=RULE,
         content=canonical_json_bytes(
             {
-                "schema": 1, "type": "private_dossier_review_proposal",
-                "source_id": "aws-3.19.1", "archive_sha256": SOURCE,
-                "requirement_id": RULE, "requirement_sha256": RULE_SHA,
+                "schema": 1,
+                "type": "private_dossier_review_proposal",
+                "source_id": "aws-3.19.1",
+                "archive_sha256": SOURCE,
+                "requirement_id": RULE,
+                "requirement_sha256": RULE_SHA,
                 "reviewer_actor_id": proposer_actor,
                 "review_template_sha256": "e" * 64,
                 "review_status": "PROPOSAL_DOCUMENTED",
@@ -117,23 +134,31 @@ def _fixture(tmp_path: Path, *, action=OwnerAction.APPROVE_PILOT_EVALUATION,
     )
     proposal_ref = f"event:{proposal.digest}"
     proposal_sig = _attest(
-        store, target=proposal, key=proposer_key, actor=proposer_actor,
-        key_id="proposer-key", role=ReviewerRole.KNOWLEDGE_REVIEWER, policy=policy,
+        store,
+        target=proposal,
+        key=proposer_key,
+        actor=proposer_actor,
+        key_id="proposer-key",
+        role=ReviewerRole.KNOWLEDGE_REVIEWER,
+        policy=policy,
     )
     reviews = []
     for i, verdict in enumerate((AgentVerdict.SUPPORT, AgentVerdict.CONTEST)):
         report = store.append(
             kind=EvidenceKind.AGENT_REVIEW_REPORT,
-            run_id=RUN, subject_id=RULE,
+            run_id=RUN,
+            subject_id=RULE,
             content=agent_report_payload(
                 source_id="aws-3.19.1",
                 archive_sha256="f" * 64 if wrong_source and i == 1 else SOURCE,
-                requirement_id=RULE, requirement_sha256=RULE_SHA,
+                requirement_id=RULE,
+                requirement_sha256=RULE_SHA,
                 proposal_ref=proposal_ref,
                 agent_id="agent-0" if same_agent else f"agent-{i}",
                 execution_id=f"execution-{i}",
                 model_id="qwen-same-model",
-                task_sha256=TASK, verdict=verdict,
+                task_sha256=TASK,
+                verdict=verdict,
                 evidence_refs=(evidence_ref,),
                 reasoned_assessment="Synthetic source notes were reviewed and compared to constraints.",
                 limitations="This model output does not establish external scholarly truth.",
@@ -141,12 +166,16 @@ def _fixture(tmp_path: Path, *, action=OwnerAction.APPROVE_PILOT_EVALUATION,
         )
         reviews.append(f"event:{report.digest}")
     decision = store.append(
-        kind=EvidenceKind.OWNER_EVALUATION_DECISION, run_id=RUN, subject_id=RULE,
+        kind=EvidenceKind.OWNER_EVALUATION_DECISION,
+        run_id=RUN,
+        subject_id=RULE,
         content=owner_review_decision_payload(
             source_id="aws-3.19.1",
             archive_sha256=SOURCE,
-            requirement_id=RULE, requirement_sha256=RULE_SHA,
-            proposal_ref=proposal_ref, task_sha256=TASK,
+            requirement_id=RULE,
+            requirement_sha256=RULE_SHA,
+            proposal_ref=proposal_ref,
+            task_sha256=TASK,
             owner_actor_id="project-owner",
             agent_report_refs=(reviews[0], reviews[1]),
             action=action,
@@ -155,12 +184,17 @@ def _fixture(tmp_path: Path, *, action=OwnerAction.APPROVE_PILOT_EVALUATION,
     )
     owner_ref = f"event:{decision.digest}"
     owner_sig = _attest(
-        store, target=decision, key=owner_key, actor="project-owner",
+        store,
+        target=decision,
+        key=owner_key,
+        actor="project-owner",
         key_id="proposer-key" if owner_is_proposer else "owner-key",
-        role=ReviewerRole.PROJECT_OWNER, policy=policy,
+        role=ReviewerRole.PROJECT_OWNER,
+        policy=policy,
     )
     return {
-        "store": store, "policy": policy,
+        "store": store,
+        "policy": policy,
         "proposal_refs": (proposal_ref, proposal_sig),
         "agent_report_refs": (reviews[0], reviews[1]),
         "owner_decision_refs": (owner_ref, owner_sig),
@@ -170,17 +204,22 @@ def _fixture(tmp_path: Path, *, action=OwnerAction.APPROVE_PILOT_EVALUATION,
 
 def _check(case, **overrides):
     args = {
-        "store": case["store"], "run_id": RUN, "rule_id": RULE,
+        "store": case["store"],
+        "run_id": RUN,
+        "rule_id": RULE,
         "source_id": "aws-3.19.1",
-        "archive_sha256": SOURCE, "requirement_sha256": RULE_SHA,
+        "archive_sha256": SOURCE,
+        "requirement_sha256": RULE_SHA,
         "task_sha256": TASK,
         "proposal_refs": case["proposal_refs"],
         "agent_report_refs": case["agent_report_refs"],
         "owner_decision_refs": case["owner_decision_refs"],
         "expected_owner_actor_id": "project-owner",
         "expected_reviewer_policy_sha256": case["policy"].policy_sha256,
-        "expected_head": case["expected_head"], "policy": case["policy"],
-        "verifier": Ed25519ReviewerVerifier(), "now": NOW,
+        "expected_head": case["expected_head"],
+        "policy": case["policy"],
+        "verifier": Ed25519ReviewerVerifier(),
+        "now": NOW,
     }
     args.update(overrides)
     return verify_owner_review(**args)
@@ -225,7 +264,9 @@ def test_stale_ledger_head_blocks_owner_action(tmp_path: Path):
     old = case["expected_head"]
     case["store"].append(
         kind=EvidenceKind.RULE_SUPPORT,
-        run_id=RUN, subject_id=RULE, content=b"subsequent evidence",
+        run_id=RUN,
+        subject_id=RULE,
+        content=b"subsequent evidence",
     )
     with pytest.raises(EvidenceIntegrityError, match="head"):
         _check(case, expected_head=old)
@@ -253,11 +294,16 @@ def test_corrupt_policy_anchor_is_rejected(tmp_path: Path):
 def test_unbound_evidence_references_are_rejected():
     with pytest.raises(EvidenceIntegrityError, match="exact ledger"):
         agent_report_payload(
-            source_id="aws-3.19.1", archive_sha256=SOURCE,
-            requirement_id=RULE, requirement_sha256=RULE_SHA,
+            source_id="aws-3.19.1",
+            archive_sha256=SOURCE,
+            requirement_id=RULE,
+            requirement_sha256=RULE_SHA,
             proposal_ref="event:" + "e" * 64,
-            agent_id="agent-a", execution_id="execution-b",
-            model_id="qwen", task_sha256=TASK, verdict=AgentVerdict.SUPPORT,
+            agent_id="agent-a",
+            execution_id="execution-b",
+            model_id="qwen",
+            task_sha256=TASK,
+            verdict=AgentVerdict.SUPPORT,
             evidence_refs=("sha256:" + "e" * 64,),
             reasoned_assessment="Synthetic observations that are source-related but cannot prove truth.",
             limitations="No independent validation of the scientific correctness.",
