@@ -1,4 +1,6 @@
-# AWF — transferencia de Sprint 2
+# AWF — transferencia de Sprint 3
+
+**Handoff actual, PR #43:** [2026-10-21 S3 — Synthetic Scope Benchmark](handoffs/2026-10-21-S3-PR43-SYNTHETIC-SCOPE.md). PR abierta en borrador directamente sobre #42. SHA funcional `d44b289b119891730e0a8ea08c31913e6f69477b`, CI [rama #39666512041](https://github.com/David-std/AWF/actions/runs/39666512041) y [PR #39666522033](https://github.com/David-std/AWF/actions/runs/39666522033), consultar estado exacto de cada corrida. Ubuntu/3.12: **534 pytest PASS**, Ruff/Pyright 0 errores, build PASS. Ocho pares ficticios ES/EN: 2 alteraciones detectadas, 2 omitidas, 1 escalada, 2 preservaciones sin alerta y 1 escalada. **Ninguna etiqueta científica independiente** ni real semantic approval. Verificar CI del commit documental antes de declararlo validado. Historial anterior intacto.
 
 **Handoff actual, PR #42:** [2026-10-21 S2 — Local Agent Execution](handoffs/2026-10-21-S2-PR42-LOCAL-AGENT.md), draft sobre PR #41. Código `b0274f7f126300913897f36222a46885b9ac6883`; Ubuntu/Python 3.12: **522 pytest PASS**, Ruff/Pyright (0 errores) y build. Ejecución real del adaptador AWF con Qwen2.5 7B en Ollama localhost: SHA/modelo y latencia observados, salida de ejemplo comprobada; **NO** equivalencia semántica ni certificado de pesos. Verificar CI del SHA documental antes de declararla validada. Historial anterior conservado abajo.
 

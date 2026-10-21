@@ -51,6 +51,7 @@ from awf.domain.reviewer_auth import (
     SignedReviewerClaim,
     parse_trust_policy,
 )
+from awf.evaluation.synthetic_scope import run_synthetic_scope_benchmark
 from awf.knowledge.adjudication_dossiers import audit_private_dossiers
 from awf.knowledge.audit import audit_registry
 from awf.verification.exact_checks import parse_contract, verify_exact_invariants
@@ -240,6 +241,12 @@ def create_parser() -> argparse.ArgumentParser:
     agent.add_argument("--seed", type=int, default=42)
     agent.add_argument("--max-output-tokens", type=int, default=128)
     agent.add_argument("--allow-local-inference", action="store_true")
+    synthetic = commands.add_parser(
+        "evaluate-synthetic",
+        help="measure exact-checker scope against pinned synthetic development cases",
+    )
+    synthetic.add_argument("dataset", type=Path)
+    synthetic.add_argument("--expected-sha256", required=True)
     exact = commands.add_parser(
         "verify-exact", help="verify SHA-pinned protected literals without semantic approval"
     )
@@ -357,6 +364,20 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         except (OSError, ValueError, RuntimeError, TypeError) as exc:
             print(f"AWF_ERROR [AGENT_EXECUTION_FAILED] {type(exc).__name__}", file=sys.stderr)
+            return 2
+
+    if args.command == "evaluate-synthetic":
+        try:
+            report = run_synthetic_scope_benchmark(
+                args.dataset, expected_sha256=args.expected_sha256
+            )
+            print(json.dumps(report, ensure_ascii=False, sort_keys=True))
+            return 0
+        except (OSError, ValueError, TypeError, RuntimeError) as exc:
+            print(
+                f"AWF_ERROR [SYNTHETIC_BENCHMARK_FAILED] {type(exc).__name__}",
+                file=sys.stderr,
+            )
             return 2
 
     if args.command == "verify-exact":
