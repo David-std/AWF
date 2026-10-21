@@ -167,6 +167,18 @@ def check_source_right(
         for c in relevant
     ):
         return RightsDecision(use, RightsOutcome.RESTRICTED, "denial_or_invalid_grant", 0, False)
+    grants = [c for c in relevant if c.kind == RightsClaimKind.GRANT_CLAIM]
+    for i, left in enumerate(grants):
+        for right in grants[i + 1 :]:
+            if (
+                left.start_byte < right.end_byte
+                and right.start_byte < left.end_byte
+                and (left.owner_id, left.authority_id, left.license_expression, left.jurisdiction)
+                != (right.owner_id, right.authority_id, right.license_expression, right.jurisdiction)
+            ):
+                return RightsDecision(
+                    use, RightsOutcome.UNKNOWN, "conflicting_overlapping_grants", 0, False
+                )
     intervals = [
         (max(c.start_byte, start_byte), min(c.end_byte, end_byte))
         for c in relevant if c.kind == RightsClaimKind.GRANT_CLAIM

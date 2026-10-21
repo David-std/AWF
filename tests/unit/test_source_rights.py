@@ -219,3 +219,31 @@ def test_noncanonical_or_duplicate_json_fields_are_rejected() -> None:
                             expected_sha256=sha256_bytes(raw.replace(
                                 b'"schema":1', b'"schema":1,"schema":1'
                             )), expected_asset=ASSET)
+
+def test_conflicting_overlap_is_not_resolved_by_choosing_friendly_licence() -> None:
+    _, inventory = _inventory(
+        _claim(),
+        _claim(identifier="claim-2", start=3, end=7, owner="another-owner"),
+    )
+    decision = _check(
+        inventory,
+        authority=SyntheticExternalAuthority(),
+        evidence={sha256_bytes(EVIDENCE): EVIDENCE},
+    )
+    assert decision.outcome == RightsOutcome.UNKNOWN
+    assert decision.reason == "conflicting_overlapping_grants"
+
+
+def test_wrong_fragment_digest_is_rejected() -> None:
+    _, inventory = _inventory(_claim())
+    with pytest.raises(EvidenceIntegrityError, match="segment"):
+        check_source_right(
+            inventory,
+            source_bytes=DATA,
+            start_byte=0,
+            end_byte=10,
+            expected_fragment_sha256="0" * 64,
+            use=RightsUse.EVALUATE,
+            evidence_by_sha256={},
+            now=50,
+        )

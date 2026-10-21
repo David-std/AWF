@@ -26,3 +26,19 @@ Cada entrada indica qué justifica, qué **no** demuestra y en qué etapa debe r
 `INDEPENDENT_STUDY`, `OPEN_DATA`, `VENDOR_DOCUMENTATION`, `VENDOR_BENCHMARK`, `IMPLEMENTATION_SOURCE`, `INTERNAL_EXPERIMENT`, `HYPOTHESIS`. Guardar publicación, experimento y snapshot por separado cuando sea relevante.
 
 **Pendiente:** fichas de literatura con resultados cuantitativos, datasets usados, amenazas de validez, contradicciones y versión exacta. Este registro es un índice inicial, no una revisión sistemática concluida.
+
+## Rights-related source-of-truth research for PR #35
+
+- [SPDX License List](https://spdx.org/licenses/) and
+  [SPDX expressions](https://spdx.github.io/spdx-spec/v3.0.1/annexes/spdx-license-expressions/):
+  names and expressions help describe licences but do not prove a particular file's
+  owner, applicable licence instrument or the authority of a grantor.
+- [Creative Commons licence considerations](https://wiki.creativecommons.org/wiki/Considerations_for_licensors_and_licensees/Licensees):
+  read the legal code, not only the human-readable deed; adaptation/commercial
+  and version/jurisdiction conditions differ.
+- [Hugging Face dataset cards](https://huggingface.co/docs/hub/main/datasets-cards):
+  descriptive metadata supports discovery and responsible context, but a card is not
+  independently verified chain-of-title evidence or ML training permission.
+
+These references justify **not inferring rights** in AWF; they are not an external
+legal opinion or certification of the old AWS ZIP.

@@ -170,3 +170,22 @@ Véanse [ADR-0015](adr/0015-durable-edit-and-finding-transitions.md) y
 - **Implementation:** `domain/evidence.py`, `domain/reviewer_auth.py`, `application/commands/scientific_assessments.py`, adversarial integration suite `test_independent_scientific_assessments.py`, and [operator notes](INDEPENDENT_SCIENTIFIC_ASSESSMENTS_S2.md). Application-only gate initially; no new public CLI.
 - **Gate:** all documented rules need exact signed proposal/assessment pair; roles, scope, source/version/head/order, revocation and non-self actor identity are checked; content notes exist in the local ledger. Fail closed on mismatch or stale head.
 - **State:** `PROTOTYPED_TESTED_CI_NOT_ADJUDICATED` at functional SHA `86f71659a47df3ce75b0f4845aa5d8f6a0b86d46`, [push CI 39531181324](https://github.com/David-std/AWF/actions/runs/39531181324) and [PR CI 39531184711](https://github.com/David-std/AWF/actions/runs/39531184711), both 4/4 green: 420 PASS Ubuntu 3.12, 418 PASS + 2 SKIP Windows 3.13, Pyright 0 errors. Final documentation SHA `34b192a32efd0841a6149d93493d3aa1b19147b3` also passed [push CI 39531777710](https://github.com/David-std/AWF/actions/runs/39531777710) and [PR CI 39531782917](https://github.com/David-std/AWF/actions/runs/39531782917), 4/4. Draft PR #34 is **not merged** or scientifically adjudicated; `all_credentials_verified` never means `REVIEW_ATTESTED` or genuine human independence. Rights verification, resolution of scientific disagreement, formal disposition, training and model rollout remain blocked. 168 MUST unresolved, 16 DEFERRED_LAB EVAL_ONLY.
+
+## AWF-R037 — Source-specific rights and provenance boundary (stacked PR #35)
+
+- **Dependency:** draft PR #34 (HEAD `1c8f729e75e9fdcb1a6e9054854baabdad8f8f24`), therefore PR #33 → PR #32 → `develop`.
+- **Contract:** separately typed `READ/EVALUATE/TRANSFORM/REDISTRIBUTE/TRAIN`
+  permissions over exact source file SHA-256 and half-open byte span; externally pinned
+  canonical inventory and independent source/fragment bytes; caller-supplied trusted
+  time, actual evidence bytes, independent verifier and externally pinned authority
+  policy are required for a conditional positive result.
+- **Adversarial checks:** absent issuer authority, cross-source, partial source, explicit
+  denial, revoked/expired grant, contradictory overlaps, missing/modified evidence,
+  duplicate IDs, modified manifest hash and wrong source/fragment hash all fail closed.
+- **Status:** `IMPLEMENTED_PARTIAL_REVIEW_PENDING` on draft PR #35; the source-of-truth
+  and non-escalation controls are implemented but no independently qualified legal
+  authority adapter or genuine source rights corpus is present. See
+  [ADR-0028](adr/0028-source-rights-evidence-gate.md) and
+  [source rights guide](SOURCE_RIGHTS_GATE_S2.md).
+- **Non-result:** still 0/168 MUST adjudicated, all 16 DEFERRED_LAB EVAL_ONLY;
+  no new review attestation or permission to train.
