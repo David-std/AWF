@@ -117,9 +117,11 @@ def run_historical_pilot(
             )
         original_source_ids = row["source_ids"]
         historical_paths = row["implementation_paths"]
-        if not isinstance(original_source_ids, list) or not all(
-            isinstance(v, str) for v in original_source_ids
-        ) or not isinstance(historical_paths, list):
+        if (
+            not isinstance(original_source_ids, list)
+            or not all(isinstance(v, str) for v in original_source_ids)
+            or not isinstance(historical_paths, list)
+        ):
             raise ValueError("malformed historical reference inventory")
         selected.append(
             {
