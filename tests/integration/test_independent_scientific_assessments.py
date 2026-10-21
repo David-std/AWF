@@ -894,9 +894,9 @@ def test_replay_or_wrong_predecessor_is_rejected(tmp_path: Path):
         )
 
 
-def test_changed_case_hash_requires_new_arbitration_evidence(tmp_path: Path):
+def test_missing_case_is_rejected_by_upstream_scientific_inventory(tmp_path: Path):
     s, second, policy, case, first = _arbitration_scenario(tmp_path)
-    with pytest.raises(EvidenceIntegrityError, match="open case"):
+    with pytest.raises(EvidenceIntegrityError, match="incomplete or mismatched scientific inventory"):
         _arbitration_check(s, second, policy, case, (first,), cases={})
 
 
