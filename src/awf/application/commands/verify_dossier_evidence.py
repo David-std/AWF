@@ -68,14 +68,19 @@ def _payload_matches(
         decoded = json.loads(payload)
     except (UnicodeDecodeError, ValueError, TypeError):
         return False
-    return isinstance(decoded, dict) and set(decoded) == _KEYS and decoded == {
-        "schema_version": "1.0.0",
-        "purpose": _PURPOSE,
-        "archive_sha256": source_sha256,
-        "source_id": source_id,
-        "requirement_id": requirement_id,
-        "requirement_sha256": requirement_sha256,
-    }
+    return (
+        isinstance(decoded, dict)
+        and set(decoded) == _KEYS
+        and decoded
+        == {
+            "schema_version": "1.0.0",
+            "purpose": _PURPOSE,
+            "archive_sha256": source_sha256,
+            "source_id": source_id,
+            "requirement_id": requirement_id,
+            "requirement_sha256": requirement_sha256,
+        }
+    )
 
 
 def verify_dossier_evidence_links(
@@ -115,22 +120,22 @@ def verify_dossier_evidence_links(
             expected = canonical_packets[filename].get("rules")
             observed = observed_packets[filename].get("rules")
             if not isinstance(expected, list) or not isinstance(observed, list):
-                raise ValueError("dossier rules must be arrays")
+                raise TypeError("dossier rules must be arrays")
             if len(expected) != len(observed):
                 raise ValueError("source-bound review packet length mismatch")
             for canonical, annotated in zip(expected, observed, strict=True):
                 if not isinstance(canonical, dict) or not isinstance(annotated, dict):
-                    raise ValueError("dossier rule must be an object")
+                    raise TypeError("dossier rule must be an object")
                 rule_id = canonical.get("id")
                 sha = canonical.get("requirement_sha256")
                 if not isinstance(rule_id, str) or not isinstance(sha, str):
-                    raise ValueError("invalid canonical rule identity")
+                    raise TypeError("invalid canonical rule identity")
                 template = annotated.get("review_template")
                 if not isinstance(template, dict):
-                    raise ValueError("missing review template")
+                    raise TypeError("missing review template")
                 references = template.get("evidence_ids")
                 if not isinstance(references, list):
-                    raise ValueError("evidence IDs must be a list")
+                    raise TypeError("evidence IDs must be a list")
                 for ref in references:
                     count += 1
                     if not isinstance(ref, str):
@@ -156,7 +161,9 @@ def verify_dossier_evidence_links(
                                 requirement_sha256=sha,
                             )
                         ):
-                            raise EvidenceIntegrityError("dossier event identity mismatch")
+                            raise EvidenceIntegrityError(
+                                "dossier event identity mismatch"
+                            )
                     except (EvidenceIntegrityError, ValueError):
                         bad_rules.add(rule_id)
                     else:

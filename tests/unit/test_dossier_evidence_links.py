@@ -10,9 +10,10 @@ import json
 from pathlib import Path
 
 import pytest
-
 from awf.adapters.persistence.sqlite_evidence import SQLiteEvidenceLedger
-from awf.application.commands.verify_dossier_evidence import verify_dossier_evidence_links
+from awf.application.commands.verify_dossier_evidence import (
+    verify_dossier_evidence_links,
+)
 from awf.domain.evidence import EvidenceIntegrityError, EvidenceKind
 from awf.knowledge.adjudication_dossiers import audit_private_dossiers
 
@@ -98,7 +99,12 @@ def check(
     actual = {
         name: {
             **packet,
-            "rules": [{**packet["rules"][0], "review_template": {**TEMPLATE, "evidence_ids": [record_ref]}}],
+            "rules": [
+                {
+                    **packet["rules"][0],
+                    "review_template": {**TEMPLATE, "evidence_ids": [record_ref]},
+                }
+            ],
         }
         for name, packet in packets.items()
     }
@@ -124,7 +130,9 @@ def check(
 def test_valid_link_is_structural_and_never_attested(tmp_path: Path) -> None:
     store = ledger(tmp_path)
     record = append(store)
-    result, inspection = check(store, f"event:{record.digest}", expected_head=record.digest)
+    result, inspection = check(
+        store, f"event:{record.digest}", expected_head=record.digest
+    )
     assert result.all_declared_links_verified
     assert result.referenced_events == result.verified_events == 1
     assert result.affected_rule_ids == ()
@@ -141,12 +149,37 @@ def test_valid_link_is_structural_and_never_attested(tmp_path: Path) -> None:
         (EvidenceKind.AUDIT_RECEIPT, RUN_ID, RULE_ID, None),
         (EvidenceKind.RULE_SUPPORT, "other-run", RULE_ID, None),
         (EvidenceKind.RULE_SUPPORT, RUN_ID, "DSR-002", None),
-        (EvidenceKind.RULE_SUPPORT, RUN_ID, RULE_ID, support_payload(archive_sha256="c" * 64)),
-        (EvidenceKind.RULE_SUPPORT, RUN_ID, RULE_ID, support_payload(source_id="other-source")),
-        (EvidenceKind.RULE_SUPPORT, RUN_ID, RULE_ID, support_payload(requirement_id="DSR-002")),
-        (EvidenceKind.RULE_SUPPORT, RUN_ID, RULE_ID, support_payload(requirement_sha256="d" * 64)),
+        (
+            EvidenceKind.RULE_SUPPORT,
+            RUN_ID,
+            RULE_ID,
+            support_payload(archive_sha256="c" * 64),
+        ),
+        (
+            EvidenceKind.RULE_SUPPORT,
+            RUN_ID,
+            RULE_ID,
+            support_payload(source_id="other-source"),
+        ),
+        (
+            EvidenceKind.RULE_SUPPORT,
+            RUN_ID,
+            RULE_ID,
+            support_payload(requirement_id="DSR-002"),
+        ),
+        (
+            EvidenceKind.RULE_SUPPORT,
+            RUN_ID,
+            RULE_ID,
+            support_payload(requirement_sha256="d" * 64),
+        ),
         (EvidenceKind.RULE_SUPPORT, RUN_ID, RULE_ID, b"unstructured raw text"),
-        (EvidenceKind.RULE_SUPPORT, RUN_ID, RULE_ID, b'{"schema_version":"1.0.0","unexpected":"x"}'),
+        (
+            EvidenceKind.RULE_SUPPORT,
+            RUN_ID,
+            RULE_ID,
+            b'{"schema_version":"1.0.0","unexpected":"x"}',
+        ),
     ],
 )
 def test_cross_scope_or_wrong_payload_never_passes(
@@ -157,15 +190,22 @@ def test_cross_scope_or_wrong_payload_never_passes(
     payload: bytes | None,
 ) -> None:
     store = ledger(tmp_path)
-    record = append(store, kind=event_kind, run_id=event_run, subject_id=subject, content=payload)
+    record = append(
+        store, kind=event_kind, run_id=event_run, subject_id=subject, content=payload
+    )
     result, _ = check(store, f"event:{record.digest}", expected_head=record.digest)
     assert result.verified_events == 0
     assert result.affected_rule_ids == (RULE_ID,)
     assert result.all_declared_links_verified is False
 
 
-@pytest.mark.parametrize("ref", ["sha256:" + "f" * 64, "event:" + "f" * 64, "http://example.test", "event:bad"])
-def test_unresolved_or_non_event_references_fail_closed(tmp_path: Path, ref: str) -> None:
+@pytest.mark.parametrize(
+    "ref",
+    ["sha256:" + "f" * 64, "event:" + "f" * 64, "http://example.test", "event:bad"],
+)
+def test_unresolved_or_non_event_references_fail_closed(
+    tmp_path: Path, ref: str
+) -> None:
     store = ledger(tmp_path)
     head = append(store).digest
     result, _ = check(store, ref, expected_head=head)
@@ -174,7 +214,9 @@ def test_unresolved_or_non_event_references_fail_closed(tmp_path: Path, ref: str
     assert result.affected_rule_ids == (RULE_ID,)
 
 
-def test_post_checkpoint_append_fails_instead_of_accepting_a_new_snapshot(tmp_path: Path) -> None:
+def test_post_checkpoint_append_fails_instead_of_accepting_a_new_snapshot(
+    tmp_path: Path,
+) -> None:
     store = ledger(tmp_path)
     original = append(store)
     append(store, content=b"second content")
@@ -191,7 +233,9 @@ def test_truncated_history_requires_pinned_head(tmp_path: Path) -> None:
         check(store, f"event:{record.digest}", expected_head="0" * 64)
 
 
-def test_duplicate_event_claim_in_one_rule_rejected_before_binding(tmp_path: Path) -> None:
+def test_duplicate_event_claim_in_one_rule_rejected_before_binding(
+    tmp_path: Path,
+) -> None:
     store = ledger(tmp_path)
     event = append(store)
     manifest, packets = inputs()
@@ -199,7 +243,15 @@ def test_duplicate_event_claim_in_one_rule_rejected_before_binding(tmp_path: Pat
     observed = {
         "batch-001.json": {
             "batch_id": "B-001",
-            "rules": [{**item, "review_template": {**TEMPLATE, "evidence_ids": [f"event:{event.digest}"] * 2}}],
+            "rules": [
+                {
+                    **item,
+                    "review_template": {
+                        **TEMPLATE,
+                        "evidence_ids": [f"event:{event.digest}"] * 2,
+                    },
+                }
+            ],
         }
     }
     with pytest.raises(ValueError, match="duplicate"):

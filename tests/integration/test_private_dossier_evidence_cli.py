@@ -38,9 +38,7 @@ def test_private_cli_evidence_links_remain_unadjudicated(
     }
     packet = {"batch_id": "AWF-REVIEW-001", "rules": [canonical_rule]}
     expected = {"batch-001.json": packet}
-    monkeypatch.setattr(
-        "awf.cli.main.prepare_review", lambda **_: (manifest, expected)
-    )
+    monkeypatch.setattr("awf.cli.main.prepare_review", lambda **_: (manifest, expected))
 
     support = {
         "schema_version": "1.0.0",
@@ -79,17 +77,23 @@ def test_private_cli_evidence_links_remain_unadjudicated(
         json.dumps({**packet, "rules": [proposal]}), encoding="utf-8"
     )
     base = [
-        "knowledge", "inspect-review", str(tmp_path / "aws-private.zip"),
-        "--manifest", str(manifest_path),
+        "knowledge",
+        "inspect-review",
+        str(tmp_path / "aws-private.zip"),
+        "--manifest",
+        str(manifest_path),
     ]
     assert main(base) == 0
     standard = json.loads(capsys.readouterr().out)
     assert "evidence_links" not in standard
 
     args = base + [
-        "--evidence-database", str(database),
-        "--review-run-id", RUN_ID,
-        "--expected-head", event.digest,
+        "--evidence-database",
+        str(database),
+        "--review-run-id",
+        RUN_ID,
+        "--expected-head",
+        event.digest,
         "--require-documented",
     ]
     assert main(args) == 0
