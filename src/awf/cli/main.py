@@ -8,10 +8,10 @@ import os
 import sqlite3
 import sys
 import tempfile
-from uuid import uuid4
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
+from uuid import uuid4
 
 from awf import __version__
 from awf.adapters.document.markdown_adapter import MarkdownAdapter
@@ -39,8 +39,8 @@ from awf.application.commands.checkpoints import (
 )
 from awf.application.commands.compile_knowledge import import_knowledge
 from awf.application.commands.ingest_document import ingest_document
-from awf.application.commands.run_agent import run_instrumented_agent
 from awf.application.commands.prepare_review import prepare_review
+from awf.application.commands.run_agent import run_instrumented_agent
 from awf.application.commands.verified_snapshot import create_verified_snapshot
 from awf.application.commands.verify_dossier_evidence import verify_dossier_evidence_links
 from awf.domain.agent_execution import AgentTask
