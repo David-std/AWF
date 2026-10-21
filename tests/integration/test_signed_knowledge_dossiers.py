@@ -5,7 +5,8 @@ All rule text and keys are synthetic. Authorization is not adjudication.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+import json
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -374,7 +375,7 @@ def test_private_cli_requires_signed_credentials_without_public_prose(
     ]
     assert main(args) == 0
     output = capsys.readouterr().out
-    result = __import__("json").loads(output)
+    result = json.loads(output)
     assert result["signed_review"]["credentials_authorized"] is True
     assert result["signed_review"]["review_attestation_authorized"] is False
     assert result["signed_review"]["training_authorized"] is False
