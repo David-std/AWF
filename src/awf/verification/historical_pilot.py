@@ -4,6 +4,7 @@ Works only on rows from the separately verified ZIP adapter. Neither source
 statements nor adversarial candidate texts are exported into the report.
 This measures engineering behavior, not academic quality or model performance.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -14,9 +15,7 @@ from typing import Any
 
 from awf.verification.exact_checks import parse_contract, verify_exact_invariants
 
-PILOT_IDS: tuple[str, ...] = (
-    "DSR-001", "DSR-055", "DSR-059", "DSR-063", "DSR-065", "DSR-066"
-)
+PILOT_IDS: tuple[str, ...] = ("DSR-001", "DSR-055", "DSR-059", "DSR-063", "DSR-065", "DSR-066")
 _TOKEN = re.compile(r"[A-Za-z]{5,}")
 
 
@@ -97,9 +96,7 @@ def run_historical_pilot(
         span = left + value + right
         mutations = {
             "unchanged_control": statement,
-            "protected_literal_mutation": statement.replace(
-                span, left + "[ALTERED]" + right, 1
-            ),
+            "protected_literal_mutation": statement.replace(span, left + "[ALTERED]" + right, 1),
             "local_context_mutation": statement.replace(span, left + "X" + value + right, 1),
             "unlisted_numeric_addition": statement + " 987654.",
             "distant_semantic_override": statement + " This requirement is optional.",

@@ -1,4 +1,5 @@
 """Synthetic regression tests for source-bound, non-adjudicating historical pilot."""
+
 from __future__ import annotations
 
 import hashlib
@@ -65,8 +66,12 @@ def test_untrusted_version_and_duplicate_ids_rejected() -> None:
     with pytest.raises(ValueError, match="pinned AWS"):
         run_historical_pilot(rows, source_sha256="a" * 64, suite_version="3.18.1")
     with pytest.raises(ValueError, match="nonempty and distinct"):
-        run_historical_pilot(rows, source_sha256="a" * 64, suite_version="3.19.1",
-                             rule_ids=(PILOT_IDS[0], PILOT_IDS[0]))
+        run_historical_pilot(
+            rows,
+            source_sha256="a" * 64,
+            suite_version="3.19.1",
+            rule_ids=(PILOT_IDS[0], PILOT_IDS[0]),
+        )
 
 
 def test_archive_evidence_paths_and_tamper(tmp_path: Path) -> None:

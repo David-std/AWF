@@ -3,6 +3,7 @@
 Checks historical paths/sources without executing code, exporting text, or
 authorizing training. Uses the same descriptor for hashing and ZIP inspection.
 """
+
 from __future__ import annotations
 
 import hashlib

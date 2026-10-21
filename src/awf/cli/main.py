@@ -14,8 +14,8 @@ from pathlib import Path
 
 from awf import __version__
 from awf.adapters.document.markdown_adapter import MarkdownAdapter
-from awf.adapters.knowledge.pilot_evidence import inspect_historical_evidence
 from awf.adapters.knowledge.pinned_archive import PinnedAwsArchive
+from awf.adapters.knowledge.pilot_evidence import inspect_historical_evidence
 from awf.adapters.knowledge.review_file import JsonReviewReader
 from awf.adapters.knowledge.zip_archive import checksum_file
 from awf.adapters.persistence.blob_store import FileBlobStore
@@ -87,7 +87,9 @@ def create_parser() -> argparse.ArgumentParser:
         "pilot", help="measure exact-invariant scope on pinned private historical ledger"
     )
     pilot_parser.add_argument("archive", type=Path)
-    pilot_parser.add_argument("--manifest", type=Path, default=Path("provenance/source-manifest.json"))
+    pilot_parser.add_argument(
+        "--manifest", type=Path, default=Path("provenance/source-manifest.json")
+    )
     pilot_parser.add_argument("--source-id", default="aws-3.19.1")
     review_plan = operations.add_parser(
         "plan-review",
