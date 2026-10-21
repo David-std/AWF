@@ -7,9 +7,9 @@ import json
 from pathlib import Path
 
 import pytest
-from awf.evaluation.synthetic_scope import run_synthetic_scope_benchmark
 
 from awf.cli.main import main
+from awf.evaluation.synthetic_scope import run_synthetic_scope_benchmark
 
 EN = "The fictional study reported 18 % under one narrow condition."
 ES = "El estudio ficticio reportó 18 % bajo una condición limitada."
