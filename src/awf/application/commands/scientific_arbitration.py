@@ -24,11 +24,23 @@ _EVENT = re.compile(r"event:([a-f0-9]{64})\Z")
 _ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}\Z")
 _FIELDS = frozenset(
     {
-        "schema", "type", "source_id", "archive_sha256", "requirement_id",
-        "requirement_sha256", "proposal_ref", "left_assessment_ref",
-        "right_assessment_ref", "case_sha256", "arbitrator_actor_id",
-        "position", "reasoned_findings", "limitations", "evidence_refs",
-        "supersedes_ref", "reconsideration_basis",
+        "schema",
+        "type",
+        "source_id",
+        "archive_sha256",
+        "requirement_id",
+        "requirement_sha256",
+        "proposal_ref",
+        "left_assessment_ref",
+        "right_assessment_ref",
+        "case_sha256",
+        "arbitrator_actor_id",
+        "position",
+        "reasoned_findings",
+        "limitations",
+        "evidence_refs",
+        "supersedes_ref",
+        "reconsideration_basis",
     }
 )
 
@@ -90,9 +102,17 @@ def arbitration_payload(
             not isinstance(value, str) or _SHA.fullmatch(value) is None
             for value in (archive_sha256, requirement_sha256, case_sha256)
         )
-        or len({_ref_digest(ref) for ref in (
-            proposal_ref, left_assessment_ref, right_assessment_ref,
-        )}) != 3
+        or len(
+            {
+                _ref_digest(ref)
+                for ref in (
+                    proposal_ref,
+                    left_assessment_ref,
+                    right_assessment_ref,
+                )
+            }
+        )
+        != 3
         or not isinstance(position, ArbitrationPosition)
         or not isinstance(reasoned_findings, str)
         or not 40 <= len(reasoned_findings.strip()) <= 4096
@@ -218,8 +238,7 @@ def verify_scientific_arbitration(
     comparison = dict(baseline.comparisons)
     if (
         rule_id not in comparison
-        or comparison[rule_id]
-        not in {ComparisonStatus.DIVERGENT, ComparisonStatus.INCONCLUSIVE}
+        or comparison[rule_id] not in {ComparisonStatus.DIVERGENT, ComparisonStatus.INCONCLUSIVE}
         or rule_id in baseline.missing_case_rule_ids
         or rule_id not in case_bytes
         or rule_id not in expected_case_sha256
@@ -237,9 +256,7 @@ def verify_scientific_arbitration(
 
     case_hash = expected_case_sha256[rule_id]
     canonical = {
-        str(row["id"]): row
-        for packet in canonical_packets.values()
-        for row in packet["rules"]
+        str(row["id"]): row for packet in canonical_packets.values() for row in packet["rules"]
     }
     expected_rule = canonical[rule_id]
     proposal_ref, signed_proposal_ref = proposal_refs[rule_id]
@@ -338,8 +355,7 @@ def verify_scientific_arbitration(
                 ):
                     raise EvidenceIntegrityError("arbitration cites inadmissible support event")
             if prior_ref is not None and (
-                not set(evidence) - seen_evidence
-                or not new_evidence_recorded_after_predecessor
+                not set(evidence) - seen_evidence or not new_evidence_recorded_after_predecessor
             ):
                 raise EvidenceIntegrityError("appeal must cite newly recorded support evidence")
             seen_evidence.update(evidence)
