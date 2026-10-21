@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — S2 signed historical-rule proposals (draft PR #33)
+
+- Add `KNOWLEDGE_REVIEWER` role and `KNOWLEDGE_REVIEW_PROPOSAL` event, reusing existing Ed25519 reviewer grants, signature envelopes and verified SQLite snapshots.
+- Bind full review-template SHA and source/rule identity to the proposal before validating a scoped, revocable signed statement. Optional private CLI inventory and policy gate; no scientific review or `REVIEW_ATTESTED`.
+- Add synthetic adversarial and CLI tests, ADR-0026, AWF-R035, handoff and guide. Draft stacked on unmerged PR #32; no training authorization.
+
+
+
 ## Unreleased — S2 dossier evidence links
 
 - Add optional read-only binding of private dossier `evidence_ids` to source- and rule-scoped ledger events, with one verified SQLite snapshot and externally supplied head.
