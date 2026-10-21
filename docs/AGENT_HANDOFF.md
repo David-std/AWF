@@ -1,5 +1,7 @@
 # AWF — transferencia de Sprint 2
 
+**Handoff actual, PR #40:** [2026-10-21 S2 — Exact-invariant verification](handoffs/2026-10-21-S2-PR40-EXACT-PROBE.md). Nuevo incremento en borrador y apilado sobre PR #39 (que sigue abierta); código `ea384f46d1312baf10961934738e43154d15425a`, CI de rama [39644665209](https://github.com/David-std/AWF/actions/runs/39644665209) y PR [39644672812](https://github.com/David-std/AWF/actions/runs/39644672812) **SUCCESS 4/4 ambas**, 498 pytest PASS Ubuntu/3.12, Pyright 0 errores. Se verificaron invariantes literales de bytes con resultados triestado; no equivalencia semántica ni corpus real. Verificar CI de este nuevo commit documental antes de declararlo validado. Los hitos anteriores permanecen como historia.
+
 **Handoff prioritario actualizado:** [2026-10-21 — recuperación integral S2 / PR #39](handoffs/2026-10-21-S2-PR39-RECOVERY.md). El commit `8fa8e32da11afea222f27863d03a86cf54bc87fa` tuvo CI push 4/4 + PR 4/4 SUCCESS (482 pytest Ubuntu 3.12); la publicación de esta nota implica un SHA documental nuevo que debe comprobarse de forma independiente. Los encabezados anteriores con «CI pendiente» son historia, no el estado actual. La siguiente prioridad es evaluación empírica y ejecución instrumentada, NO nuevos quórums.
 
 ## S2 draft PR #39 — owner-governed agent review, code CI passed
