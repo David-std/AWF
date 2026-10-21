@@ -239,9 +239,7 @@ def verify_independent_scientific_assessments(
                         or value["schema"] != 1
                     ):
                         raise EvidenceIntegrityError("scientific assessment fields mismatch")
-                    if any(
-                        not isinstance(value[key], str) for key in _FIELDS - {"schema"}
-                    ):
+                    if any(not isinstance(value[key], str) for key in _FIELDS - {"schema"}):
                         raise EvidenceIntegrityError("invalid scientific assessment field types")
                     if (
                         value["type"] != "independent_scientific_assessment"
