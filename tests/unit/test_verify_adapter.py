@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 
 import pytest
+
 from awf.training.manifest import BASE_MODEL, MODEL_REVISION
 from awf.training.verify_adapter import main, verify_saved_adapter
 
