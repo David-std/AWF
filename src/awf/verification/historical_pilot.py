@@ -115,12 +115,18 @@ def run_historical_pilot(
                     "semantic_equivalence_verified": result["semantic_equivalence_verified"],
                 }
             )
+        original_source_ids = row["source_ids"]
+        historical_paths = row["implementation_paths"]
+        if not isinstance(original_source_ids, list) or not all(
+            isinstance(v, str) for v in original_source_ids
+        ) or not isinstance(historical_paths, list):
+            raise ValueError("malformed historical reference inventory")
         selected.append(
             {
                 "id": item_id,
                 "rule_sha256": _digest(original),
-                "source_ids": sorted(set(row["source_ids"])),
-                "historical_surface_count": len(row["implementation_paths"]),
+                "source_ids": sorted(set(original_source_ids)),
+                "historical_surface_count": len(historical_paths),
                 "legacy_status_claim": row.get("status"),
                 "awf_review_status": "UNREVIEWED",
             }

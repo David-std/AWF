@@ -316,20 +316,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "knowledge":
         if args.knowledge_action == "pilot":
             try:
-                source = PinnedAwsArchive().load(
+                loaded_knowledge = PinnedAwsArchive().load(
                     archive_path=args.archive,
                     manifest_path=args.manifest,
                     source_id=args.source_id,
                 )
                 report = run_historical_pilot(
-                    source.rows,
-                    source_sha256=source.archive_sha256,
-                    suite_version=source.suite_version,
+                    loaded_knowledge.rows,
+                    source_sha256=loaded_knowledge.archive_sha256,
+                    suite_version=loaded_knowledge.suite_version,
                 )
-                selected = [row for row in source.rows if row.get("id") in PILOT_IDS]
+                selected = [row for row in loaded_knowledge.rows if row.get("id") in PILOT_IDS]
                 report["evidence_presence"] = inspect_historical_evidence(
                     args.archive,
-                    expected_sha256=source.archive_sha256,
+                    expected_sha256=loaded_knowledge.archive_sha256,
                     rows=selected,
                 )
                 print(json.dumps(report, ensure_ascii=False, sort_keys=True))
