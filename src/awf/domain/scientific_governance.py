@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import cast
 
 from awf.domain.evidence import EvidenceIntegrityError, sha256_bytes
 from awf.domain.signed_documents import strict_json
@@ -70,8 +71,8 @@ def parse_governance_policy(data: bytes, *, expected_sha256: str) -> GovernanceP
         raise EvidenceIntegrityError("invalid governance policy schema")
     return GovernancePolicy(
         sha256=expected_sha256,
-        quorum=raw["quorum"],
-        max_transitions=raw["max_transitions"],
+        quorum=cast(int, raw["quorum"]),
+        max_transitions=cast(int, raw["max_transitions"]),
     )
 
 

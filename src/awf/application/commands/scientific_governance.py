@@ -368,7 +368,7 @@ def verify_governance_register(
                 max_sig = max(max_sig, signed_rec.sequence)
                 checked_actors[actor] = (
                     event_ref,
-                    value["case_sha256"],
+                    cast(str, value["case_sha256"]),
                     tuple(sorted(excluded_actors)),
                 )
             intended_state = next_governance_state(intended_state, action)
