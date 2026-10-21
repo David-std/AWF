@@ -328,3 +328,11 @@ Véanse [ADR-0015](adr/0015-durable-edit-and-finding-transitions.md) y
 - **Negative fixtures:** changed/duplicated quantity, moved value, wrong SHA, ambiguous anchor, unsupported schema, unlisted number, causal marker change, non-regular input and mismatched pinned contract.
 - **Evidence limits:** synthetic engineering tests; no licensed real corpus or actual LLM output verified. 0/168 MUST adjudicated; 16 laboratory items EVAL_ONLY; no TRAIN.
 - **Usage and decision:** `docs/EXACT_INVARIANT_PROBE_S2.md`, ADR-0033. Code SHA `ea384f46d1312baf10961934738e43154d15425a`, [push CI 39644665209](https://github.com/David-std/AWF/actions/runs/39644665209) + [PR CI 39644672812](https://github.com/David-std/AWF/actions/runs/39644672812): 4/4 SUCCESS each, Ubuntu/3.12: 498 tests passed, 0 Pyright errors/warnings, Ruff/build PASS. This demonstrates only synthetic software checks; docs final commit requires separate CI.
+
+## AWF-R043 — Private, real-ledger syntax scope pilot
+
+- **Implementation:** `awf knowledge pilot`, `verification/historical_pilot.py`, `adapters/knowledge/pilot_evidence.py`; reuses AWF-R042 checker and SHA-pinned `PinnedAwsArchive`.
+- **Source evidence:** authentic AWS 3.19.1 ZIP at SHA `ccff7d4f8c672a6ec1305faa128540893c44ee6c373941eece72a61880bb6d3c`; six actual DSR rule IDs; 25 historical code files, 10 directories and 14 research source pointers resolved by **presence only**.
+- **Experiment (local):** 6 × 5 = 30 controlled mutations; 12 PASS, 12 NEEDS_REVIEW, 6 FAIL. In six cases a contradictory distant sentence produced a syntactic PASS, and every case remains `document_acceptance=NEEDS_REVIEW`. No independently reviewed semantic accuracy label or training authorization.
+- **Engineering acceptance:** code SHA `9f9d2467b0b7cabd88c3181d96dd12251cd1ddf8` push [39656095522](https://github.com/David-std/AWF/actions/runs/39656095522), PR [39656102213](https://github.com/David-std/AWF/actions/runs/39656102213), 4/4 SUCCESS each; 503 Ubuntu/3.12 tests, Pyright 0 errors/warnings, Ruff/build pass.
+- **Limits:** no 168 MUST adjudicated; 16 DEFERRED_LAB EVAL_ONLY; no real model runs, private text in GitHub, independent gold dataset or original legacy code execution. Documented in [PR #41 pilot handoff](handoffs/2026-10-21-S2-PR41-HISTORICAL-PILOT.md).

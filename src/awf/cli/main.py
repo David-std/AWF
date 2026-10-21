@@ -14,6 +14,7 @@ from pathlib import Path
 
 from awf import __version__
 from awf.adapters.document.markdown_adapter import MarkdownAdapter
+from awf.adapters.knowledge.pilot_evidence import inspect_historical_evidence
 from awf.adapters.knowledge.pinned_archive import PinnedAwsArchive
 from awf.adapters.knowledge.review_file import JsonReviewReader
 from awf.adapters.knowledge.zip_archive import checksum_file
@@ -49,6 +50,7 @@ from awf.domain.reviewer_auth import (
 from awf.knowledge.adjudication_dossiers import audit_private_dossiers
 from awf.knowledge.audit import audit_registry
 from awf.verification.exact_checks import parse_contract, verify_exact_invariants
+from awf.verification.historical_pilot import PILOT_IDS, run_historical_pilot
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -81,6 +83,14 @@ def create_parser() -> argparse.ArgumentParser:
     auditor.add_argument(
         "--archive", type=Path, help="optionally compare actual local archive hash"
     )
+    pilot_parser = operations.add_parser(
+        "pilot", help="measure exact-invariant scope on pinned private historical ledger"
+    )
+    pilot_parser.add_argument("archive", type=Path)
+    pilot_parser.add_argument(
+        "--manifest", type=Path, default=Path("provenance/source-manifest.json")
+    )
+    pilot_parser.add_argument("--source-id", default="aws-3.19.1")
     review_plan = operations.add_parser(
         "plan-review",
         help="prepare private, source-bound review batches (not approvals)",
@@ -304,6 +314,33 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 2
 
     if args.command == "knowledge":
+        if args.knowledge_action == "pilot":
+            try:
+                loaded_knowledge = PinnedAwsArchive().load(
+                    archive_path=args.archive,
+                    manifest_path=args.manifest,
+                    source_id=args.source_id,
+                )
+                report = run_historical_pilot(
+                    loaded_knowledge.rows,
+                    source_sha256=loaded_knowledge.archive_sha256,
+                    suite_version=loaded_knowledge.suite_version,
+                )
+                selected = [row for row in loaded_knowledge.rows if row.get("id") in PILOT_IDS]
+                report["evidence_presence"] = inspect_historical_evidence(
+                    args.archive,
+                    expected_sha256=loaded_knowledge.archive_sha256,
+                    rows=selected,
+                )
+                print(json.dumps(report, ensure_ascii=False, sort_keys=True))
+                return 0
+            except (OSError, ValueError, KeyError, RuntimeError, TypeError) as exc:
+                print(
+                    f"AWF_ERROR [HISTORICAL_PILOT_FAILED] {type(exc).__name__}",
+                    file=sys.stderr,
+                )
+                return 2
+
         if args.knowledge_action == "inspect-review":
             try:
                 canonical, packets = prepare_review(
