@@ -118,3 +118,7 @@ dos nombres o claves diferentes no prueban independencia. Ver
 Las atestaciones no convierten a `REVIEW_ATTESTED` ninguna entrada histórica
 del corpus AWS 3.19.1; la identidad/independencia real y un checkpoint externo
 firmado siguen pendientes. Consultar [ADR-0016](adr/0016-signed-reviewer-authorization.md).
+
+## Separate historical-rule proposal authorization (stacked PR #33)
+
+`KNOWLEDGE_REVIEWER` signs *only* `KNOWLEDGE_REVIEW_PROPOSAL` evidence events. This role does not inherit `CRITIC`, `AUDITOR` or `APPLICABILITY_REVIEWER` authority. Each event commits a SHA-256 of the entire private review template and the exact canonical rule/source identifiers; a later modified annotation cannot reuse the original signature. The opt-in `knowledge inspect-review` authorization gate checks all currently documented rule proposals in one ledger snapshot against a private inventory and externally pinned trust policy. See [ADR-0026](adr/0026-signed-knowledge-review-proposals.md) and [the guide](SIGNED_KNOWLEDGE_PROPOSALS_S2.md). This is credential-level authorization, not scientific adjudication and not permission for training.

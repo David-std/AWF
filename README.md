@@ -2,7 +2,7 @@
 
 **AWF Neural Engine** is an engineering and machine-learning project for traceable academic text revision in Spanish and English. The goal is to preserve meaning, citations, evidence, and author intent while comparing pretrained editors, fine-tuned models, and explicit verification policies.
 
-**Status (2026-10-20):** PR #10–#31 are merged into `develop` at `6888a8f44a3342c61e0d31dc93374ef44a21c174`; draft PR #32 proposes an optional, source-bound SQLite evidence-link gate and has passed its code CI. `main` remains untouched. Sprint 2 stays open with 0/168 mandatory historical rules adjudicated and 16 deferred laboratory rules reserved for evaluation. A neural editor, independently authorized scholarly adjudication, training, and external API are **not implemented**. Hash and event integrity do not prove authorship, research correctness, or reviewer authority.
+**Status (2026-10-20):** PR #10–#31 are merged into `develop`; draft PR #32 adds source-bound dossier evidence links, and dependent draft PR #33 adds scoped Ed25519 authorization of exact review proposals. Both remain unmerged. `main` is untouched, Sprint 2 remains OPEN, and 0/168 mandatory historical rules are adjudicated. Neural editing, independent scientific review and training are not implemented.
 
 ## Start here
 
@@ -159,3 +159,7 @@ or RPO/RTO commitment. A backup does not authorize scholarly claims.
 ## Dossier evidence links — optional Sprint 2 gate
 
 [ADR-0025](docs/adr/0025-dossier-evidence-links.md) documents the opt-in `awf knowledge inspect-review --evidence-database ... --review-run-id ... --expected-head ...` integrity gate. It verifies stored event bytes, bound source/rule identity and one trusted ledger snapshot, without granting reviewer authority or scientific acceptance. See [usage](docs/DOSSIER_EVIDENCE_LINKS_S2.md).
+
+## Signed dossier proposal review — stacked Sprint 2 increment
+
+A separate `KNOWLEDGE_REVIEWER` role can sign the exact immutable snapshot of a documented private rule proposal, with per-rule/run grants, expiry and revocation. `awf knowledge inspect-review` can optionally verify this signed inventory under an externally pinned policy and ledger head. This is **credential authorization only**, never `REVIEW_ATTESTED` or scientific acceptance. See [ADR-0026](docs/adr/0026-signed-knowledge-review-proposals.md) and [private usage guide](docs/SIGNED_KNOWLEDGE_PROPOSALS_S2.md). Draft [PR #33](https://github.com/David-std/AWF/pull/33) depends on draft PR #32.

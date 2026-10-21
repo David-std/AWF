@@ -22,6 +22,10 @@ from awf.adapters.persistence.registry_store import save_registry, save_review_w
 from awf.adapters.persistence.sqlite_evidence import SQLiteEvidenceLedger
 from awf.adapters.persistence.sqlite_snapshots import SQLiteSnapshotWriter
 from awf.adapters.security.ed25519_reviewer import Ed25519ReviewerVerifier
+from awf.application.commands.authorize_dossiers import (
+    parse_dossier_attestation_inventory,
+    verify_authorized_dossier_proposals,
+)
 from awf.application.commands.authorize_review import (
     append_signed_review_claim,
     verify_signed_review_event,
@@ -104,6 +108,17 @@ def create_parser() -> argparse.ArgumentParser:
     dossiers.add_argument(
         "--expected-head", help="independently retained 64-character ledger head digest"
     )
+    dossiers.add_argument(
+        "--attestation-inventory",
+        type=Path,
+        help="private JSON of signed proposal and attestation event refs",
+    )
+    dossiers.add_argument(
+        "--reviewer-policy",
+        type=Path,
+        help="private SHA-pinned reviewer authorization policy",
+    )
+    dossiers.add_argument("--expected-reviewer-policy-sha256")
     evidence = commands.add_parser("evidence", help="private, transactional evidence ledger")
     actions = evidence.add_subparsers(dest="evidence_action")
     writer = actions.add_parser("append", help="store evidence locally and bind an event")
@@ -301,7 +316,48 @@ def main(argv: Sequence[str] | None = None) -> int:
                     args.expected_head,
                 )
                 links_verified: bool | None = None
-                if any(option is not None for option in linking_options):
+                authorization_options = (
+                    args.attestation_inventory,
+                    args.reviewer_policy,
+                    args.expected_reviewer_policy_sha256,
+                )
+                if any(value is not None for value in authorization_options):
+                    if not all(
+                        value is not None for value in (*authorization_options, *linking_options)
+                    ):
+                        raise ValueError(
+                            "signed review requires inventory, policy and all evidence flags"
+                        )
+                    reviewer_policy = parse_trust_policy(
+                        _read_private_auth_file(args.reviewer_policy),
+                        expected_sha256=args.expected_reviewer_policy_sha256,
+                    )
+                    inventory = parse_dossier_attestation_inventory(
+                        _read_private_auth_file(args.attestation_inventory)
+                    )
+                    credential_result = verify_authorized_dossier_proposals(
+                        canonical_manifest=canonical,
+                        canonical_packets=packets,
+                        observed_manifest=observed,
+                        observed_packets=actual_packets,
+                        store=SQLiteEvidenceLedger(args.evidence_database),
+                        run_id=args.review_run_id,
+                        expected_head=args.expected_head,
+                        attestation_refs=inventory,
+                        policy=reviewer_policy,
+                        verifier=Ed25519ReviewerVerifier(),
+                        now=int(datetime.now(UTC).timestamp()),
+                    )
+                    report["signed_review"] = {
+                        "checked": credential_result.checked,
+                        "unverified_rule_ids": list(credential_result.unverified),
+                        "credentials_authorized": credential_result.authorization_verified,
+                        "independent_adjudication_proven": False,
+                        "review_attestation_authorized": False,
+                        "training_authorized": False,
+                    }
+                    links_verified = credential_result.authorization_verified
+                elif any(option is not None for option in linking_options):
                     if not all(option is not None for option in linking_options):
                         raise ValueError(
                             "evidence linking requires database, run ID and independently held head"
