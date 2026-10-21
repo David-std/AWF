@@ -83,7 +83,6 @@ def _payload_matches(
     )
 
 
-
 def resolve_rule_support_event(
     reader: VerifiedEvidenceReaderPort,
     *,
@@ -99,9 +98,7 @@ def resolve_rule_support_event(
     match = _EVENT.fullmatch(reference)
     if match is None:
         raise EvidenceIntegrityError("support reference must be an exact ledger event digest")
-    record, payload = reader.resolve_event(
-        event_digest=match.group(1), expected_head=expected_head
-    )
+    record, payload = reader.resolve_event(event_digest=match.group(1), expected_head=expected_head)
     if (
         record.kind != EvidenceKind.RULE_SUPPORT
         or record.run_id != run_id

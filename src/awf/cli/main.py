@@ -109,11 +109,13 @@ def create_parser() -> argparse.ArgumentParser:
         "--expected-head", help="independently retained 64-character ledger head digest"
     )
     dossiers.add_argument(
-        "--attestation-inventory", type=Path,
+        "--attestation-inventory",
+        type=Path,
         help="private JSON of signed proposal and attestation event refs",
     )
     dossiers.add_argument(
-        "--reviewer-policy", type=Path,
+        "--reviewer-policy",
+        type=Path,
         help="private SHA-pinned reviewer authorization policy",
     )
     dossiers.add_argument("--expected-reviewer-policy-sha256")
@@ -320,8 +322,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                     args.expected_reviewer_policy_sha256,
                 )
                 if any(value is not None for value in authorization_options):
-                    if not all(value is not None for value in (*authorization_options, *linking_options)):
-                        raise ValueError("signed review requires inventory, policy and all evidence flags")
+                    if not all(
+                        value is not None for value in (*authorization_options, *linking_options)
+                    ):
+                        raise ValueError(
+                            "signed review requires inventory, policy and all evidence flags"
+                        )
                     reviewer_policy = parse_trust_policy(
                         _read_private_auth_file(args.reviewer_policy),
                         expected_sha256=args.expected_reviewer_policy_sha256,

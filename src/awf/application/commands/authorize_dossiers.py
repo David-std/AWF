@@ -46,7 +46,9 @@ def private_dossier_proposal_payload(
     requirement_sha = canonical_rule["requirement_sha256"]
     archive_sha = canonical_manifest["archive_sha256"]
     source_id = canonical_manifest["source_id"]
-    if not all(isinstance(item, str) for item in (rule_id, requirement_sha, archive_sha, source_id)):
+    if not all(
+        isinstance(item, str) for item in (rule_id, requirement_sha, archive_sha, source_id)
+    ):
         raise EvidenceIntegrityError("canonical review identities are invalid")
     reviewer = template.get("reviewer")
     if not isinstance(reviewer, str) or not reviewer:
@@ -75,7 +77,6 @@ def _event_digest(ref: str) -> str:
     return match.group(1)
 
 
-
 def parse_dossier_attestation_inventory(data: bytes) -> dict[str, tuple[str, str]]:
     """Parse a bounded, canonical private event map with no ambiguous JSON."""
     from awf.domain.signed_documents import strict_json
@@ -100,7 +101,6 @@ def parse_dossier_attestation_inventory(data: bytes) -> dict[str, tuple[str, str
             f"event:{_event_digest(references['attestation_ref'])}",
         )
     return result
-
 
 
 def verify_authorized_dossier_proposals(
@@ -134,9 +134,7 @@ def verify_authorized_dossier_proposals(
         observed_packets=observed_packets,
     )
     documented = {
-        str(item["id"])
-        for item in audit["rules"]
-        if item["status"] == "PROPOSAL_DOCUMENTED"
+        str(item["id"]) for item in audit["rules"] if item["status"] == "PROPOSAL_DOCUMENTED"
     }
     if not documented or set(attestation_refs) != documented:
         return AuthorizationGateResult(

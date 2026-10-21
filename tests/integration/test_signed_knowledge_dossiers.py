@@ -5,13 +5,9 @@ All rule text and keys are synthetic. Authorization is not adjudication.
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pytest
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-
 from awf.adapters.persistence.sqlite_evidence import SQLiteEvidenceLedger
 from awf.adapters.security.ed25519_reviewer import Ed25519ReviewerVerifier
 from awf.application.commands.authorize_dossiers import (
@@ -28,6 +24,8 @@ from awf.domain.reviewer_auth import (
     parse_trust_policy,
 )
 from awf.domain.signed_documents import canonical_json_bytes
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 RUN = "research-run-a"
 RULE = "DSR-001"
@@ -37,9 +35,11 @@ _NOW = 1_800_000_000
 
 
 def _policy(key, *, roles=None, revoked=False, subjects=None, until=None):
-    pub = key.public_key().public_bytes(
-        encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw
-    ).hex()
+    pub = (
+        key.public_key()
+        .public_bytes(encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw)
+        .hex()
+    )
     raw = canonical_json_bytes(
         {
             "schema": 1,
@@ -105,7 +105,9 @@ def _scenario(tmp_path):
             "requirement_sha256": REQUIREMENT,
         }
     )
-    support = store.append(kind=EvidenceKind.RULE_SUPPORT, run_id=RUN, subject_id=RULE, content=support_bytes)
+    support = store.append(
+        kind=EvidenceKind.RULE_SUPPORT, run_id=RUN, subject_id=RULE, content=support_bytes
+    )
     review_template = {
         **template,
         "reviewer": "reviewer-a",
@@ -122,7 +124,9 @@ def _scenario(tmp_path):
         canonical_manifest=manifest, canonical_rule=canonical_rule, observed_rule=reviewed
     )
     proposal = store.append(
-        kind=EvidenceKind.KNOWLEDGE_REVIEW_PROPOSAL, run_id=RUN, subject_id=RULE,
+        kind=EvidenceKind.KNOWLEDGE_REVIEW_PROPOSAL,
+        run_id=RUN,
+        subject_id=RULE,
         content=claim_bytes,
     )
     key = Ed25519PrivateKey.generate()
@@ -136,14 +140,23 @@ def _scenario(tmp_path):
     )
     inventory = {RULE: (f"event:{proposal.digest}", f"event:{attested.digest}")}
     return {
-        "store": store, "manifest": manifest, "original": original,
-        "observed": observed, "policy": policy, "policy_raw": policy_raw,
-        "inventory": inventory, "key": key, "proposal": proposal, "attested": attested,
+        "store": store,
+        "manifest": manifest,
+        "original": original,
+        "observed": observed,
+        "policy": policy,
+        "policy_raw": policy_raw,
+        "inventory": inventory,
+        "key": key,
+        "proposal": proposal,
+        "attested": attested,
         "support": support,
     }
 
 
-def _gate(s, *, inventory=None, policy=None, observed=None, head=None, now=_NOW, run=RUN, store=None):
+def _gate(
+    s, *, inventory=None, policy=None, observed=None, head=None, now=_NOW, run=RUN, store=None
+):
     actual_store = store or s["store"]
     return verify_authorized_dossier_proposals(
         canonical_manifest=s["manifest"],
@@ -170,7 +183,9 @@ def test_signed_exact_snapshot_reopens_without_adjudication(tmp_path: Path) -> N
     assert not outcome.independent_adjudication_proven
 
 
-@pytest.mark.parametrize("kind", ["missing", "extra", "wrong_proposal", "wrong_attestation", "swapped"])
+@pytest.mark.parametrize(
+    "kind", ["missing", "extra", "wrong_proposal", "wrong_attestation", "swapped"]
+)
 def test_inventory_is_exact_and_signed_to_proposal(tmp_path: Path, kind: str) -> None:
     s = _scenario(tmp_path)
     base = s["inventory"][RULE]
@@ -185,13 +200,19 @@ def test_inventory_is_exact_and_signed_to_proposal(tmp_path: Path, kind: str) ->
     assert not outcome.authorization_verified
 
 
-@pytest.mark.parametrize("change", ["reason", "rights", "reviewer", "evidence_ids", "disposition", "proposed_tests", "version"])
+@pytest.mark.parametrize(
+    "change",
+    ["reason", "rights", "reviewer", "evidence_ids", "disposition", "proposed_tests", "version"],
+)
 def test_any_mutation_of_review_template_breaks_old_signature(tmp_path: Path, change: str) -> None:
     s = _scenario(tmp_path)
     packet = s["observed"]["batch-001.json"]
     review = dict(packet["rules"][0]["review_template"])
     updates = {
-        "reason": ("reason", "Different detailed scientific analysis of this synthetic requirement."),
+        "reason": (
+            "reason",
+            "Different detailed scientific analysis of this synthetic requirement.",
+        ),
         "rights": ("source_rights_status", "RESTRICTED"),
         "reviewer": ("reviewer", "reviewer-b"),
         "evidence_ids": ("evidence_ids", [f"event:{s['proposal'].digest}"]),
@@ -211,14 +232,18 @@ def test_any_mutation_of_review_template_breaks_old_signature(tmp_path: Path, ch
     assert not outcome.authorization_verified
 
 
-@pytest.mark.parametrize("role", [ReviewerRole.CRITIC, ReviewerRole.APPLICABILITY_REVIEWER, ReviewerRole.AUDITOR])
+@pytest.mark.parametrize(
+    "role", [ReviewerRole.CRITIC, ReviewerRole.APPLICABILITY_REVIEWER, ReviewerRole.AUDITOR]
+)
 def test_other_roles_cannot_sign_a_knowledge_proposal(tmp_path: Path, role: ReviewerRole) -> None:
     s = _scenario(tmp_path)
     with pytest.raises(EvidenceIntegrityError):
         append_signed_review_claim(
             store=s["store"],
             signed=_signed(s["key"], f"event:{s['proposal'].digest}", role=role),
-            policy=s["policy"], verifier=Ed25519ReviewerVerifier(), now=_NOW,
+            policy=s["policy"],
+            verifier=Ed25519ReviewerVerifier(),
+            now=_NOW,
         )
 
 
@@ -289,7 +314,9 @@ def test_canonical_private_inventory_rejects_extra_duplicate_and_malformed(tmp_p
         valid.replace(b'"schema":1', b'"schema":2'),
         valid[:-1] + b" ",
         b'{"schema":1,"schema":1,"attestations":{}}\n',
-        b'{"schema":1,"attestations":{"DSR-001":{"proposal_ref":"not-event","attestation_ref":"event:' + b"a"*64 + b'"}}}\n',
+        b'{"schema":1,"attestations":{"DSR-001":{"proposal_ref":"not-event","attestation_ref":"event:'
+        + b"a" * 64
+        + b'"}}}\n',
     ):
         with pytest.raises(EvidenceIntegrityError):
             parse_dossier_attestation_inventory(invalid)
