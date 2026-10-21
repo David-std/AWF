@@ -11,6 +11,7 @@ import tempfile
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
+from uuid import uuid4
 
 from awf import __version__
 from awf.adapters.document.markdown_adapter import MarkdownAdapter
@@ -18,6 +19,7 @@ from awf.adapters.knowledge.pilot_evidence import inspect_historical_evidence
 from awf.adapters.knowledge.pinned_archive import PinnedAwsArchive
 from awf.adapters.knowledge.review_file import JsonReviewReader
 from awf.adapters.knowledge.zip_archive import checksum_file
+from awf.adapters.models.ollama_local import OllamaLocalAgent
 from awf.adapters.persistence.blob_store import FileBlobStore
 from awf.adapters.persistence.registry_store import save_registry, save_review_workbench
 from awf.adapters.persistence.sqlite_evidence import SQLiteEvidenceLedger
@@ -38,8 +40,10 @@ from awf.application.commands.checkpoints import (
 from awf.application.commands.compile_knowledge import import_knowledge
 from awf.application.commands.ingest_document import ingest_document
 from awf.application.commands.prepare_review import prepare_review
+from awf.application.commands.run_agent import run_instrumented_agent
 from awf.application.commands.verified_snapshot import create_verified_snapshot
 from awf.application.commands.verify_dossier_evidence import verify_dossier_evidence_links
+from awf.domain.agent_execution import AgentTask
 from awf.domain.checkpoints import SignedLedgerCheckpoint, parse_checkpoint_policy
 from awf.domain.evidence import EvidenceKind
 from awf.domain.reviewer_auth import (
@@ -227,6 +231,15 @@ def create_parser() -> argparse.ArgumentParser:
             default=[],
             help="complete signed ancestors, oldest first",
         )
+    agent = commands.add_parser(
+        "agent-run", help="explicitly execute a bounded localhost model and store a private receipt"
+    )
+    agent.add_argument("prompt_file", type=Path)
+    agent.add_argument("--model", required=True)
+    agent.add_argument("--temperature", type=float, default=0.0)
+    agent.add_argument("--seed", type=int, default=42)
+    agent.add_argument("--max-output-tokens", type=int, default=128)
+    agent.add_argument("--allow-local-inference", action="store_true")
     exact = commands.add_parser(
         "verify-exact", help="verify SHA-pinned protected literals without semantic approval"
     )
@@ -284,6 +297,66 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         except (ValueError, OSError, RuntimeError) as exc:
             print(f"AWF_ERROR [INGEST_FAILED] {exc}", file=sys.stderr)
+            return 2
+
+    if args.command == "agent-run":
+        try:
+            if not args.allow_local_inference:
+                raise ValueError("explicit --allow-local-inference is required")
+            task_path: Path = args.prompt_file
+            if (
+                task_path.is_symlink()
+                or not task_path.is_file()
+                or not 1 <= task_path.stat().st_size <= 32 * 1024
+            ):
+                raise ValueError("agent task must be a bounded, regular non-symlinked file")
+            task = AgentTask(
+                prompt=task_path.read_bytes(),
+                model_id=args.model,
+                temperature=args.temperature,
+                seed=args.seed,
+                max_output_tokens=args.max_output_tokens,
+            )
+            privacy_root = Path(".awf") / "agent-execution"
+            for path in (
+                privacy_root.parent,
+                privacy_root,
+                privacy_root / "blobs",
+                privacy_root / "receipts",
+            ):
+                if path.is_symlink():
+                    raise ValueError("agent output directories cannot be symbolic links")
+            generated_bytes, receipt = run_instrumented_agent(task, OllamaLocalAgent())
+            if receipt["execution_transport"] != "LOCAL_OLLAMA_HTTP":
+                raise ValueError("model transport is not a local HTTP execution")
+            digest = FileBlobStore(privacy_root / "blobs").put(generated_bytes)
+            if digest != receipt["result_sha256"]:
+                raise ValueError("stored candidate hash mismatch")
+            destination = privacy_root / "receipts" / f"{uuid4().hex}.json"
+            if destination.exists() or destination.is_symlink():
+                raise ValueError("generated receipt path already exists")
+            save_registry(destination, receipt)
+            print(
+                json.dumps(
+                    {
+                        "status": "LOCAL_GENERATION_OBSERVED",
+                        "receipt_file": str(destination),
+                        "output_sha256": digest,
+                        "prompt_sha256": receipt["task_sha256"],
+                        "model_id": receipt["reported_model_id"],
+                        "generated_tokens_reported": receipt["generated_tokens_reported"],
+                        "elapsed_client_ns": receipt["elapsed_client_ns"],
+                        "document_acceptance": "NEEDS_REVIEW",
+                        "model_weights_verified": False,
+                        "training_authorized": False,
+                    },
+                    ensure_ascii=False,
+                    sort_keys=True,
+                )
+            )
+            return 0
+        except (OSError, ValueError, RuntimeError, TypeError) as exc:
+            print(f"AWF_ERROR [AGENT_EXECUTION_FAILED] {type(exc).__name__}", file=sys.stderr)
             return 2
 
     if args.command == "verify-exact":

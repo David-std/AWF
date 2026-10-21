@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Protocol
 
 from awf.application.dto import LoadedKnowledgeSource, PersistedRevision, SnapshotReceipt
+from awf.domain.agent_execution import AgentTask, ProviderObservation
 from awf.domain.document import DocumentIR
 from awf.domain.evidence import EvidenceAppend, EvidenceKind, EvidenceRecord, LedgerAudit
 from awf.domain.revision_audit import AuditSlot, AuditStatus, RevisionPolicy
@@ -199,3 +200,11 @@ class RevisionJournalPort(Protocol):
     ) -> PersistedRevision: ...
 
     def load(self, *, revision_id: str, expected_head: str | None = None) -> PersistedRevision: ...
+
+
+class AgentExecutionPort(Protocol):
+    """Attempt a bounded inference; caller independently times the invocation."""
+
+    def generate(self, task: AgentTask) -> ProviderObservation:
+        """Return observed model output without asserting correctness or independence."""
+        ...
