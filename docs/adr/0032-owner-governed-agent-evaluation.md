@@ -43,3 +43,15 @@ AI reviewers can be faster and more repeatable for controlled criteria, but repe
 5. Keep source rights, formal scientific certification and training eligibility separate.
 
 Status: **engineering path only; no model training or historical MUST adjudication**.
+
+## Engineering implementation checkpoint
+
+Code SHA `b72de165412759e62737a0c64afb3cdc276e675a`
+passed [push CI 39630505998](https://github.com/David-std/AWF/actions/runs/39630505998)
+and [PR CI 39630513081](https://github.com/David-std/AWF/actions/runs/39630513081),
+both SUCCESS 4/4 on Ubuntu/Windows × Python 3.12/3.13. Ubuntu Python
+3.12 ran 482 tests PASS, Pyright 0 errors/0 warnings, Ruff lint/format
+and build PASS. These tests use synthetic keys and agent receipt metadata,
+NOT real independently instrumented Qwen/Gemini execution or primary-source
+scientific adjudication. The subsequent documentation commit is subject
+to another SHA-specific CI check.

@@ -259,3 +259,12 @@ independent scientific adjudication, third-party qualification or publication
 review. No trained-model access, rights grant, historic rule disposition or
 `RATIFIED_PROCEDURAL` state follows. See [ADR-0032](docs/adr/0032-owner-governed-agent-evaluation.md)
 and [owner workflow](docs/OWNER_AGENT_REVIEW_S2.md).
+
+**Owner-review code CI:** `b72de165412759e62737a0c64afb3cdc276e675a`
+passed [push 39630505998](https://github.com/David-std/AWF/actions/runs/39630505998)
+and [PR 39630513081](https://github.com/David-std/AWF/actions/runs/39630513081),
+4/4 Ubuntu/Windows × Python 3.12/3.13 each. Ubuntu Python 3.12:
+482 pytest PASS, Pyright 0 errors / 0 warnings, Ruff and build PASS.
+This code test does not prove that actual AI agents executed or scientifically
+verified the historical corpus. The follow-up documentation commit requires
+a distinct exact-SHA CI verification.

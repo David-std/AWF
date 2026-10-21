@@ -1,5 +1,17 @@
 # AWF — transferencia de Sprint 2
 
+## S2 draft PR #39 — owner-governed agent review, code CI passed
+
+- **Code SHA:** `b72de165412759e62737a0c64afb3cdc276e675a`.
+  [Push 39630505998](https://github.com/David-std/AWF/actions/runs/39630505998)
+  and [PR 39630513081](https://github.com/David-std/AWF/actions/runs/39630513081)
+  each **SUCCESS 4/4** (Ubuntu/Windows × Python 3.12/3.13). Ubuntu 3.12:
+  **482 tests PASS**, Pyright **0 errors/0 warnings**, Ruff and build PASS.
+  This is an engineering receipt, not an evaluation of an actual LLM run.
+- A documentation reconciliation follows this code SHA. Record its independent
+  CI at its exact final SHA, keep the PR **DRAFT** for code/security review,
+  and DO NOT merge/retarget the stack blindly.
+
 ## S2 draft PR #39 — project-owner EVAL_ONLY AI review (under test)
 
 - New branch `feat/s2-owner-agent-review` from PR #38 exact HEAD
