@@ -48,6 +48,7 @@ from awf.domain.reviewer_auth import (
 )
 from awf.knowledge.adjudication_dossiers import audit_private_dossiers
 from awf.knowledge.audit import audit_registry
+from awf.verification.exact_checks import parse_contract, verify_exact_invariants
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -216,6 +217,13 @@ def create_parser() -> argparse.ArgumentParser:
             default=[],
             help="complete signed ancestors, oldest first",
         )
+    exact = commands.add_parser(
+        "verify-exact", help="verify SHA-pinned protected literals without semantic approval"
+    )
+    exact.add_argument("baseline", type=Path)
+    exact.add_argument("candidate", type=Path)
+    exact.add_argument("--contract", type=Path, required=True)
+    exact.add_argument("--expected-contract-sha256", required=True)
     return parser
 
 
@@ -266,6 +274,33 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         except (ValueError, OSError, RuntimeError) as exc:
             print(f"AWF_ERROR [INGEST_FAILED] {exc}", file=sys.stderr)
+            return 2
+
+    if args.command == "verify-exact":
+        try:
+            import hashlib
+
+            def checked_bytes(path: Path, bound: int) -> bytes:
+                if path.is_symlink() or not path.is_file() or path.stat().st_size > bound:
+                    raise ValueError("verification requires a bounded regular non-symlinked file")
+                return path.read_bytes()
+
+            raw_contract = checked_bytes(args.contract, 64 * 1024)
+            digest = hashlib.sha256(raw_contract).hexdigest()
+            if (
+                not isinstance(args.expected_contract_sha256, str)
+                or len(args.expected_contract_sha256) != 64
+                or digest != args.expected_contract_sha256
+            ):
+                raise ValueError("externally pinned contract SHA-256 mismatch")
+            policy = parse_contract(json.loads(raw_contract.decode("utf-8")))
+            baseline = checked_bytes(args.baseline, 2 * 1024 * 1024)
+            candidate = checked_bytes(args.candidate, 2 * 1024 * 1024)
+            result = verify_exact_invariants(baseline, candidate, policy)
+            print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+            return 0 if result["scope_status"] == "PASS" else 1
+        except (ValueError, OSError, TypeError) as exc:
+            print(f"AWF_ERROR [EXACT_VERIFICATION_FAILED] {type(exc).__name__}", file=sys.stderr)
             return 2
 
     if args.command == "knowledge":
