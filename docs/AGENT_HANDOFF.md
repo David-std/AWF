@@ -1,5 +1,33 @@
 # AWF — transferencia de Sprint 2
 
+## S2 candidate PR #37 — third-party arbitration and reconsideration
+
+- Branch `feat/s2-third-party-arbitration` from draft PR #36 HEAD
+  `8b76b152466499871d7265b69a74df548fc9583b`; stacked
+  #32 → #33 → #34 → #35 → #36 → #37. Do not merge/retarget blindly.
+- Add `ReviewerRole.SCIENTIFIC_ARBITER` and `EvidenceKind.SCIENTIFIC_ARBITRATION`
+  mapped to the existing Ed25519 reviewer signature system (no new signing
+  infrastructure). The proposed arbitration record includes source/requirement
+  SHAs, exact proposal, both prior assessments, case digest, signed actor,
+  position, reasoning, limitations and exact ledger evidence references.
+- `verify_scientific_arbitration` reruns the complete prior disagreement
+  prerequisite, detects same-actor conflict with proposer/scientists/prior
+  arbiter, verifies signature and event order, then checks append-only
+  appeal predecessors and **fresh primary evidence recorded after prior decision**.
+- `ExternalQualificationPort` is strictly an injected legal/research institution
+  trust boundary for actual real-person independence, topic competence and COI.
+  No production adapter exists, so signatures alone imply no procedural approval.
+  Even an externally verified procedure **cannot adjudicate a historical rule,
+  authorize training, change a disposition or grant source rights**.
+- Limitations: one arbitrator per ruling (not quorum), at most 4 reconsiderations,
+  no actual research/identity certification, appeal service, legal certification
+  or 184-rule migration. No private AWS ZIP, dossiers, credentials or evidence
+  is published.
+- See ADR-0030 and SCIENTIFIC_ARBITRATION_S2. CI evidence only after exact
+  final branch SHA completes in Ubuntu/Windows Python 3.12/3.13.
+
+## Previous Sprint 2 handoff
+
 ## S2 draft PR #36 — scientific disagreement protocol (CI-verified engineering slice)
 
 - **Code SHA:** `55f1c03a1904148e7c7360da4a2dd05ee695f49b`.

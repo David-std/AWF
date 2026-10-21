@@ -199,3 +199,17 @@ system is introduced. See [ADR-0029](docs/adr/0029-scientific-disagreement-triag
 and [private guide](docs/SCIENTIFIC_DISAGREEMENTS_S2.md).
 
 **PR #36 code CI checkpoint:** `55f1c03`, both [push 39542413641](https://github.com/David-std/AWF/actions/runs/39542413641) and [PR 39542418761](https://github.com/David-std/AWF/actions/runs/39542418761) SUCCESS (4/4 each); Ubuntu 3.12 449 tests PASS, Pyright zero errors. This proves an engineering test outcome only, never human scientific independence or final adjudication.
+
+## Third-party scientific arbitration / reconsideration (S2 draft PR #37)
+
+A dedicated `SCIENTIFIC_ARBITER` role **reuses the existing Ed25519 reviewer
+trust policy and event signatures**. The application verifies a PR #36 open
+disagreement, source/proposal/two assessments, evidence-event references,
+signed decision records and append-only reconsideration decisions citing
+fresh recorded evidence. An independently pinned, externally qualified
+reviewer/COI authority must be supplied to verify *procedural competence*.
+No such real authority exists in the shipped code: valid signatures alone
+return `procedure_verified=false`. Even with a synthetic verifier in tests,
+`scientific_adjudications=0` and all training/right/disposition
+authorizations stay false. See [ADR-0030](docs/adr/0030-third-party-scientific-arbitration.md)
+and the [private API guide](docs/SCIENTIFIC_ARBITRATION_S2.md).

@@ -214,3 +214,29 @@ Véanse [ADR-0015](adr/0015-durable-edit-and-finding-transitions.md) y
 - **Next step:** independent panel governance, signed resolution decisions
   and a reversible formal state transition, as separate increments once actual
   human-review/authority criteria and independent evidence standards are agreed.
+
+## AWF-R039 — Third-party scientific arbitration and reconsideration
+
+- **Parent:** PR #36 signed disagreement protocol. State on draft PR #37:
+  `ENGINEERING_IMPLEMENTED_AWAITING_CI_AND_INDEPENDENT_REVIEW`.
+- **Inputs:** exact signed proposer, two independently authenticated reviewer
+  assessments, SHA-pinned private disagreement case, externally pinned
+  evidence-ledger head, existing Ed25519 reviewer trust policy and trusted time.
+- **Receipt:** `SCIENTIFIC_ARBITRATION` source- and requirement-bound event
+  signed with `SCIENTIFIC_ARBITER` role; includes reasoning, limitations,
+  and prior source support references. Repeatable reconsideration chain
+  requires a distinct authorized actor, `supersedes_ref`, explicit new
+  grounds and independently recorded new support after prior signed decision.
+- **External trust:** `ExternalQualificationPort` requires independent
+  qualification/identity/conflict-of-interest evidence and policy SHA; no
+  production adapter is included, so `procedure_verified` remains false
+  without a genuinely trusted verifier.
+- **Safety outcomes:** zero automated formal adjudications, no automatic
+  review-attestation, dataset rights, training permission or historical-rule
+  disposition transitions. Still 0/168 MUST adjudicated and 16 DEFERRED_LAB
+  EVAL_ONLY. No corpus or reviewer identity uploaded.
+- **Negative gates:** self-review, duplicate actor, revoked role, stale head,
+  missing/cross-source case, tampered signatures, invalid chronology,
+  old evidence disguised as new and wrong appeal chain fail closed.
+  See [ADR-0030](adr/0030-third-party-scientific-arbitration.md)
+  and [private API guide](SCIENTIFIC_ARBITRATION_S2.md).

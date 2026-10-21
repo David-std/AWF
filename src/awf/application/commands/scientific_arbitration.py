@@ -323,10 +323,13 @@ def verify_scientific_arbitration(
             ):
                 raise EvidenceIntegrityError("arbitrator independence or source binding failed")
             evidence = cast(list[str], value["evidence_refs"])
+            new_evidence_recorded_after_predecessor = False
             for evidence_ref in evidence:
                 support, _ = reader.resolve_event(
                     event_digest=_ref_digest(evidence_ref), expected_head=expected_head
                 )
+                if prior_ref is not None and support.sequence > prior_sequence:
+                    new_evidence_recorded_after_predecessor = True
                 if (
                     support.kind != EvidenceKind.RULE_SUPPORT
                     or support.run_id != run_id
@@ -334,7 +337,10 @@ def verify_scientific_arbitration(
                     or support.sequence >= decision_record.sequence
                 ):
                     raise EvidenceIntegrityError("arbitration cites inadmissible support event")
-            if prior_ref is not None and not set(evidence) - seen_evidence:
+            if prior_ref is not None and (
+                not set(evidence) - seen_evidence
+                or not new_evidence_recorded_after_predecessor
+            ):
                 raise EvidenceIntegrityError("appeal must cite newly recorded support evidence")
             seen_evidence.update(evidence)
             positions.append(ArbitrationPosition(cast(str, value["position"])))

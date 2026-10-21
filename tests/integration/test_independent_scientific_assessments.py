@@ -734,8 +734,6 @@ def test_arbitration_by_prior_scientist_fails_even_with_valid_signature(tmp_path
     s, second, policy, case, first = _arbitration_scenario(tmp_path)
     # Permit a previous scientist's credential to sign as an arbiter; this must still fail.
     scientist = s["scientist_key"]
-    expanded = _arbitrator_policy(policy, Ed25519PrivateKey.generate(), "arbiter-e")
-    del expanded
     promoted_grants = tuple(
         ReviewerGrant(
             actor_id=g.actor_id, key_id=g.key_id, public_key_hex=g.public_key_hex,
@@ -811,7 +809,7 @@ def test_replay_or_wrong_predecessor_is_rejected(tmp_path: Path):
     s, second, policy, case, first = _arbitration_scenario(tmp_path)
     with pytest.raises(EvidenceIntegrityError, match="order/scope"):
         _arbitration_check(s, second, policy, case, (first, first))
-    with pytest.raises(EvidenceIntegrityError, match="binding"):
+    with pytest.raises(EvidenceIntegrityError, match="order/scope"):
         _arbitration_check(
             s, second, policy, case,
             ((first[1], first[0]),),
@@ -856,3 +854,35 @@ def test_revoked_arbiter_credential_is_rejected(tmp_path: Path):
     )
     with pytest.raises(EvidenceIntegrityError, match="not authorized"):
         _arbitration_check(s, second, revoked, case, (first,))
+
+def test_reconsideration_must_cite_new_evidence(tmp_path: Path):
+    s, second, policy, case, first = _arbitration_scenario(tmp_path)
+    key = Ed25519PrivateKey.generate()
+    policy = _arbitrator_policy(policy, key, "arbiter-e")
+    old_ref = s["observed"]["batch-001.json"]["rules"][0][
+        "review_template"
+    ]["evidence_ids"][0]
+    record = s["store"].append(
+        kind=EvidenceKind.SCIENTIFIC_ARBITRATION, run_id=RUN, subject_id=RULE,
+        content=arbitration_payload(
+            source_id="aws-3.19.1", archive_sha256=SOURCE,
+            requirement_id=RULE, requirement_sha256=RULE_SHA,
+            proposal_ref=s["proposal_refs"][RULE][0],
+            left_assessment_ref=s["assessment_refs"][RULE][0],
+            right_assessment_ref=second[0], case_sha256=sha256_bytes(case),
+            arbitrator_actor_id="arbiter-e", position=ArbitrationPosition.UNRESOLVED,
+            reasoned_findings="No new primary source supports a change to the original finding.",
+            limitations="This second review is only an adversarial synthetic test.",
+            evidence_refs=(old_ref,), supersedes_ref=first[0],
+            reconsideration_basis="The appellant challenges the reasoning but supplies no new evidence.",
+        ),
+    )
+    sig = _attest(
+        s["store"], key=key, actor="arbiter-e", key_id="arbiter-e-key",
+        role=ReviewerRole.SCIENTIFIC_ARBITER, target=record, policy=policy,
+    )
+    with pytest.raises(EvidenceIntegrityError, match="newly recorded"):
+        _arbitration_check(
+            s, second, policy, case,
+            (first, (f"event:{record.digest}", f"event:{sig.digest}")),
+        )
