@@ -22,6 +22,12 @@ from awf.application.commands.scientific_disagreements import (
     disagreement_case_payload,
     verify_disagreement_protocol,
 )
+from awf.application.commands.scientific_arbitration import (
+    arbitration_payload,
+    verify_scientific_arbitration,
+)
+from awf.domain.scientific_arbitration import ArbitrationPosition
+
 from awf.domain.evidence import EvidenceIntegrityError, EvidenceKind, sha256_bytes
 from awf.domain.reviewer_auth import (
     ReviewerClaim,
@@ -572,3 +578,281 @@ def test_unapproved_extra_case_is_rejected(tmp_path: Path):
             cases={RULE: case},
             case_pins={RULE: sha256_bytes(case)},
         )
+
+
+QUAL_POLICY = "e" * 64
+QUAL_DOCUMENT = b"independent synthetic documented academic qualification and COI review"
+
+
+def _arbitrator_policy(existing: ReviewerTrustPolicy, key, actor: str):
+    grants = list(existing.grants)
+    grants.append(
+        ReviewerGrant(
+            actor_id=actor, key_id=actor + "-key", public_key_hex=_public(key),
+            roles=frozenset({ReviewerRole.SCIENTIFIC_ARBITER}),
+            runs=frozenset({RUN}), subjects=frozenset({RULE}),
+            valid_from=NOW - 100, valid_until=NOW + 100,
+            revoked=False,
+        )
+    )
+    policy_bytes = canonical_json_bytes(
+        {
+            "schema": 1,
+            "grants": [
+                {
+                    "actor_id": g.actor_id, "key_id": g.key_id,
+                    "public_key_hex": g.public_key_hex,
+                    "roles": sorted(role.value for role in g.roles),
+                    "runs": sorted(g.runs), "subjects": sorted(g.subjects),
+                    "valid_from": g.valid_from, "valid_until": g.valid_until,
+                    "revoked": g.revoked,
+                }
+                for g in grants
+            ],
+        }
+    )
+    return parse_trust_policy(
+        policy_bytes, expected_sha256=sha256_bytes(policy_bytes)
+    )
+
+
+class SyntheticQualificationAuthority:
+    """Fake authority exists only in tests, not as a production verifier."""
+
+    def verify(
+        self, *, actor_id, excluded_actor_ids, requirement_id, case_sha256,
+        qualification_evidence, policy_sha256, at_time,
+    ) -> None:
+        if (
+            actor_id not in {"arbiter-d", "arbiter-e"}
+            or actor_id in excluded_actor_ids
+            or "proposer-a" not in excluded_actor_ids
+            or "scientist-b" not in excluded_actor_ids
+            or "scientist-c" not in excluded_actor_ids
+            or requirement_id != RULE
+            or not isinstance(case_sha256, str)
+            or qualification_evidence != QUAL_DOCUMENT
+            or policy_sha256 != QUAL_POLICY
+            or at_time != NOW
+        ):
+            raise EvidenceIntegrityError("synthetic qualification authority rejects actor")
+
+
+def _arbitration_scenario(tmp_path: Path):
+    s = scenario(tmp_path, verdict="SUPPORT")
+    second, policy, _ = _second_scientist(s, verdict="CONTEST")
+    case = _dispute_case(s, second)
+    key = Ed25519PrivateKey.generate()
+    policy = _arbitrator_policy(policy, key, "arbiter-d")
+    evidence_ref = s["observed"]["batch-001.json"]["rules"][0][
+        "review_template"
+    ]["evidence_ids"][0]
+    record = s["store"].append(
+        kind=EvidenceKind.SCIENTIFIC_ARBITRATION,
+        run_id=RUN,
+        subject_id=RULE,
+        content=arbitration_payload(
+            source_id="aws-3.19.1", archive_sha256=SOURCE,
+            requirement_id=RULE, requirement_sha256=RULE_SHA,
+            proposal_ref=s["proposal_refs"][RULE][0],
+            left_assessment_ref=s["assessment_refs"][RULE][0],
+            right_assessment_ref=second[0], case_sha256=sha256_bytes(case),
+            arbitrator_actor_id="arbiter-d", position=ArbitrationPosition.DEFER,
+            reasoned_findings="Insufficient methodological evidence is available to settle the claim.",
+            limitations="This is an explicitly synthetic, unqualified scientific assessment.",
+            evidence_refs=(evidence_ref,),
+        ),
+    )
+    signed = _attest(
+        s["store"], key=key, actor="arbiter-d", key_id="arbiter-d-key",
+        role=ReviewerRole.SCIENTIFIC_ARBITER, target=record, policy=policy,
+    )
+    return s, second, policy, case, (f"event:{record.digest}", f"event:{signed.digest}")
+
+
+def _arbitration_check(
+    s, second, policy, case, pairs, *, qualifier=None, qualification=None,
+    pins=None, policy_digest=QUAL_POLICY, head=None, cases=None,
+):
+    return verify_scientific_arbitration(
+        canonical_manifest=s["manifest"], canonical_packets=s["original"],
+        observed_manifest=s["manifest"], observed_packets=s["observed"],
+        proposal_refs=s["proposal_refs"], left_assessments=s["assessment_refs"],
+        right_assessments={RULE: second},
+        case_bytes={RULE: case} if cases is None else cases,
+        expected_case_sha256={RULE: sha256_bytes(case)},
+        rule_id=RULE, arbitration_refs=pairs,
+        qualification_bytes={} if qualification is None else qualification,
+        expected_qualification_sha256={} if pins is None else pins,
+        qualification_policy_sha256=policy_digest,
+        qualification_verifier=qualifier,
+        store=s["store"], run_id=RUN,
+        expected_head=s["store"].verify().head_digest if head is None else head,
+        policy=policy, verifier=Ed25519ReviewerVerifier(), now=NOW,
+    )
+
+
+def test_arbitration_signed_is_not_automatically_adjudicated(tmp_path: Path):
+    s, second, policy, case, first = _arbitration_scenario(tmp_path)
+    result = _arbitration_check(s, second, policy, case, (first,))
+    assert result.authenticated_decisions == 1
+    assert result.latest_position == ArbitrationPosition.DEFER
+    assert result.appeal_count == 0
+    assert not result.independently_qualified
+    assert not result.procedure_verified
+    assert result.scientific_adjudications == 0
+    assert result.to_dict()["training_authorized"] is False
+
+
+def test_synthetic_independent_qualification_allows_procedural_gate_only(tmp_path: Path):
+    s, second, policy, case, first = _arbitration_scenario(tmp_path)
+    result = _arbitration_check(
+        s, second, policy, case, (first,),
+        qualifier=SyntheticQualificationAuthority(),
+        qualification={"arbiter-d": QUAL_DOCUMENT},
+        pins={"arbiter-d": sha256_bytes(QUAL_DOCUMENT)},
+    )
+    assert result.independently_qualified
+    assert result.procedure_verified
+    assert result.scientific_adjudications == 0
+    assert result.to_dict()["historical_rule_disposition_changed"] is False
+
+
+def test_fake_qualification_policy_mismatch_cannot_pass(tmp_path: Path):
+    s, second, policy, case, first = _arbitration_scenario(tmp_path)
+    with pytest.raises(EvidenceIntegrityError, match="synthetic qualification authority"):
+        _arbitration_check(
+            s, second, policy, case, (first,),
+            qualifier=SyntheticQualificationAuthority(),
+            qualification={"arbiter-d": QUAL_DOCUMENT},
+            pins={"arbiter-d": sha256_bytes(QUAL_DOCUMENT)},
+            policy_digest="f" * 64,
+        )
+
+
+def test_arbitration_by_prior_scientist_fails_even_with_valid_signature(tmp_path: Path):
+    s, second, policy, case, first = _arbitration_scenario(tmp_path)
+    # Permit a previous scientist's credential to sign as an arbiter; this must still fail.
+    scientist = s["scientist_key"]
+    expanded = _arbitrator_policy(policy, Ed25519PrivateKey.generate(), "arbiter-e")
+    del expanded
+    promoted_grants = tuple(
+        ReviewerGrant(
+            actor_id=g.actor_id, key_id=g.key_id, public_key_hex=g.public_key_hex,
+            roles=frozenset({*g.roles, ReviewerRole.SCIENTIFIC_ARBITER})
+            if g.actor_id == "scientist-b" else g.roles,
+            runs=g.runs, subjects=g.subjects, valid_from=g.valid_from,
+            valid_until=g.valid_until, revoked=g.revoked,
+        )
+        for g in policy.grants
+    )
+    privileged = ReviewerTrustPolicy(grants=promoted_grants, policy_sha256=policy.policy_sha256)
+    rec = s["store"].append(
+        kind=EvidenceKind.SCIENTIFIC_ARBITRATION, run_id=RUN, subject_id=RULE,
+        content=arbitration_payload(
+            source_id="aws-3.19.1", archive_sha256=SOURCE,
+            requirement_id=RULE, requirement_sha256=RULE_SHA,
+            proposal_ref=s["proposal_refs"][RULE][0],
+            left_assessment_ref=s["assessment_refs"][RULE][0],
+            right_assessment_ref=second[0], case_sha256=sha256_bytes(case),
+            arbitrator_actor_id="scientist-b", position=ArbitrationPosition.SUPPORT,
+            reasoned_findings="A previous reviewer tries to arbitrate their own source judgement.",
+            limitations="This is an adversarial case testing same-person role escalation.",
+            evidence_refs=(s["observed"]["batch-001.json"]["rules"][0]["review_template"]["evidence_ids"][0],),
+        ),
+    )
+    sig = _attest(
+        s["store"], key=scientist, actor="scientist-b", key_id="scientist-key",
+        role=ReviewerRole.SCIENTIFIC_ARBITER, target=rec, policy=privileged,
+    )
+    with pytest.raises(EvidenceIntegrityError, match="independence"):
+        _arbitration_check(
+            s, second, privileged, case, ((f"event:{rec.digest}", f"event:{sig.digest}"),)
+        )
+
+
+def test_arbitration_reconsideration_preserves_predecessor(tmp_path: Path):
+    s, second, policy, case, first = _arbitration_scenario(tmp_path)
+    support = s["store"].append(
+        kind=EvidenceKind.RULE_SUPPORT, run_id=RUN, subject_id=RULE,
+        content=b"synthetic additional verifiable methodological evidence",
+    )
+    key = Ed25519PrivateKey.generate()
+    policy = _arbitrator_policy(policy, key, "arbiter-e")
+    second_record = s["store"].append(
+        kind=EvidenceKind.SCIENTIFIC_ARBITRATION, run_id=RUN, subject_id=RULE,
+        content=arbitration_payload(
+            source_id="aws-3.19.1", archive_sha256=SOURCE,
+            requirement_id=RULE, requirement_sha256=RULE_SHA,
+            proposal_ref=s["proposal_refs"][RULE][0],
+            left_assessment_ref=s["assessment_refs"][RULE][0],
+            right_assessment_ref=second[0], case_sha256=sha256_bytes(case),
+            arbitrator_actor_id="arbiter-e", position=ArbitrationPosition.UNRESOLVED,
+            reasoned_findings="Newly supplied methodological evidence still fails to demonstrate validity.",
+            limitations="This appeal has simulated evidence but no actual panel review.",
+            evidence_refs=(f"event:{support.digest}",),
+            supersedes_ref=first[0],
+            reconsideration_basis="A recorded new methodological observation challenges the old finding.",
+        ),
+    )
+    sig = _attest(
+        s["store"], key=key, actor="arbiter-e", key_id="arbiter-e-key",
+        role=ReviewerRole.SCIENTIFIC_ARBITER, target=second_record, policy=policy,
+    )
+    pairs=(first, (f"event:{second_record.digest}", f"event:{sig.digest}"))
+    result = _arbitration_check(s, second, policy, case, pairs)
+    assert result.authenticated_decisions == 2
+    assert result.appeal_count == 1
+    assert result.latest_position == ArbitrationPosition.UNRESOLVED
+    assert not result.procedure_verified
+
+
+def test_replay_or_wrong_predecessor_is_rejected(tmp_path: Path):
+    s, second, policy, case, first = _arbitration_scenario(tmp_path)
+    with pytest.raises(EvidenceIntegrityError, match="order/scope"):
+        _arbitration_check(s, second, policy, case, (first, first))
+    with pytest.raises(EvidenceIntegrityError, match="binding"):
+        _arbitration_check(
+            s, second, policy, case,
+            ((first[1], first[0]),),
+        )
+
+
+def test_changed_case_hash_requires_new_arbitration_evidence(tmp_path: Path):
+    s, second, policy, case, first = _arbitration_scenario(tmp_path)
+    with pytest.raises(EvidenceIntegrityError, match="open case"):
+        _arbitration_check(s, second, policy, case, (first,), cases={})
+
+
+def test_qualification_evidence_without_pinned_authority_cannot_authorize(tmp_path: Path):
+    s, second, policy, case, first = _arbitration_scenario(tmp_path)
+    assert not _arbitration_check(
+        s, second, policy, case, (first,),
+        qualification={"arbiter-d": QUAL_DOCUMENT},
+        pins={"arbiter-d": sha256_bytes(QUAL_DOCUMENT)},
+    ).procedure_verified
+    with pytest.raises(EvidenceIntegrityError, match="external arbitrator qualifications"):
+        _arbitration_check(
+            s, second, policy, case, (first,),
+            qualifier=SyntheticQualificationAuthority(),
+            qualification={"arbiter-d": QUAL_DOCUMENT + b"altered"},
+            pins={"arbiter-d": sha256_bytes(QUAL_DOCUMENT)},
+        )
+
+
+def test_revoked_arbiter_credential_is_rejected(tmp_path: Path):
+    s, second, policy, case, first = _arbitration_scenario(tmp_path)
+    revoked = ReviewerTrustPolicy(
+        grants=tuple(
+            ReviewerGrant(
+                actor_id=g.actor_id, key_id=g.key_id, public_key_hex=g.public_key_hex,
+                roles=g.roles, runs=g.runs, subjects=g.subjects,
+                valid_from=g.valid_from, valid_until=g.valid_until,
+                revoked=True if g.actor_id == "arbiter-d" else g.revoked,
+            )
+            for g in policy.grants
+        ),
+        policy_sha256=policy.policy_sha256,
+    )
+    with pytest.raises(EvidenceIntegrityError, match="not authorized"):
+        _arbitration_check(s, second, revoked, case, (first,))
