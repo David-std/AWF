@@ -1347,7 +1347,6 @@ def test_governance_rejects_invalid_direct_state_jump(tmp_path: Path):
 
 
 def test_governance_rejects_unpinned_or_wrong_policy(tmp_path: Path):
-    s = _governance_scenario(tmp_path)
     p = canonical_json_bytes({"schema": 1, "quorum": 2, "max_transitions": 5})
     with pytest.raises(EvidenceIntegrityError, match="external trusted hash"):
         parse_governance_policy(p, expected_sha256="f" * 64)
