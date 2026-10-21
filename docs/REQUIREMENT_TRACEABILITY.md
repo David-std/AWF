@@ -255,3 +255,32 @@ Véanse [ADR-0015](adr/0015-durable-edit-and-finding-transitions.md) y
   adjudication, employment credentials, IP ownership or training permission.
 - The subsequent documentation reconciliation must be verified at its own
   exact SHA; this record is the code checkpoint only.
+
+## AWF-R040 — Independent scientific governance quorum and reversible procedural status
+
+- **Parent:** draft PR #37 signed independent arbitration and reconsideration.
+  Implementation in [draft PR #38](https://github.com/David-std/AWF/pull/38)
+  on `feat/s2-governance-transitions`; status
+  `ENGINEERING_TESTED_DEPENDS_ON_REAL_GOVERNANCE_AUTHORITY`.
+- **Contract:** canonical, externally SHA-pinned governance policy with quorum
+  2–5 and max actions 1–16; exact run, source, archive SHA, requirement SHA,
+  disagreement case SHA, last signed arbitration ref, predecessor ref and
+  signed `GOVERNANCE_APPROVER` quorum (Ed25519).
+- **Procedural states:** `OPEN→RATIFIED_PROCEDURAL→SUSPENDED→OPEN`, append-only
+  and bounded; suspend/reopen require primary RULE_SUPPORT recorded after the
+  previous action signatures. Invalid jumps or same actors fail closed.
+- **Independent qualification:** no production `ExternalGovernanceAuthorityPort`.
+  Actors/keys must be independently authorized by an appointed institution
+  with real human qualification and conflict evidence. Without the authority
+  OR independently qualified arbiter, result remains `OPEN` with
+  `applied_actions=0`. A local hash or two signed keys is not enough.
+- **Invariants:** all historic knowledge requirements remain unchanged;
+  `scientific_adjudications=0`, `training_authorized=false`,
+  `source_rights_verified=false`, `review_attestation_authorized=false`.
+  0/168 MUST adjudicated and 16 DEFERRED_LAB still EVAL_ONLY.
+- **Checkpoint:** `edd2301e235c2f0214ab56666dbae30d179c214e` passed
+  [push CI 39623798093](https://github.com/David-std/AWF/actions/runs/39623798093)
+  4/4, Ubuntu 3.12 472 pytest PASS / Pyright 0 errors.
+  [PR CI 39623808300](https://github.com/David-std/AWF/actions/runs/39623808300)
+  and subsequent documentation SHA need independent validation.
+  See [ADR-0031](adr/0031-scientific-governance-register.md).

@@ -70,3 +70,18 @@ equate a signature with a correct decision or rights grant.
 These guidelines concern transparent research-review methods; they do **not**
 certify individual reviewer competence, endorse AWF software, give legal
 rights to research sources, or adjudicate a scientific truth claim.
+
+## Source basis for governance in PR #38 (AWF-R040)
+
+- [PRISMA 2020 expanded checklist, items 8–9](https://www.prisma-statement.org/s/PRISMA_2020_expanded_checklist-yc78.pdf):
+  document reviewer independence, selection methods and disagreement-resolution
+  process; does NOT prescribe an AWF quorum of two or certify individuals.
+- [COPE — Ethical guidelines for peer reviewers](https://doi.org/10.24318/2019.1.4):
+  competence, confidentiality, transparency and competing-interest duties;
+  does NOT verify a particular AWF app user.
+- [NIST AI RMF GOVERN 1.4–1.5, 2.1](https://airc.nist.gov/airmf-resources/airmf/5-sec-core/):
+  documented policies, monitoring, accountability, roles and responsibilities;
+  this is a governance framework, not a scientific arbitration warrant.
+
+These are **design rationale**, not evidence of a real independent custodian
+or experimental proof that a specific historical AWS rule is correct.

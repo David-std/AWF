@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased — reversible scientific governance and independent quorum (S2 draft PR #38)
+
+- Add canonical SHA-pinned governance policies, a distinct `GOVERNANCE_APPROVER`
+  role and event `SCIENTIFIC_GOVERNANCE` using the existing Ed25519 ledger.
+- Add quorum-scoped reversible procedural state projection and append-only
+  RATIFY/SUSPEND/REOPEN records with exact predecessor, signed actors and fresh
+  source evidence. External human-qualification/COI verification is mandatory
+  for positive projection, with no production authority adapter.
+- Keep ALL historical rules unadjudicated, all model training unauthorized,
+  original AWS corpus private and source-rights authority separate.
+- Add ADR-0031, AWF-R040 and adversarial synthetic integration tests.
+
 ## Unreleased — third-party scientific arbitration (S2 draft PR #37)
 
 - Add `SCIENTIFIC_ARBITER` to the existing reviewer role/event signatures
