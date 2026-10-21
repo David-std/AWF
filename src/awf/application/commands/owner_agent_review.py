@@ -210,7 +210,7 @@ def _rebuild_decision(value: dict[str, object]) -> bytes:
             proposal_ref=cast(str, value["proposal_ref"]),
             task_sha256=cast(str, value["task_sha256"]),
             owner_actor_id=cast(str, value["owner_actor_id"]),
-            agent_report_refs=tuple(cast(tuple[str, str], tuple(refs))),
+            agent_report_refs=(cast(str, refs[0]), cast(str, refs[1])),
             action=OwnerAction(cast(str, value["action"])),
             reason=cast(str, value["reason"]),
         )
