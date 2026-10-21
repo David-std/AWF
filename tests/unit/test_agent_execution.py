@@ -21,7 +21,10 @@ DIGEST = "a" * 64
 
 def _task() -> AgentTask:
     return AgentTask(
-        prompt=b"Compute 2 + 2.", model_id=MODEL, temperature=0, seed=42,
+        prompt=b"Compute 2 + 2.",
+        model_id=MODEL,
+        temperature=0,
+        seed=42,
         max_output_tokens=12,
     )
 
@@ -77,12 +80,16 @@ def test_provider_result_must_be_bounded_utf8_and_sane() -> None:
         ProviderObservation(output=b"\xff", reported_model_id=MODEL, transport="OFFLINE_FAKE")
     with pytest.raises(ValueError, match="metric"):
         ProviderObservation(
-            output=b"4", reported_model_id=MODEL, transport="LOCAL_OLLAMA_HTTP",
+            output=b"4",
+            reported_model_id=MODEL,
+            transport="LOCAL_OLLAMA_HTTP",
             generated_tokens=True,
         )
     with pytest.raises(ValueError, match="digest"):
         ProviderObservation(
-            output=b"4", reported_model_id=MODEL, transport="LOCAL_OLLAMA_HTTP",
+            output=b"4",
+            reported_model_id=MODEL,
+            transport="LOCAL_OLLAMA_HTTP",
             reported_model_digest="pretend-proof",
         )
 
@@ -93,6 +100,7 @@ def test_mismatched_provider_model_and_clock_rejected() -> None:
             return ProviderObservation(
                 output=b"4", reported_model_id="other:latest", transport="OFFLINE_FAKE"
             )
+
     with pytest.raises(ValueError, match="does not match"):
         run_instrumented_agent(_task(), BadModel())
     with pytest.raises(ValueError, match="monotonic"):
@@ -112,38 +120,47 @@ def _ollama_stub(monkeypatch: pytest.MonkeyPatch, *, second_digest: str = DIGEST
     import http.client
 
     seen: list[tuple[object, ...]] = []
+
     class FakeConnection:
         def __init__(self, host: str, port: int, timeout: int) -> None:
             assert (host, port) == ("127.0.0.1", 11434)
             seen.append(("connect", host, port, timeout))
 
         def request(
-            self, method: str, path: str, body: bytes | None = None,
+            self,
+            method: str,
+            path: str,
+            body: bytes | None = None,
             headers: dict[str, str] | None = None,
         ) -> None:
             seen.append((method, path, body))
+
         def getresponse(self) -> FakeResponse:
             method, path, body = seen[-1]
             if (method, path) == ("POST", "/api/generate"):
                 payload = json.loads(body)
                 assert payload["stream"] is False
                 assert payload["model"] == MODEL
-                assert payload["options"] == {
-                    "temperature": 0, "seed": 42, "num_predict": 12
-                }
-                return FakeResponse({
-                    "done": True, "model": MODEL, "response": "4",
-                    "total_duration": 45000000,
-                    "load_duration": 110000,
-                    "prompt_eval_count": 13,
-                    "eval_count": 2,
-                })
+                assert payload["options"] == {"temperature": 0, "seed": 42, "num_predict": 12}
+                return FakeResponse(
+                    {
+                        "done": True,
+                        "model": MODEL,
+                        "response": "4",
+                        "total_duration": 45000000,
+                        "load_duration": 110000,
+                        "prompt_eval_count": 13,
+                        "eval_count": 2,
+                    }
+                )
             assert (method, path) == ("GET", "/api/tags")
             times = sum(item[0] == "GET" for item in seen if item[0] != "connect")
-            return FakeResponse({
-                "models": [{"name": MODEL, "digest": second_digest if times == 2 else DIGEST}]
-            })
-        def close(self) -> None: pass
+            return FakeResponse(
+                {"models": [{"name": MODEL, "digest": second_digest if times == 2 else DIGEST}]}
+            )
+
+        def close(self) -> None:
+            pass
 
     monkeypatch.setattr(http.client, "HTTPConnection", FakeConnection)
     return seen
@@ -163,9 +180,7 @@ def test_local_ollama_http_adapter_observes_real_wire_protocol(monkeypatch) -> N
     assert receipt["provider_total_ns"] == 45000000
     assert receipt["elapsed_client_ns"] == 400
     assert receipt["model_weights_verified"] is False
-    assert [event[0] for event in events if event[0] != "connect"] == [
-        "GET", "POST", "GET"
-    ]
+    assert [event[0] for event in events if event[0] != "connect"] == ["GET", "POST", "GET"]
 
 
 def test_local_model_digest_change_blocks_receipt(monkeypatch) -> None:
@@ -203,9 +218,7 @@ def test_cli_stores_private_blob_and_metadata_without_leaking_text(
             )
 
     monkeypatch.setattr(cli, "OllamaLocalAgent", FakeLocal)
-    assert cli.main([
-        "agent-run", str(prompt), "--model", MODEL, "--allow-local-inference"
-    ]) == 0
+    assert cli.main(["agent-run", str(prompt), "--model", MODEL, "--allow-local-inference"]) == 0
     out = capsys.readouterr().out
     assert "SENSITIVE-TEST-SENTENCE" not in out
     assert "PRIVATE-SYNTHETIC-ANSWER" not in out
@@ -231,6 +244,5 @@ def test_cli_output_directory_symlink_refused(
         (tmp_path / ".awf").symlink_to(outside, target_is_directory=True)
     except OSError:
         pytest.skip("local runner cannot create symbolic links")
-    assert cli.main(["agent-run", str(prompt), "--model", MODEL,
-                     "--allow-local-inference"]) == 2
+    assert cli.main(["agent-run", str(prompt), "--model", MODEL, "--allow-local-inference"]) == 2
     assert "AWF_ERROR" in capsys.readouterr().err

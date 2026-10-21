@@ -37,7 +37,12 @@ class OllamaLocalAgent:
             if not isinstance(parsed, dict):
                 raise ValueError("unexpected Ollama response schema")
             return parsed
-        except (OSError, http.client.HTTPException, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        except (
+            OSError,
+            http.client.HTTPException,
+            UnicodeDecodeError,
+            json.JSONDecodeError,
+        ) as exc:
             raise ValueError("local model transport or response failed") from exc
         finally:
             client.close()
@@ -47,8 +52,9 @@ class OllamaLocalAgent:
         models = tags.get("models")
         if not isinstance(models, list):
             raise ValueError("local model inventory unavailable")
-        matches = [model for model in models if isinstance(model, dict)
-                   and model.get("name") == model_id]
+        matches = [
+            model for model in models if isinstance(model, dict) and model.get("name") == model_id
+        ]
         if len(matches) != 1:
             raise ValueError("requested local model missing or ambiguous")
         digest = matches[0].get("digest")
@@ -58,16 +64,20 @@ class OllamaLocalAgent:
 
     def generate(self, task: AgentTask) -> ProviderObservation:
         digest_before = self._model_digest(task.model_id)
-        payload = json.dumps({
-            "model": task.model_id,
-            "prompt": task.prompt.decode("utf-8"),
-            "stream": False,
-            "options": {
-                "temperature": task.temperature,
-                "seed": task.seed,
-                "num_predict": task.max_output_tokens,
+        payload = json.dumps(
+            {
+                "model": task.model_id,
+                "prompt": task.prompt.decode("utf-8"),
+                "stream": False,
+                "options": {
+                    "temperature": task.temperature,
+                    "seed": task.seed,
+                    "num_predict": task.max_output_tokens,
+                },
             },
-        }, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+            ensure_ascii=False,
+            separators=(",", ":"),
+        ).encode("utf-8")
         report = self._exchange("POST", "/api/generate", payload)
         if report.get("done") is not True:
             raise ValueError("Ollama did not finish the generation")

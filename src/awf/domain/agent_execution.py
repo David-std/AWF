@@ -28,9 +28,11 @@ class AgentTask:
             raise ValueError("agent prompt is not UTF-8") from exc
         if not isinstance(self.model_id, str) or _MODEL_ID.fullmatch(self.model_id) is None:
             raise ValueError("invalid model identifier")
-        if not isinstance(self.temperature, (float, int)) or not math.isfinite(
-            self.temperature
-        ) or not 0 <= self.temperature <= 2:
+        if (
+            not isinstance(self.temperature, (float, int))
+            or not math.isfinite(self.temperature)
+            or not 0 <= self.temperature <= 2
+        ):
             raise ValueError("temperature must be between 0 and 2")
         if type(self.seed) is not int or not 0 <= self.seed <= 4294967295:
             raise ValueError("invalid sampler seed")
@@ -60,13 +62,12 @@ class ProviderObservation:
             raise ValueError("unsupported execution transport")
         if not isinstance(self.reported_model_id, str) or not self.reported_model_id:
             raise ValueError("provider model identifier is missing")
-        if self.reported_model_digest is not None and re.fullmatch(
-            r"[0-9a-f]{64}", self.reported_model_digest
-        ) is None:
-            raise ValueError("invalid reported model digest")
-        for name in (
-            "prompt_tokens", "generated_tokens", "provider_total_ns", "provider_load_ns"
+        if (
+            self.reported_model_digest is not None
+            and re.fullmatch(r"[0-9a-f]{64}", self.reported_model_digest) is None
         ):
+            raise ValueError("invalid reported model digest")
+        for name in ("prompt_tokens", "generated_tokens", "provider_total_ns", "provider_load_ns"):
             value = getattr(self, name)
             if value is not None and (type(value) is not int or value < 0):
                 raise ValueError(f"invalid provider metric: {name}")

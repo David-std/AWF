@@ -318,8 +318,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                 max_output_tokens=args.max_output_tokens,
             )
             privacy_root = Path(".awf") / "agent-execution"
-            for path in (privacy_root.parent, privacy_root, privacy_root / "blobs",
-                         privacy_root / "receipts"):
+            for path in (
+                privacy_root.parent,
+                privacy_root,
+                privacy_root / "blobs",
+                privacy_root / "receipts",
+            ):
                 if path.is_symlink():
                     raise ValueError("agent output directories cannot be symbolic links")
             output, receipt = run_instrumented_agent(task, OllamaLocalAgent())
