@@ -6,7 +6,7 @@
 - New `KNOWLEDGE_REVIEWER` role and `KNOWLEDGE_REVIEW_PROPOSAL` event; `application/commands/authorize_dossiers.py` authenticates the full private template digest, canonical ZIP/rule ID and support receipts with Ed25519 grants and fresh policy/head in one verified snapshot. CLI exposes optional private inventory/policy flags, with default PR #31/#32 behavior unchanged.
 - [ADR-0026](adr/0026-signed-knowledge-review-proposals.md), [guide](SIGNED_KNOWLEDGE_PROPOSALS_S2.md), AWF-R035 and synthetic adversarial/CLI tests. No corpus data, private reviewer notes or secrets committed.
 - **Epistemic status:** cryptographic permission to sign a proposal snapshot is NOT an authenticated person, reviewer independence, research correctness, a legal rights grant or `REVIEW_ATTESTED`. S2 **OPEN**, 168 MUST unresolved, 16 lab EVAL_ONLY; no neural training.
-- CI status for this documentary commit must be taken from exact GitHub Actions SHA, not inherited from PR #32. Do not claim CI success until confirmed; local formatting scratch on ASUS does not represent full local test execution.
+- **Verified PR #33 code+docs SHA** `994456d3d423f2a9bc59fbf560bbbe3a2c3d0542`: [push CI 39527598797](https://github.com/David-std/AWF/actions/runs/39527598797) and [PR CI 39527604600](https://github.com/David-std/AWF/actions/runs/39527604600), **4/4 SUCCESS** each, Ubuntu/Windows × Python 3.12/3.13. Ubuntu 3.12: **409 PASS**; Windows 3.13: **407 PASS + 2 SKIP**; locked Ruff 0.14 format/lint, Pyright **0 errors/0 warnings**, package build passed. This note itself is a later documentation-only commit and must receive separate CI confirmation. ASUS scratch was used for formatting only, not claimed as a full physical Windows test.
 
 
 
