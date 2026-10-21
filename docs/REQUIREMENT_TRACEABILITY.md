@@ -319,3 +319,12 @@ Véanse [ADR-0015](adr/0015-durable-edit-and-finding-transitions.md) y
   model execution was performed in CI, no human scientific independence was
   asserted, and no source-rights or training permission was granted.
 - Final documentation SHA must receive its own separate CI receipt.
+
+
+## AWF-R042 — Actual-byte exact-invariant pilot after owner evaluation
+
+- **Dependency:** PR #39 owner-governed pilot gates; this checker does not change that approval contract. Draft PR stacked on #39.
+- **Behavior:** source SHA-bound protected literal/context checks for QUANTITY/CITATION/QUOTE/SOURCE_ID, global numeric/modal drift as `NEEDS_REVIEW`, and `document_acceptance=NEEDS_REVIEW` regardless of syntactic PASS.
+- **Negative fixtures:** changed/duplicated quantity, moved value, wrong SHA, ambiguous anchor, unsupported schema, unlisted number, causal marker change, non-regular input and mismatched pinned contract.
+- **Evidence limits:** synthetic engineering tests; no licensed real corpus or actual LLM output verified. 0/168 MUST adjudicated; 16 laboratory items EVAL_ONLY; no TRAIN.
+- **Usage and decision:** `docs/EXACT_INVARIANT_PROBE_S2.md`, ADR-0033. Code SHA `ea384f46d1312baf10961934738e43154d15425a`, [push CI 39644665209](https://github.com/David-std/AWF/actions/runs/39644665209) + [PR CI 39644672812](https://github.com/David-std/AWF/actions/runs/39644672812): 4/4 SUCCESS each, Ubuntu/3.12: 498 tests passed, 0 Pyright errors/warnings, Ruff/build PASS. This demonstrates only synthetic software checks; docs final commit requires separate CI.
