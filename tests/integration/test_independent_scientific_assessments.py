@@ -1306,7 +1306,7 @@ def test_governance_reused_voter_fails_even_with_two_signatures(tmp_path: Path):
 def test_governance_authority_rejects_forged_qualification(tmp_path: Path):
     s = _governance_scenario(tmp_path)
     first = _governance_step(s, voters=("governor-0", "governor-1"))
-    with pytest.raises(EvidenceIntegrityError, match="synthetic governance authority"):
+    with pytest.raises(EvidenceIntegrityError, match="externally pinned governing evidence"):
         _governance_check(
             s,
             (first,),
