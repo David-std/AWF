@@ -13,25 +13,25 @@ from awf.adapters.persistence.sqlite_evidence import SQLiteEvidenceLedger
 from awf.adapters.security.ed25519_reviewer import Ed25519ReviewerVerifier
 from awf.application.commands.authorize_dossiers import private_dossier_proposal_payload
 from awf.application.commands.authorize_review import append_signed_review_claim
-from awf.application.commands.scientific_disagreements import (
-    disagreement_case_payload,
-    verify_disagreement_protocol,
-)
-from awf.domain.scientific_disagreements import ComparisonStatus, ProposedNextAction
-from awf.domain.reviewer_auth import ReviewerGrant, ReviewerTrustPolicy
-
 from awf.application.commands.scientific_assessments import (
     parse_scientific_assessment_inventory,
     scientific_assessment_payload,
     verify_independent_scientific_assessments,
 )
+from awf.application.commands.scientific_disagreements import (
+    disagreement_case_payload,
+    verify_disagreement_protocol,
+)
 from awf.domain.evidence import EvidenceIntegrityError, EvidenceKind, sha256_bytes
 from awf.domain.reviewer_auth import (
     ReviewerClaim,
+    ReviewerGrant,
     ReviewerRole,
+    ReviewerTrustPolicy,
     SignedReviewerClaim,
     parse_trust_policy,
 )
+from awf.domain.scientific_disagreements import ComparisonStatus, ProposedNextAction
 from awf.domain.signed_documents import canonical_json_bytes
 
 RUN = "science-run-001"
