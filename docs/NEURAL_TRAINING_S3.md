@@ -1,6 +1,6 @@
 # S3 — AWF Neural Adapter, supervised LoRA pilot
 
-**State:** training infrastructure, draft PR #44 stacked on #43. A saved adapter is an AWF-owned *parameter-efficient delta*, not a pre-trained-from-scratch model. The existing original neural base remains pinned. **Do not infer academic reliability or author authenticity from a training loss.**
+**State:** training infrastructure, draft PR #45 stacked on #43. A saved adapter is an AWF-owned *parameter-efficient delta*, not a pre-trained-from-scratch model. The existing original neural base remains pinned. **Do not infer academic reliability or author authenticity from a training loss.**
 
 ## Grounded technical decisions
 
@@ -45,3 +45,9 @@ For Google Colab open `notebooks/awf_s3_qlora_colab.ipynb`; the notebook demonst
 A **true** local LoRA adapter exists only after observing `gradient_updates_observed > 0`, saved weights with hash manifest, successful reload and independent held-out evaluation. A toy synthetic smoke adapter may prove training infrastructure works, **not** source fidelity or detector efficacy. Before a scientific model comparison: obtain reviewed owner-authored or licensed source-grounded examples, immutable document/author-separated holdout, blind annotations and baseline vs adapter revision receipts; report metrics including critical semantic drift and abstentions. The 168 historic MUST remain UNRESOLVED; 16 DEFERRED_LAB remain EVAL_ONLY.
 
 **Files:** `training/manifest.py`, `training/runner.py`, `training/synthetic_smoke.py`, `config/training/`, `requirements-neural.txt`, `tests/unit/test_neural_training.py`, and [ADR-0036](adr/0036-peft-adapter-training.md).
+
+## Verified local gradient and adapter reload — 2026-10-21
+
+Direct execution on the authorized RTX 4050 Windows laptop at code SHA `68a7a3143415672faafb7f908ae44e8d790825c8` and **private synthetic-only** dataset. Exact manifest SHA `73c1c93971dcdfecd783bd16c747f70a77b04158e05e54af00a9716958770fda`. PEFT/TRL performed **8/8 observed optimizer updates**, training loss `0.9749333038926125`, training runtime 15.36 seconds (process runtime 81.95 seconds including model load), GPU max allocated `1268997632` bytes. Private run ID `a39d4d23782d4cd79ee94325b0566696`, under ignored `.awf/model-runs/` in the local scratch checkout. **7/7 saved file hashes matched** the receipt, including `adapter_model.safetensors` (2,175,168 bytes). Direct offline PEFT reload succeeded with **96 nonzero adapter tensors** and a private eight-token generation. No gold holdout or real manuscript was read or evaluated. This is proof of an engineering smoke run, not evidence of improved academic writing.
+
+A deficiency was found in the first run: its PEFT `adapter_config.json` reported `revision: null` even though the parent receipt pinned the base model revision. This change passes `revision=MODEL_REVISION` to `LoraConfig` for future saved adapters. The first run remains immutable; its receipt is not rewritten to pretend the field existed. `python -m awf.training.verify_adapter RUN_DIR --expected-receipt-sha256 EXTERNAL_HASH` now independently rehashes each saved file, checks expected PEFT/base/target metadata, reports whether the revision was embedded, and explicitly says **no parameter reload occurred** in the standard-library verifier. An actual reload must be separately recorded using the optional ML environment. No output weights or private dataset are placed in GitHub.

@@ -198,6 +198,7 @@ def run_training(
         target_modules=["q_proj", "v_proj"],
         bias="none",
         task_type="CAUSAL_LM",
+        revision=MODEL_REVISION,
     )
     train_data = datasets.Dataset.from_list(_dataset_view(dataset.train))
     validation_data = datasets.Dataset.from_list(_dataset_view(dataset.validation))

@@ -1,6 +1,6 @@
 # ADR-0036 — SHA-pinned Qwen LoRA training with explicit data-rights boundary
 
-**Date:** 2026-10-21. **Status:** experimental / draft PR #44, stacked on #43.
+**Date:** 2026-10-21. **Status:** experimental / draft PR #45, stacked on #43.
 
 **Decision:** Fine-tune a small, Apache-2.0 Qwen2.5-Instruct base using PEFT LoRA, completion-only supervised TRL training, a documented initial local 6-GB GPU profile, and an optional NF4 4-bit Colab profile. Base model and dataset bytes are pinned by SHA; downstream inference never treats an adapter as a trustworthy scholarly judge. The model revision and tokenizer are fixed together. No full pretraining.
 
