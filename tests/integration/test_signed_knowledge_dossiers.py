@@ -325,6 +325,7 @@ def test_canonical_private_inventory_rejects_extra_duplicate_and_malformed(tmp_p
         with pytest.raises(EvidenceIntegrityError):
             parse_dossier_attestation_inventory(invalid)
 
+
 def test_private_cli_requires_signed_credentials_without_public_prose(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -345,9 +346,10 @@ def test_private_cli_requires_signed_credentials_without_public_prose(
     pair = s["inventory"][RULE]
     inventory_file.write_bytes(
         canonical_json_bytes(
-            {"schema": 1, "attestations": {RULE: {
-                "proposal_ref": pair[0], "attestation_ref": pair[1]
-            }}}
+            {
+                "schema": 1,
+                "attestations": {RULE: {"proposal_ref": pair[0], "attestation_ref": pair[1]}},
+            }
         )
     )
     policy_file = tmp_path / "private-policy.json"
@@ -364,13 +366,23 @@ def test_private_cli_requires_signed_credentials_without_public_prose(
 
     monkeypatch.setattr("awf.cli.main.datetime", FixedClock)
     args = [
-        "knowledge", "inspect-review", str(tmp_path / "aws-private.zip"),
-        "--manifest", str(manifest_path), "--evidence-database",
-        str(s["store"].database), "--review-run-id", RUN,
-        "--expected-head", s["attested"].digest,
-        "--attestation-inventory", str(inventory_file),
-        "--reviewer-policy", str(policy_file),
-        "--expected-reviewer-policy-sha256", sha256_bytes(s["policy_raw"]),
+        "knowledge",
+        "inspect-review",
+        str(tmp_path / "aws-private.zip"),
+        "--manifest",
+        str(manifest_path),
+        "--evidence-database",
+        str(s["store"].database),
+        "--review-run-id",
+        RUN,
+        "--expected-head",
+        s["attested"].digest,
+        "--attestation-inventory",
+        str(inventory_file),
+        "--reviewer-policy",
+        str(policy_file),
+        "--expected-reviewer-policy-sha256",
+        sha256_bytes(s["policy_raw"]),
         "--require-documented",
     ]
     assert main(args) == 0
