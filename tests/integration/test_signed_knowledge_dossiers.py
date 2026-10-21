@@ -5,6 +5,7 @@ All rule text and keys are synthetic. Authorization is not adjudication.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -19,6 +20,7 @@ from awf.application.commands.authorize_dossiers import (
     verify_authorized_dossier_proposals,
 )
 from awf.application.commands.authorize_review import append_signed_review_claim
+from awf.cli.main import main
 from awf.domain.evidence import EvidenceIntegrityError, EvidenceKind, sha256_bytes
 from awf.domain.reviewer_auth import (
     ReviewerClaim,
@@ -321,3 +323,66 @@ def test_canonical_private_inventory_rejects_extra_duplicate_and_malformed(tmp_p
     ):
         with pytest.raises(EvidenceIntegrityError):
             parse_dossier_attestation_inventory(invalid)
+
+def test_private_cli_requires_signed_credentials_without_public_prose(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    s = _scenario(tmp_path)
+    manifest_path = tmp_path / "provenance" / "source-manifest.json"
+    manifest_path.parent.mkdir()
+    manifest_path.write_text("{}", encoding="utf-8")
+    private = tmp_path / ".awf" / "knowledge" / f"review-{ARCHIVE[:12]}-b12"
+    private.mkdir(parents=True)
+    (private / "manifest.json").write_text(
+        canonical_json_bytes(s["manifest"]).decode("utf-8"), encoding="utf-8"
+    )
+    (private / "batch-001.json").write_text(
+        canonical_json_bytes(s["observed"]["batch-001.json"]).decode("utf-8"),
+        encoding="utf-8",
+    )
+    inventory_file = tmp_path / "private-attestations.json"
+    pair = s["inventory"][RULE]
+    inventory_file.write_bytes(
+        canonical_json_bytes(
+            {"schema": 1, "attestations": {RULE: {
+                "proposal_ref": pair[0], "attestation_ref": pair[1]
+            }}}
+        )
+    )
+    policy_file = tmp_path / "private-policy.json"
+    policy_file.write_bytes(s["policy_raw"])
+    monkeypatch.setattr(
+        "awf.cli.main.prepare_review",
+        lambda **_: (s["manifest"], s["original"]),
+    )
+
+    class FixedClock:
+        @staticmethod
+        def now(tz):
+            return datetime.fromtimestamp(_NOW, tz)
+
+    monkeypatch.setattr("awf.cli.main.datetime", FixedClock)
+    args = [
+        "knowledge", "inspect-review", str(tmp_path / "aws-private.zip"),
+        "--manifest", str(manifest_path), "--evidence-database",
+        str(s["store"].database), "--review-run-id", RUN,
+        "--expected-head", s["attested"].digest,
+        "--attestation-inventory", str(inventory_file),
+        "--reviewer-policy", str(policy_file),
+        "--expected-reviewer-policy-sha256", sha256_bytes(s["policy_raw"]),
+        "--require-documented",
+    ]
+    assert main(args) == 0
+    output = capsys.readouterr().out
+    result = __import__("json").loads(output)
+    assert result["signed_review"]["credentials_authorized"] is True
+    assert result["signed_review"]["review_attestation_authorized"] is False
+    assert result["signed_review"]["training_authorized"] is False
+    assert result["all_rules_adjudicated"] is False
+    assert "detailed reason" not in output
+    assert "reviewer-a" not in output
+
+    wrong_policy = args.copy()
+    wrong_policy[wrong_policy.index("--expected-reviewer-policy-sha256") + 1] = "0" * 64
+    assert main(wrong_policy) == 2
+    assert "DOSSIER_INSPECTION_FAILED" in capsys.readouterr().err
