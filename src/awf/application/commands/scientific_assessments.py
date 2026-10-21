@@ -51,7 +51,11 @@ def _event(ref: str) -> str:
 def parse_scientific_assessment_inventory(data: bytes) -> dict[str, tuple[str, str]]:
     """Require canonical, bounded and unambiguous private per-rule references."""
     body = strict_json(data)
-    if set(body) != {"schema", "assessments"} or type(body["schema"]) is not int or body["schema"] != 1:
+    if (
+        set(body) != {"schema", "assessments"}
+        or type(body["schema"]) is not int
+        or body["schema"] != 1
+    ):
         raise EvidenceIntegrityError("invalid scientific assessment inventory schema")
     rows = body["assessments"]
     if not isinstance(rows, dict) or not 1 <= len(rows) <= 184:
@@ -86,10 +90,7 @@ def scientific_assessment_payload(
     limitations: str,
 ) -> bytes:
     """Create a canonical local-only assessment; stores full private notes in ledger."""
-    if not all(
-        isinstance(v, str) and v
-        for v in (source_id, requirement_id, actor_id)
-    ):
+    if not all(isinstance(v, str) and v for v in (source_id, requirement_id, actor_id)):
         raise EvidenceIntegrityError("missing assessment source/actor identity")
     if any(_DIGEST.fullmatch(v) is None for v in (archive_sha256, requirement_sha256)):
         raise EvidenceIntegrityError("invalid scientific assessment source digest")
@@ -229,7 +230,11 @@ def verify_independent_scientific_assessments(
                     ):
                         raise EvidenceIntegrityError("scientific assessment event is out of scope")
                     value = strict_json(assessment_bytes)
-                    if set(value) != _FIELDS or type(value["schema"]) is not int or value["schema"] != 1:
+                    if (
+                        set(value) != _FIELDS
+                        or type(value["schema"]) is not int
+                        or value["schema"] != 1
+                    ):
                         raise EvidenceIntegrityError("scientific assessment fields mismatch")
                     if (
                         value["type"] != "independent_scientific_assessment"

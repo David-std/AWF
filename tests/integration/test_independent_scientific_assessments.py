@@ -6,9 +6,6 @@ import json
 from pathlib import Path
 
 import pytest
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-
 from awf.adapters.persistence.sqlite_evidence import SQLiteEvidenceLedger
 from awf.adapters.security.ed25519_reviewer import Ed25519ReviewerVerifier
 from awf.application.commands.authorize_dossiers import private_dossier_proposal_payload
@@ -26,6 +23,8 @@ from awf.domain.reviewer_auth import (
     parse_trust_policy,
 )
 from awf.domain.signed_documents import canonical_json_bytes
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 RUN = "science-run-001"
 RULE = "DSR-001"
@@ -35,12 +34,16 @@ RULE_SHA = "b" * 64
 
 
 def _public(key: Ed25519PrivateKey) -> str:
-    return key.public_key().public_bytes(
-        encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw
-    ).hex()
+    return (
+        key.public_key()
+        .public_bytes(encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw)
+        .hex()
+    )
 
 
-def _make_policy(proposer_key, scientist_key, *, scientist_role="SCIENTIFIC_REVIEWER", revoked=False):
+def _make_policy(
+    proposer_key, scientist_key, *, scientist_role="SCIENTIFIC_REVIEWER", revoked=False
+):
     raw = canonical_json_bytes(
         {
             "schema": 1,
@@ -190,9 +193,7 @@ def scenario(tmp_path: Path):
         "observed": observed,
         "policy": policy,
         "proposal_refs": {RULE: (f"event:{proposal.digest}", f"event:{proposal_sig.digest}")},
-        "assessment_refs": {
-            RULE: (f"event:{assessment.digest}", f"event:{assessment_sig.digest}")
-        },
+        "assessment_refs": {RULE: (f"event:{assessment.digest}", f"event:{assessment_sig.digest}")},
         "proposal": proposal,
         "proposer_key": proposer_key,
         "scientist_key": scientist_key,
@@ -250,9 +251,7 @@ def test_wrong_assessment_inventory_fails_closed(tmp_path: Path, problem: str):
 
 def test_reviewer_role_revocation_and_mismatch_fail_closed(tmp_path: Path):
     s = scenario(tmp_path)
-    wrong_role = _make_policy(
-        s["proposer_key"], s["scientist_key"], scientist_role="CRITIC"
-    )
+    wrong_role = _make_policy(s["proposer_key"], s["scientist_key"], scientist_role="CRITIC")
     revoked = _make_policy(s["proposer_key"], s["scientist_key"], revoked=True)
     assert not check(s, policy=wrong_role).all_credentials_verified
     assert not check(s, policy=revoked).all_credentials_verified
@@ -291,7 +290,8 @@ def test_canonical_inventory_rejects_duplicate_keys_and_wrong_refs():
         }
     )
     assert parse_scientific_assessment_inventory(valid)[RULE] == (
-        "event:" + "a" * 64, "event:" + "b" * 64
+        "event:" + "a" * 64,
+        "event:" + "b" * 64,
     )
     for invalid in (
         b'{"schema":1,"schema":1,"assessments":{}}\n',
