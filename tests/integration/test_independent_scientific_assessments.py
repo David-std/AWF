@@ -444,8 +444,12 @@ def test_signed_disagreement_generates_only_a_non_adjudicating_case(tmp_path: Pa
     second, policy, head = _second_scientist(s, verdict="CONTEST")
     case = _dispute_case(s, second)
     result = _dispute_check(
-        s, second, policy, head,
-        cases={RULE: case}, case_pins={RULE: sha256_bytes(case)},
+        s,
+        second,
+        policy,
+        head,
+        cases={RULE: case},
+        case_pins={RULE: sha256_bytes(case)},
     )
     assert result.checked == 1
     assert result.comparisons == ((RULE, ComparisonStatus.DIVERGENT),)
@@ -499,11 +503,17 @@ def test_revoked_second_scientist_rejected(tmp_path: Path):
     revoked = ReviewerTrustPolicy(
         grants=tuple(
             ReviewerGrant(
-                actor_id=g.actor_id, key_id=g.key_id, public_key_hex=g.public_key_hex,
-                roles=g.roles, runs=g.runs, subjects=g.subjects,
-                valid_from=g.valid_from, valid_until=g.valid_until,
+                actor_id=g.actor_id,
+                key_id=g.key_id,
+                public_key_hex=g.public_key_hex,
+                roles=g.roles,
+                runs=g.runs,
+                subjects=g.subjects,
+                valid_from=g.valid_from,
+                valid_until=g.valid_until,
                 revoked=True if g.actor_id == "scientist-c" else g.revoked,
-            ) for g in policy.grants
+            )
+            for g in policy.grants
         ),
         policy_sha256=policy.policy_sha256,
     )
@@ -517,17 +527,22 @@ def test_disagreement_case_swapping_or_tampering_is_rejected(tmp_path: Path):
     case = _dispute_case(s, second)
     with pytest.raises(EvidenceIntegrityError, match="external SHA"):
         _dispute_check(
-            s, second, policy, head,
+            s,
+            second,
+            policy,
+            head,
             cases={RULE: case + b"tampered"},
             case_pins={RULE: sha256_bytes(case)},
         )
-    changed = case.replace(
-        second[0].encode(), ("event:" + "f" * 64).encode()
-    )
+    changed = case.replace(second[0].encode(), ("event:" + "f" * 64).encode())
     with pytest.raises(EvidenceIntegrityError, match="source/events"):
         _dispute_check(
-            s, second, policy, head,
-            cases={RULE: changed}, case_pins={RULE: sha256_bytes(changed)},
+            s,
+            second,
+            policy,
+            head,
+            cases={RULE: changed},
+            case_pins={RULE: sha256_bytes(changed)},
         )
 
 
@@ -535,7 +550,9 @@ def test_stale_ledger_head_blocks_comparison(tmp_path: Path):
     s = scenario(tmp_path, verdict="SUPPORT")
     second, policy, head = _second_scientist(s)
     s["store"].append(
-        kind=EvidenceKind.RULE_SUPPORT, run_id=RUN, subject_id=RULE,
+        kind=EvidenceKind.RULE_SUPPORT,
+        run_id=RUN,
+        subject_id=RULE,
         content=b"later evidence invalidates pinned head",
     )
     with pytest.raises(EvidenceIntegrityError, match="head"):
@@ -548,6 +565,10 @@ def test_unapproved_extra_case_is_rejected(tmp_path: Path):
     case = _dispute_case(s, second)
     with pytest.raises(EvidenceIntegrityError, match="extra"):
         _dispute_check(
-            s, second, policy, head,
-            cases={RULE: case}, case_pins={RULE: sha256_bytes(case)},
+            s,
+            second,
+            policy,
+            head,
+            cases={RULE: case},
+            case_pins={RULE: sha256_bytes(case)},
         )

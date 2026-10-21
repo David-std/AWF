@@ -31,10 +31,19 @@ _SHA = re.compile(r"[a-f0-9]{64}\Z")
 _ID = re.compile(r"DSR-[0-9]{3}\Z")
 _CASE_KEYS = frozenset(
     {
-        "schema", "type", "source_id", "archive_sha256", "requirement_id",
-        "requirement_sha256", "proposal_ref", "left_assessment_ref",
-        "right_assessment_ref", "claim_in_dispute", "evidence_gaps",
-        "methodological_divergence", "proposed_next_action",
+        "schema",
+        "type",
+        "source_id",
+        "archive_sha256",
+        "requirement_id",
+        "requirement_sha256",
+        "proposal_ref",
+        "left_assessment_ref",
+        "right_assessment_ref",
+        "claim_in_dispute",
+        "evidence_gaps",
+        "methodological_divergence",
+        "proposed_next_action",
     }
 )
 
@@ -162,9 +171,7 @@ def verify_disagreement_protocol(
     rows = dossier["rules"]
     if not isinstance(rows, list):
         raise EvidenceIntegrityError("invalid source-bound review inventory")
-    documented = {
-        str(row["id"]) for row in rows if row["status"] == "PROPOSAL_DOCUMENTED"
-    }
+    documented = {str(row["id"]) for row in rows if row["status"] == "PROPOSAL_DOCUMENTED"}
     if (
         not documented
         or set(left_assessments) != documented
@@ -174,9 +181,7 @@ def verify_disagreement_protocol(
     ):
         raise EvidenceIntegrityError("incomplete or mismatched scientific inventory")
     canonical = {
-        str(row["id"]): row
-        for packet in canonical_packets.values()
-        for row in packet["rules"]
+        str(row["id"]): row for packet in canonical_packets.values() for row in packet["rules"]
     }
 
     comparisons: list[tuple[str, ComparisonStatus]] = []
@@ -238,7 +243,11 @@ def verify_disagreement_protocol(
                 ):
                     raise EvidenceIntegrityError("disagreement case lacks external SHA pin")
                 case = strict_json(data)
-                if set(case) != _CASE_KEYS or type(case["schema"]) is not int or case["schema"] != 1:
+                if (
+                    set(case) != _CASE_KEYS
+                    or type(case["schema"]) is not int
+                    or case["schema"] != 1
+                ):
                     raise EvidenceIntegrityError("invalid disagreement case schema")
                 try:
                     rebuilt = disagreement_case_payload(
@@ -269,7 +278,9 @@ def verify_disagreement_protocol(
                     or case["left_assessment_ref"] != left_ref
                     or case["right_assessment_ref"] != right_ref
                 ):
-                    raise EvidenceIntegrityError("scientific dispute case binds wrong source/events")
+                    raise EvidenceIntegrityError(
+                        "scientific dispute case binds wrong source/events"
+                    )
     if not set(case_bytes) <= required_cases:
         raise EvidenceIntegrityError("extra or silently substituted disagreement cases")
     missing = tuple(sorted(required_cases - set(case_bytes)))
