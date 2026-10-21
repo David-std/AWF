@@ -300,6 +300,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     args.review_run_id,
                     args.expected_head,
                 )
+                links_verified: bool | None = None
                 if any(option is not None for option in linking_options):
                     if not all(option is not None for option in linking_options):
                         raise ValueError(
@@ -315,6 +316,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                         expected_head=args.expected_head,
                     )
                     report["evidence_links"] = links.to_dict()
+                    links_verified = links.all_declared_links_verified
                 print(json.dumps(report, ensure_ascii=False))
                 counts = report["status_counts"]
                 if not isinstance(counts, dict):
@@ -323,8 +325,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 documented_pass = (
                     not args.require_documented or documented == report["requirements_count"]
                 )
-                if any(option is not None for option in linking_options):
-                    return 0 if documented_pass and links.all_declared_links_verified else 2
+                if links_verified is not None:
+                    return 0 if documented_pass and links_verified else 2
                 return 0 if documented_pass else 2
             except (OSError, ValueError, RuntimeError, KeyError, TypeError, sqlite3.Error) as exc:
                 print(f"AWF_ERROR [DOSSIER_INSPECTION_FAILED] {exc}", file=sys.stderr)
