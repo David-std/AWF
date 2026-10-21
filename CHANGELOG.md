@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased — third-party scientific arbitration (S2 draft PR #37)
+
+- Add `SCIENTIFIC_ARBITER` to the existing reviewer role/event signatures
+  for independent third-party scientific decision receipts.
+- Source- and proposal-bound private arbitration records may be reconsidered
+  through append-only chains with new signed arbiters and new recorded evidence.
+- A separate externally trusted competence, independence and COI verification
+  port is required to assert procedural acceptance; no production verifier
+  is bundled. Scientific truth, historic rule state and training remain unchanged.
+- ADR-0030, AWF-R039 and adversarial synthetic tests added.
+
 ## Unreleased — independent scientific disagreement triage (S2 draft PR #36)
 
 - Compare two existing PR #34 credential-authenticated scientific assessments of

@@ -57,3 +57,16 @@ legal opinion or certification of the old AWS ZIP.
 These recommendations inform a **governance analogy**, not validation that two
 signing keys represent two independently qualified people. AWF must not
 equate a signature with a correct decision or rights grant.
+
+## Methodological basis for third-party arbitration (PR #37)
+
+- [JBI Manual for Evidence Synthesis, section 7.3.6.3](https://jbi-global.atlassian.net/wiki/spaces/MANUAL/pages/355598976/7.3.6.3%2BAssessment%2Bof%2Bmethodological%2Bquality):
+  independent appraisal, explicit quality criteria, consensus discussion
+  and escalation to a third reviewer if needed.
+- [PRISMA 2020 explanation and elaboration (BMJ)](https://www.bmj.com/content/372/bmj.n160):
+  reporting how many reviewers worked independently and how differences
+  were resolved; automation should be reported and validated.
+
+These guidelines concern transparent research-review methods; they do **not**
+certify individual reviewer competence, endorse AWF software, give legal
+rights to research sources, or adjudicate a scientific truth claim.
