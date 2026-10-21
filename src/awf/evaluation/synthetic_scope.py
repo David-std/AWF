@@ -10,7 +10,6 @@ import hashlib
 import json
 import re
 from collections import Counter
-from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -51,9 +50,7 @@ def _read_pinned_dataset(source: Path, expected_sha256: str) -> dict[str, Any]:
         parsed = json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ValueError("synthetic benchmark dataset is not valid UTF-8 JSON") from exc
-    if not isinstance(parsed, dict) or set(parsed) != {
-        "schema_version", "dataset_role", "cases"
-    }:
+    if not isinstance(parsed, dict) or set(parsed) != {"schema_version", "dataset_role", "cases"}:
         raise ValueError("unexpected synthetic benchmark dataset schema")
     if parsed["schema_version"] != "1.0.0" or parsed["dataset_role"] != "SYNTHETIC_DEVELOPMENT":
         raise ValueError("only explicitly synthetic developer tests are accepted")
@@ -70,14 +67,22 @@ def run_synthetic_scope_benchmark(source: Path, *, expected_sha256: str) -> dict
     document_languages: dict[str, str] = {}
     for case in dataset["cases"]:
         if not isinstance(case, dict) or set(case) != {
-            "case_id", "document_id", "language", "risk_family",
-            "gold_label", "gold_provenance", "baseline", "candidate", "contract"
+            "case_id",
+            "document_id",
+            "language",
+            "risk_family",
+            "gold_label",
+            "gold_provenance",
+            "baseline",
+            "candidate",
+            "contract",
         }:
             raise ValueError("unexpected synthetic case fields")
         case_id = _string(case["case_id"], key="case_id")
         document_id = _string(case["document_id"], key="document_id")
         if (
-            _ID.fullmatch(case_id) is None or case_id in case_ids
+            _ID.fullmatch(case_id) is None
+            or case_id in case_ids
             or _ID.fullmatch(document_id) is None
         ):
             raise ValueError("invalid or duplicate benchmark identifiers")
@@ -107,21 +112,21 @@ def run_synthetic_scope_benchmark(source: Path, *, expected_sha256: str) -> dict
         status = result["scope_status"]
         if status not in ("FAIL", "PASS", "NEEDS_REVIEW"):
             raise ValueError("unexpected exact checker status")
-        observed.append({
-            "case_id": case_id,
-            "document_id": document_id,
-            "language": language,
-            "risk_family": family,
-            "gold_label": label,
-            "syntactic_scope_status": str(status),
-            "baseline_sha256": hashlib.sha256(original).hexdigest(),
-            "candidate_sha256": hashlib.sha256(candidate).hexdigest(),
-        })
+        observed.append(
+            {
+                "case_id": case_id,
+                "document_id": document_id,
+                "language": language,
+                "risk_family": family,
+                "gold_label": label,
+                "syntactic_scope_status": str(status),
+                "baseline_sha256": hashlib.sha256(original).hexdigest(),
+                "candidate_sha256": hashlib.sha256(candidate).hexdigest(),
+            }
+        )
 
     def tally(rows: list[dict[str, str]]) -> dict[str, Any]:
-        counts = Counter(
-            (row["gold_label"], row["syntactic_scope_status"]) for row in rows
-        )
+        counts = Counter((row["gold_label"], row["syntactic_scope_status"]) for row in rows)
         tp = counts["DRIFT", "FAIL"]
         fn = counts["DRIFT", "PASS"]
         pending_drift = counts["DRIFT", "NEEDS_REVIEW"]

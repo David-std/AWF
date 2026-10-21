@@ -7,9 +7,9 @@ import json
 from pathlib import Path
 
 import pytest
+from awf.evaluation.synthetic_scope import run_synthetic_scope_benchmark
 
 from awf.cli.main import main
-from awf.evaluation.synthetic_scope import run_synthetic_scope_benchmark
 
 EN = "The fictional study reported 18 % under one narrow condition."
 ES = "El estudio ficticio reportó 18 % bajo una condición limitada."
@@ -40,13 +40,15 @@ def _case(
         "contract": {
             "schema_version": "1.0.0",
             "baseline_sha256": hashlib.sha256(original.encode("utf-8")).hexdigest(),
-            "checks": [{
-                "id": "protected-metric",
-                "kind": "QUANTITY",
-                "value": "18 %",
-                "left_context": left,
-                "right_context": right,
-            }],
+            "checks": [
+                {
+                    "id": "protected-metric",
+                    "kind": "QUANTITY",
+                    "value": "18 %",
+                    "left_context": left,
+                    "right_context": right,
+                }
+            ],
         },
     }
 
@@ -57,19 +59,55 @@ def _fixture() -> dict[str, object]:
         "dataset_role": "SYNTHETIC_DEVELOPMENT",
         "cases": [
             _case("en_ok", EN, EN, "PRESERVED", language="en", family="quantity"),
-            _case("en_metric", EN, EN.replace("18 %", "19 %"), "DRIFT",
-                  language="en", family="quantity"),
-            _case("en_distant", EN, EN + " This conclusion is false.",
-                  "DRIFT", language="en", family="negation"),
-            _case("en_context", EN, EN.replace("reported ", "reported approximately "),
-                  "PRESERVED", language="en", family="modality"),
+            _case(
+                "en_metric",
+                EN,
+                EN.replace("18 %", "19 %"),
+                "DRIFT",
+                language="en",
+                family="quantity",
+            ),
+            _case(
+                "en_distant",
+                EN,
+                EN + " This conclusion is false.",
+                "DRIFT",
+                language="en",
+                family="negation",
+            ),
+            _case(
+                "en_context",
+                EN,
+                EN.replace("reported ", "reported approximately "),
+                "PRESERVED",
+                language="en",
+                family="modality",
+            ),
             _case("es_ok", ES, ES, "PRESERVED", language="es", family="quantity"),
-            _case("es_metric", ES, ES.replace("18 %", "19 %"), "DRIFT",
-                  language="es", family="quantity"),
-            _case("es_distant", ES, ES + " Esta conclusión es falsa.",
-                  "DRIFT", language="es", family="negation"),
-            _case("es_added", ES, ES + " Otro valor fue 42 %.",
-                  "DRIFT", language="es", family="quantity"),
+            _case(
+                "es_metric",
+                ES,
+                ES.replace("18 %", "19 %"),
+                "DRIFT",
+                language="es",
+                family="quantity",
+            ),
+            _case(
+                "es_distant",
+                ES,
+                ES + " Esta conclusión es falsa.",
+                "DRIFT",
+                language="es",
+                family="negation",
+            ),
+            _case(
+                "es_added",
+                ES,
+                ES + " Otro valor fue 42 %.",
+                "DRIFT",
+                language="es",
+                family="quantity",
+            ),
         ],
     }
 
