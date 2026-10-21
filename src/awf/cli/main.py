@@ -14,8 +14,8 @@ from pathlib import Path
 
 from awf import __version__
 from awf.adapters.document.markdown_adapter import MarkdownAdapter
-from awf.adapters.knowledge.pinned_archive import PinnedAwsArchive
 from awf.adapters.knowledge.pilot_evidence import inspect_historical_evidence
+from awf.adapters.knowledge.pinned_archive import PinnedAwsArchive
 from awf.adapters.knowledge.review_file import JsonReviewReader
 from awf.adapters.knowledge.zip_archive import checksum_file
 from awf.adapters.persistence.blob_store import FileBlobStore
