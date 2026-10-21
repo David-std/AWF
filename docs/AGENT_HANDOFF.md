@@ -1,5 +1,14 @@
 # AWF — transferencia de Sprint 2
 
+## New provisional incremental branch after PR #33 — ADR-0027
+
+- Draft work planned: `feat/s2-independent-scientific-assessments` stacked on still-draft PR #33 (`7fcd406189762e62ad2186f43f967b1dd4ec2661`). PR #33 stacks on #32; neither has merged. Do not interpret these commits as changes to `develop` or `main`.
+- New `SCIENTIFIC_REVIEWER` role and `SCIENTIFIC_RULE_ASSESSMENT` event, with application-only separate actor-credential verification `scientific_assessments.py`. It reuses original signed-proposal validation and exact externally SHA-pinned ledger head. Actual method/evidence/limitations notes are local SQLite evidence bytes, not public text. The assessment opinion `SUPPORT|CONTEST|INCONCLUSIVE` is **not scholarly adjudication**.
+- [ADR-0027](adr/0027-independent-scientific-assessment-receipts.md) and [guide](INDEPENDENT_SCIENTIFIC_ASSESSMENTS_S2.md); AWF-R036 candidate. No added CLI option yet; rights and independent real-human review remain deferred. No `REVIEW_ATTESTED`, no TRAIN, S2 remains OPEN, 0/168 MUST.
+- **Verification status:** candidate pending CI and PR merge; replace this line ONLY after observing the final exact SHA job results and recording a PR comment. Do not claim local physical Windows tests based on GitHub Actions.
+
+
+
 ## Newest provisional increment: stacked PR #33 (2026-10-20)
 
 - Branch `feat/s2-signed-knowledge-review-proposals`, **draft [PR #33](https://github.com/David-std/AWF/pull/33)** targeting the *still-draft* `feat/s2-verify-dossier-evidence-links` of PR #32. Never merge or retarget directly to `develop` before the parent is independently reviewed and integrated.

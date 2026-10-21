@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — independent scientific assessment receipts (S2 candidate)
+
+- Propose a separately granted SCIENTIFIC_REVIEWER role and signed per-rule SCIENTIFIC_RULE_ASSESSMENT event verified after the exact authenticated proposal.
+- Preserve the rights/independence/epistemic boundary: no automatic REVIEW_ATTESTED, TRAIN or resolution of historical rules. Pending independent CI/review.
+
+
+
 ## Unreleased — S2 signed historical-rule proposals (draft PR #33)
 
 - Add `KNOWLEDGE_REVIEWER` role and `KNOWLEDGE_REVIEW_PROPOSAL` event, reusing existing Ed25519 reviewer grants, signature envelopes and verified SQLite snapshots.

@@ -163,3 +163,7 @@ or RPO/RTO commitment. A backup does not authorize scholarly claims.
 ## Signed dossier proposal review — stacked Sprint 2 increment
 
 A separate `KNOWLEDGE_REVIEWER` role can sign the exact immutable snapshot of a documented private rule proposal, with per-rule/run grants, expiry and revocation. `awf knowledge inspect-review` can optionally verify this signed inventory under an externally pinned policy and ledger head. This is **credential authorization only**, never `REVIEW_ATTESTED` or scientific acceptance. See [ADR-0026](docs/adr/0026-signed-knowledge-review-proposals.md) and [private usage guide](docs/SIGNED_KNOWLEDGE_PROPOSALS_S2.md). Draft [PR #33](https://github.com/David-std/AWF/pull/33) depends on draft PR #32.
+
+## Independent scientific assessment receipts (S2 draft candidate)
+
+The optional Python application service `verify_independent_scientific_assessments` authenticates an actor-distinct, role-scoped, Ed25519-signed assessment following an already signed rule proposal. Assessment notes remain in the private ledger. Credential and event integrity do not prove research correctness or source rights. No historical rule is thereby adjudicated or usable for training. See [ADR-0027](docs/adr/0027-independent-scientific-assessment-receipts.md).
