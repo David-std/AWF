@@ -9,7 +9,6 @@ import argparse
 import hashlib
 import importlib
 import json
-import os
 import platform
 import re
 import sys
