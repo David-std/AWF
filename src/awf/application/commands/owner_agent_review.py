@@ -8,12 +8,11 @@ An existing Ed25519 reviewer attestation authenticates only owner intent.
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
 from typing import cast
 
 from awf.application.commands.authorize_review import verify_signed_review_event
 from awf.application.ports import EvidenceStorePort, ReviewerSignatureVerifierPort
-from awf.domain.evidence import EvidenceIntegrityError, EvidenceKind, sha256_bytes
+from awf.domain.evidence import EvidenceIntegrityError, EvidenceKind
 from awf.domain.owner_agent_review import AgentVerdict, OwnerAction, OwnerReviewResult
 from awf.domain.reviewer_auth import ReviewerRole, ReviewerTrustPolicy
 from awf.domain.signed_documents import canonical_json_bytes, strict_json
