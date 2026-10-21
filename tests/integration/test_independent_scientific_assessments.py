@@ -1119,14 +1119,19 @@ def _governance_step(
             governance_policy_sha256=s["gov_policy"].sha256,
         ),
     )
-    signatures = tuple(
-        f"event:{_attest(
-            s['store'], key=s['governors'][actor], actor=actor,
-            key_id=actor + '-key', role=ReviewerRole.GOVERNANCE_APPROVER,
-            target=record, policy=s['reviewer_policy']
-        ).digest}"
-        for actor in voters
-    )
+    signed_refs = []
+    for actor in voters:
+        receipt = _attest(
+            s["store"],
+            key=s["governors"][actor],
+            actor=actor,
+            key_id=actor + "-key",
+            role=ReviewerRole.GOVERNANCE_APPROVER,
+            target=record,
+            policy=s["reviewer_policy"],
+        )
+        signed_refs.append(f"event:{receipt.digest}")
+    signatures = tuple(signed_refs)
     return (f"event:{record.digest}", signatures)
 
 
@@ -1346,10 +1351,26 @@ def test_governance_rejects_unpinned_or_wrong_policy(tmp_path: Path):
     p = canonical_json_bytes({"schema": 1, "quorum": 2, "max_transitions": 5})
     with pytest.raises(EvidenceIntegrityError, match="external trusted hash"):
         parse_governance_policy(p, expected_sha256="f" * 64)
-    with pytest.raises(EvidenceIntegrityError, match="ambiguous"):
+    with pytest.raises(EvidenceIntegrityError, match="duplicate"):
         parse_governance_policy(
             b'{"schema":1,"quorum":2,"quorum":2,"max_transitions":5}\n',
             expected_sha256=sha256_bytes(
                 b'{"schema":1,"quorum":2,"quorum":2,"max_transitions":5}\n'
             ),
         )
+
+def test_governance_different_events_cannot_reuse_the_same_board_members(tmp_path: Path):
+    s = _governance_scenario(tmp_path)
+    first = _governance_step(s, voters=("governor-0", "governor-1"))
+    fresh = s["store"].append(
+        kind=EvidenceKind.RULE_SUPPORT, run_id=RUN, subject_id=RULE,
+        content=b"synthetic fresh support before governance suspension",
+    )
+    second = _governance_step(
+        s, voters=("governor-0", "governor-2"),
+        action=GovernanceAction.SUSPEND,
+        before=GovernanceState.RATIFIED_PROCEDURAL,
+        previous=first[0], evidence_ref=f"event:{fresh.digest}",
+    )
+    with pytest.raises(EvidenceIntegrityError, match="duplicated or conflicted"):
+        _governance_check(s, (first, second))

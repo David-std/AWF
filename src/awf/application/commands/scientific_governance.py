@@ -249,7 +249,6 @@ def verify_governance_register(
     }
     rule_sha = canonical[context.rule_id]["requirement_sha256"]
     excluded_actors: set[str] = set()
-    signatures_per_transition: list[tuple[str, ...]] = []
 
     with context.store.verified_read(expected_head=context.expected_head) as reader:
         prerequisites = [
@@ -347,21 +346,19 @@ def verify_governance_register(
                 signed_rec, _ = reader.resolve_event(
                     event_digest=_digest(sig_ref), expected_head=context.expected_head
                 )
-                if actor in signed_actors or actor in excluded_actors:
+                if actor in signed_actors or actor in excluded_actors or actor in checked_actors:
                     raise EvidenceIntegrityError("governance signer duplicated or conflicted")
                 signed_actors.add(actor)
                 max_sig = max(max_sig, signed_rec.sequence)
                 checked_actors[actor] = (
                     event_ref, value["case_sha256"], tuple(sorted(excluded_actors))
                 )
-            signed_set = tuple(sorted(signed_actors))
-            signatures_per_transition.append(signed_set)
             intended_state = next_governance_state(intended_state, action)
             previous_ref = event_ref
             preceding_signature_sequence = max_sig
 
     all_actors = set(checked_actors)
-    if authority is None or not result.procedure_verified:
+    if authority is None or not result.procedure_verified or not transitions:
         return GovernanceResult(
             context.rule_id, len(transitions), 0, GovernanceState.OPEN,
             False, result.independently_qualified,
