@@ -220,3 +220,29 @@ and [PR CI 39544672301](https://github.com/David-std/AWF/actions/runs/3954467230
 4/4 matrix jobs each. Ubuntu Python 3.12 recorded 459 pytest PASS and
 Pyright 0 errors/0 warnings. Engineering verification is not a scientific
 adjudication or qualification of an actual human arbitrator.
+
+## Reversible scientific governance (S2 stacked draft PR #38)
+
+A private, externally SHA-pinned governance policy (two-to-five-person quorum)
+binds exact `SCIENTIFIC_GOVERNANCE` intent events to the prior validated
+arbitration case. Distinct `GOVERNANCE_APPROVER` keys sign **the same** event
+with the existing reviewer Ed25519 infrastructure; conflicts with proposer,
+scientific evaluators, arbitrators and prior governors are rejected. The
+reversible procedural projection is `OPEN → RATIFIED_PROCEDURAL → SUSPENDED →
+OPEN`, with fresh evidence mandatory for suspension/reopening.
+
+Critically, **no actual governance/qualification authority adapter has been
+appointed or implemented**. Signed intents are recorded but not applied
+without both externally qualified arbitration and a separately trusted
+`ExternalGovernanceAuthorityPort`. In default deployment the state remains
+OPEN. Even test-only synthetic ratification never changes the 184 historic
+requirements, source rights, scientific truth or model-training access.
+See [ADR-0031](docs/adr/0031-scientific-governance-register.md)
+and [private API guide](docs/SCIENTIFIC_GOVERNANCE_S2.md).
+
+**PR #38 code checkpoint:** `edd2301e235c2f0214ab56666dbae30d179c214e`,
+[push CI 39623798093](https://github.com/David-std/AWF/actions/runs/39623798093)
+4/4 PASS; Ubuntu Python 3.12 **472 pytest PASS** and Pyright zero errors.
+[PR CI 39623808300](https://github.com/David-std/AWF/actions/runs/39623808300)
+should be verified independently at the code SHA; this documentation
+follow-up requires another CI run on its own SHA.

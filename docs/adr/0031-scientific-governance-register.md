@@ -40,3 +40,15 @@ Test with synthetic Ed25519 signers and fake external arbitral/board verifiers: 
 ## Deferred
 
 Actual appointment and verification of a real external governing authority, verified custody and cross-key human identity, event-level quorum certificates recognized across institutions, expiration scheduling, practical appeals service, enforceable external revocation/withdrawal and deliberate promotion of any historical rule after empirical source-linked review. No silent version or state migration.
+
+## Verified engineering checkpoint (not scientific authorization)
+
+The code SHA `edd2301e235c2f0214ab56666dbae30d179c214e`
+completed [push CI 39623798093](https://github.com/David-std/AWF/actions/runs/39623798093)
+with 4/4 matrix jobs PASS (Ubuntu/Windows × Python 3.12/3.13).
+Ubuntu Python 3.12 recorded 472 pytest PASS, Pyright zero errors/warnings,
+Ruff 0.14 lint/format and build success. The corresponding
+[PR CI 39623808300](https://github.com/David-std/AWF/actions/runs/39623808300)
+must be independently checked at the same SHA and this documentation commit
+will require another CI check. Synthetic verification of source-bound
+procedures does not establish a real independent governing institution.

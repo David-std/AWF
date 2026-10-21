@@ -1,5 +1,46 @@
 # AWF — transferencia de Sprint 2
 
+## S2 PR #38 — reversible governance quorum, code checkpoint
+
+- **Draft PR:** [#38](https://github.com/David-std/AWF/pull/38),
+  `feat/s2-governance-transitions`, based on draft PR #37 HEAD
+  `736b2786e3bf0908ee136226dbf330830d9833a6`. Keep stack
+  #32 → #33 → #34 → #35 → #36 → #37 → #38; do NOT merge into develop/main
+  or change historical state as a shortcut.
+- **Code SHA:** `edd2301e235c2f0214ab56666dbae30d179c214e`.
+  [Push CI 39623798093](https://github.com/David-std/AWF/actions/runs/39623798093)
+  completed **4/4 PASS**, Ubuntu/Windows × Python 3.12/3.13.
+  Ubuntu Python 3.12 ran **472 tests PASS**, Pyright zero errors/warnings,
+  Ruff lint/format and build. [PR CI 39623808300](https://github.com/David-std/AWF/actions/runs/39623808300)
+  requires separate complete-job verification. The subsequent docs commit
+  must also pass CI at its own exact SHA.
+- **New contracts:** `src/awf/domain/scientific_governance.py`,
+  `src/awf/application/commands/scientific_governance.py`, ADR-0031,
+  AWF-R040, private guide `docs/SCIENTIFIC_GOVERNANCE_S2.md`.
+  Existing reviewer Ed25519 grants support `GOVERNANCE_APPROVER`,
+  with new `SCIENTIFIC_GOVERNANCE` intent event.
+- **Fail-closed core:** rerun complete PR #37 arbitration, require eligible
+  SUPPORT/CONTEST result, a canonical externally pinned governance policy,
+  an exact ledger head, source/case/rule SHA, immutable predecessor and
+  legitimate transitions `OPEN → RATIFIED_PROCEDURAL → SUSPENDED → OPEN`.
+  Each action needs separately signed quorum (default example 2; allowed
+  policy 2–5) with actor exclusion and no reuse; later actions cite new
+  RULE_SUPPORT events recorded after prior signatures.
+- **Outside authority:** a separately trusted `ExternalGovernanceAuthorityPort`
+  must verify documented real-person identity, academic expertise,
+  independent appointment, absence of COI, mandate and revocation using
+  externally SHA-pinned evidence. **No real production implementation
+  exists**. The shipped system projects zero applied actions and OPEN without
+  it. Positive synthetic tests only exercise the procedural wiring.
+- **Never inferred:** a procedural `RATIFIED_PROCEDURAL` state does not mean
+  a historical rule was scientifically adjudicated, source rights granted,
+  similarity detector scores improved, an ML model trained or training allowed.
+  Always 0/168 MUST adjudicated and 16 DEFERRED_LAB EVAL_ONLY.
+- **Next:** independent security/code review, realistic authorized external
+  custodian (only if an actual institution is available), verify real source
+  provenance and return to the S2 per-requirement evaluation. Stop adding
+  ceremonial signature layers without actual evidence and human governance.
+
 ## S2 draft PR #37 — signed arbitration records and appeals, CI-verified code
 
 - **Code SHA:** `0205780d2f5e0139db2ed6db3585e58efdd79f40`, [push
