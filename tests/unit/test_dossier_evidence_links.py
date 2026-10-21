@@ -10,6 +10,7 @@ import json
 from pathlib import Path
 
 import pytest
+
 from awf.adapters.persistence.sqlite_evidence import SQLiteEvidenceLedger
 from awf.application.commands.verify_dossier_evidence import (
     verify_dossier_evidence_links,
