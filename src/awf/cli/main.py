@@ -13,8 +13,16 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
+from awf import __version__
+from awf.adapters.document.markdown_adapter import MarkdownAdapter
 from awf.adapters.knowledge.pilot_evidence import inspect_historical_evidence
+from awf.adapters.knowledge.pinned_archive import PinnedAwsArchive
+from awf.adapters.knowledge.review_file import JsonReviewReader
+from awf.adapters.knowledge.zip_archive import checksum_file
 from awf.adapters.models.ollama_local import OllamaLocalAgent
+from awf.adapters.persistence.blob_store import FileBlobStore
+from awf.adapters.persistence.registry_store import save_registry, save_review_workbench
+from awf.adapters.persistence.sqlite_evidence import SQLiteEvidenceLedger
 from awf.adapters.persistence.sqlite_snapshots import SQLiteSnapshotWriter
 from awf.adapters.security.ed25519_reviewer import Ed25519ReviewerVerifier
 from awf.application.commands.authorize_dossiers import (
@@ -29,11 +37,15 @@ from awf.application.commands.checkpoints import (
     propose_checkpoint,
     verify_signed_checkpoint,
 )
+from awf.application.commands.compile_knowledge import import_knowledge
+from awf.application.commands.ingest_document import ingest_document
+from awf.application.commands.prepare_review import prepare_review
 from awf.application.commands.run_agent import run_instrumented_agent
 from awf.application.commands.verified_snapshot import create_verified_snapshot
 from awf.application.commands.verify_dossier_evidence import verify_dossier_evidence_links
 from awf.domain.agent_execution import AgentTask
 from awf.domain.checkpoints import SignedLedgerCheckpoint, parse_checkpoint_policy
+from awf.domain.evidence import EvidenceKind
 from awf.domain.reviewer_auth import (
     ReviewerRole,
     SignedReviewerClaim,
@@ -41,23 +53,10 @@ from awf.domain.reviewer_auth import (
 )
 from awf.evaluation.synthetic_scope import run_synthetic_scope_benchmark
 from awf.knowledge.adjudication_dossiers import audit_private_dossiers
+from awf.knowledge.audit import audit_registry
 from awf.ml.lora_smoke import LoRASmokePlan, prepare_smoke_run, train_synthetic_lora
 from awf.verification.exact_checks import parse_contract, verify_exact_invariants
 from awf.verification.historical_pilot import PILOT_IDS, run_historical_pilot
-
-from awf import __version__
-from awf.adapters.document.markdown_adapter import MarkdownAdapter
-from awf.adapters.knowledge.pinned_archive import PinnedAwsArchive
-from awf.adapters.knowledge.review_file import JsonReviewReader
-from awf.adapters.knowledge.zip_archive import checksum_file
-from awf.adapters.persistence.blob_store import FileBlobStore
-from awf.adapters.persistence.registry_store import save_registry, save_review_workbench
-from awf.adapters.persistence.sqlite_evidence import SQLiteEvidenceLedger
-from awf.application.commands.compile_knowledge import import_knowledge
-from awf.application.commands.ingest_document import ingest_document
-from awf.application.commands.prepare_review import prepare_review
-from awf.domain.evidence import EvidenceKind
-from awf.knowledge.audit import audit_registry
 
 
 def create_parser() -> argparse.ArgumentParser:

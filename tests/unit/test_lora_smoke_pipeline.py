@@ -7,10 +7,10 @@ import json
 from pathlib import Path
 
 import pytest
-from awf.ml.lora_smoke import LoRASmokePlan, prepare_smoke_run, train_synthetic_lora
-from awf.ml.smoke_dataset import load_synthetic_smoke_dataset
 
 from awf.cli.main import main
+from awf.ml.lora_smoke import LoRASmokePlan, prepare_smoke_run, train_synthetic_lora
+from awf.ml.smoke_dataset import load_synthetic_smoke_dataset
 
 
 def _item(number: int, split: str) -> dict[str, str]:
