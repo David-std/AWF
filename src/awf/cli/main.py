@@ -54,6 +54,7 @@ from awf.domain.reviewer_auth import (
 from awf.evaluation.synthetic_scope import run_synthetic_scope_benchmark
 from awf.knowledge.adjudication_dossiers import audit_private_dossiers
 from awf.knowledge.audit import audit_registry
+from awf.ml.lora_smoke import LoRASmokePlan, prepare_smoke_run, train_synthetic_lora
 from awf.verification.exact_checks import parse_contract, verify_exact_invariants
 from awf.verification.historical_pilot import PILOT_IDS, run_historical_pilot
 
@@ -241,6 +242,14 @@ def create_parser() -> argparse.ArgumentParser:
     agent.add_argument("--seed", type=int, default=42)
     agent.add_argument("--max-output-tokens", type=int, default=128)
     agent.add_argument("--allow-local-inference", action="store_true")
+    smoke = commands.add_parser(
+        "ml-smoke", help="plan or explicitly train a strictly synthetic local LoRA adapter"
+    )
+    smoke.add_argument("dataset", type=Path)
+    smoke.add_argument("--expected-sha256", required=True)
+    smoke.add_argument("--max-steps", type=int, default=2)
+    smoke.add_argument("--allow-synthetic-training", action="store_true")
+    smoke.add_argument("--allow-model-download", action="store_true")
     synthetic = commands.add_parser(
         "evaluate-synthetic",
         help="measure exact-checker scope against pinned synthetic development cases",
@@ -364,6 +373,31 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         except (OSError, ValueError, RuntimeError, TypeError) as exc:
             print(f"AWF_ERROR [AGENT_EXECUTION_FAILED] {type(exc).__name__}", file=sys.stderr)
+            return 2
+
+    if args.command == "ml-smoke":
+        try:
+            plan = LoRASmokePlan(max_steps=args.max_steps)
+            if not args.allow_synthetic_training:
+                _dataset, result = prepare_smoke_run(args.dataset, args.expected_sha256, plan)
+            else:
+                root = Path(".awf") / "ml" / "smoke"
+                if root.parent.is_symlink() or root.parent.parent.is_symlink():
+                    raise ValueError("private ML output parents cannot be symlinks")
+                result = train_synthetic_lora(
+                    args.dataset,
+                    expected_sha256=args.expected_sha256,
+                    plan=plan,
+                    output_root=root,
+                    allow_model_download=args.allow_model_download,
+                )
+            print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+            return 0
+        except (OSError, ValueError, TypeError, RuntimeError, ImportError) as exc:
+            print(
+                f"AWF_ERROR [ML_SMOKE_FAILED] {type(exc).__name__}",
+                file=sys.stderr,
+            )
             return 2
 
     if args.command == "evaluate-synthetic":
