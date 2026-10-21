@@ -1,0 +1,8 @@
+# Optional, isolated environment only. Pin all resolved transitive wheels in the experiment receipt.
+# torch CUDA wheel should be selected for the detected driver/platform first.
+trl==0.29.1
+peft==0.20.0
+transformers==5.0.0
+datasets==4.4.1
+accelerate==1.11.0
+# For colab_qlora also install bitsandbytes with verified CUDA compatibility.
