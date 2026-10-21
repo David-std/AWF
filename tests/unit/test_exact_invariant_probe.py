@@ -122,13 +122,15 @@ def test_citation_literal_is_not_citation_grounding() -> None:
     c = {
         "schema_version": "1.0.0",
         "baseline_sha256": _sha(text.encode()),
-        "checks": [{
-            "id": "citation",
-            "kind": "CITATION",
-            "left_context": "Según ",
-            "value": "(López, 2024)",
-            "right_context": ", el método",
-        }],
+        "checks": [
+            {
+                "id": "citation",
+                "kind": "CITATION",
+                "left_context": "Según ",
+                "value": "(López, 2024)",
+                "right_context": ", el método",
+            }
+        ],
     }
     result = verify_exact_invariants(text.encode(), text.encode(), parse_contract(c))
     assert result["scope_status"] == "PASS"
@@ -142,8 +144,13 @@ def test_cli_private_files_and_external_contract_hash(tmp_path, capsys) -> None:
     policy.write_text(json.dumps(_contract(), ensure_ascii=False), encoding="utf-8")
     h = _sha(policy.read_bytes())
     command = [
-        "verify-exact", str(a), str(b), "--contract", str(policy),
-        "--expected-contract-sha256", h,
+        "verify-exact",
+        str(a),
+        str(b),
+        "--contract",
+        str(policy),
+        "--expected-contract-sha256",
+        h,
     ]
     assert main(command) == 1
     report = json.loads(capsys.readouterr().out)
@@ -168,8 +175,18 @@ def test_cli_symlink_refused(tmp_path, capsys) -> None:
     candidate.write_text(BASE, encoding="utf-8")
     policy = tmp_path / "contract.json"
     policy.write_text(json.dumps(_contract()), encoding="utf-8")
-    assert main([
-        "verify-exact", str(link), str(candidate), "--contract", str(policy),
-        "--expected-contract-sha256", _sha(policy.read_bytes()),
-    ]) == 2
+    assert (
+        main(
+            [
+                "verify-exact",
+                str(link),
+                str(candidate),
+                "--contract",
+                str(policy),
+                "--expected-contract-sha256",
+                _sha(policy.read_bytes()),
+            ]
+        )
+        == 2
+    )
     assert "AWF_ERROR" in capsys.readouterr().err

@@ -66,9 +66,7 @@ def _value(raw: object, *, key: str) -> str:
 
 def parse_contract(raw: object) -> InvariantContract:
     """Validate explicit assertions; never infer coverage from a model response."""
-    if not isinstance(raw, dict) or set(raw) != {
-        "schema_version", "baseline_sha256", "checks"
-    }:
+    if not isinstance(raw, dict) or set(raw) != {"schema_version", "baseline_sha256", "checks"}:
         raise ValueError("invalid exact-invariant contract keys")
     if raw["schema_version"] != "1.0.0":
         raise ValueError("unsupported exact-invariant contract version")
@@ -82,7 +80,11 @@ def parse_contract(raw: object) -> InvariantContract:
     seen: set[str] = set()
     for entry in entries:
         if not isinstance(entry, dict) or set(entry) != {
-            "id", "kind", "value", "left_context", "right_context"
+            "id",
+            "kind",
+            "value",
+            "left_context",
+            "right_context",
         }:
             raise ValueError("invalid protected-literal fields")
         identity = _value(entry["id"], key="check ID")
@@ -138,15 +140,17 @@ def verify_exact_invariants(
             status = ProbeStatus.PASS
             reason = "EXACT_ANCHOR_UNCHANGED"
         statuses.append(status)
-        items.append({
-            "check_id": check.check_id,
-            "kind": check.kind,
-            "status": status.value,
-            "reason_code": reason,
-            "baseline_occurrences": original_count,
-            "candidate_occurrences": candidate_count,
-            "anchor_sha256": _sha(check.anchor.encode("utf-8")),
-        })
+        items.append(
+            {
+                "check_id": check.check_id,
+                "kind": check.kind,
+                "status": status.value,
+                "reason_code": reason,
+                "baseline_occurrences": original_count,
+                "candidate_occurrences": candidate_count,
+                "anchor_sha256": _sha(check.anchor.encode("utf-8")),
+            }
+        )
 
     signals: list[str] = []
     if _inventory(first, _NUMBERS) != _inventory(second, _NUMBERS):
