@@ -1,7 +1,7 @@
 # ADR-0027 — Independent scientific assessment receipts, not adjudications
 
 - Date: 2026-10-20
-- Status: provisional engineering prototype; awaiting independent review and CI.
+- Status: CI-verified provisional engineering prototype; independent scientific/legal and code review remain outstanding (not merged).
 - Base: draft PR #33 SHA `7fcd406189762e62ad2186f43f967b1dd4ec2661`; parent PR #32 is also unmerged. Do not merge out of stack.
 - Purpose: authenticate a second, actor-distinct, source-bound scientific assessment of a signed historical-rule proposal without granting formal adjudication, licensing or training rights.
 
@@ -29,6 +29,6 @@ Cryptographic separation of **actor IDs** does not establish distinct people, ex
 
 ## Verification and deferred work
 
-Run synthetic real-Ed25519 tests including valid two-role chain, wrong/missing/swapped references, revoked or wrong role, corrupted proposal signature, unknown head, invalid canonical payload and empty/incomplete evaluation notes. Validate locked Ruff, Pyright, pytest and build on Ubuntu/Windows × Python 3.12/3.13. No AWS ZIP or private annotations in Git.
+Real-Ed25519 adversarial integration tests and locked Ruff/Pyright/pytest/build were verified on the final PR #34 SHA `34b192a32efd0841a6149d93493d3aa1b19147b3`: [push CI 39531777710](https://github.com/David-std/AWF/actions/runs/39531777710) and [PR CI 39531782917](https://github.com/David-std/AWF/actions/runs/39531782917), both 4/4 SUCCESS (Ubuntu/Windows × Python 3.12/3.13). Ubuntu Python 3.12: **420 PASS**, Pyright **0 errors/0 warnings**, Ruff/build PASS. No physical Windows full-suite reproduction is claimed. No AWS ZIP or private annotations in Git.
 
 Next separately design: scientific evidence evaluation protocol (primary source review, conflicting evidence, applicability), licensed-source provenance/owner rights and explicit `UNKNOWN` handling, third-party independence/audit, eventual durable `REVIEW_ATTESTED` transition with no auto-TRAIN, and operator CLI. S2 remains OPEN, **0/168 MUST adjudicated**, 16 lab-only `EVAL_ONLY`.

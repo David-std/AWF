@@ -1,5 +1,15 @@
 # AWF — transferencia de Sprint 2
 
+## Authoritative continuation after the PR #34 final CI (2026-10-20; verify again before changes)
+
+- **Repository state verified:** `develop=6888a8f44a3342c61e0d31dc93374ef44a21c174`, `main=a902135b80e96eea17ebb9c229eed065077e809d`. No merge of draft [PR #32](https://github.com/David-std/AWF/pull/32), [PR #33](https://github.com/David-std/AWF/pull/33), or [PR #34](https://github.com/David-std/AWF/pull/34). PR stack: develop → #32 (head `e6846eff`) → #33 (head `7fcd4061`) → #34 (head `34b192a32efd0841a6149d93493d3aa1b19147b3`).
+- **Final SHA verified:** [push 39531777710](https://github.com/David-std/AWF/actions/runs/39531777710) and [PR 39531782917](https://github.com/David-std/AWF/actions/runs/39531782917), both 4/4 SUCCESS, Ubuntu/Windows × Python 3.12/3.13. Ubuntu 3.12 420 PASS, Pyright 0 errors/0 warnings, Ruff and build PASS. [PR #34 closure comment](https://github.com/David-std/AWF/pull/34#issuecomment-6306358457) already preserves the completed work and its limits.
+- **Current increment:** `SCIENTIFIC_REVIEWER`/ `SCIENTIFIC_RULE_ASSESSMENT`, private source-bound canonical assessment, Ed25519 verification against prior `KNOWLEDGE_REVIEWER` proposal and distinct credentials, external SHA-pinned policy/head, source/run/rule binding, revocation and chronology. [ADR-0027](adr/0027-independent-scientific-assessment-receipts.md), [usage](INDEPENDENT_SCIENTIFIC_ASSESSMENTS_S2.md), AWF-R036, `application/commands/scientific_assessments.py` and `tests/integration/test_independent_scientific_assessments.py`.
+- **Non-goals:** The result authenticates scoped records, **not** a human person, independence in the social/scientific sense, scientific truth, licensing, or authorization to train. **168/168 MUST remain UNRESOLVED, 16 DEFERRED_LAB EVAL_ONLY, 0 REVIEW_ATTESTED**, Sprint 2 OPEN. No untrusted data moved into Git/CI. ASUS used only for isolated formatter scratch.
+- **Next separately scoped work:** source-specific rights provenance and independent scientific adjudication protocol / disagreement resolution, each with explicit authority, adversarial tests, and a no-training default. No new signature implementation unless shown necessary. Preserve the PR stack; do not force push, rewrite/merge historic owner checkout or alter `main`.
+- **Historical caveat:** all references below to PR #30/#31 awaiting merge or PR #32/#33/#34 awaiting CI are past-time entries. This section supersedes them as of this verified cut. The next agent must re-check current GitHub SHA/PR states before acting.
+
+
 ## New provisional incremental branch after PR #33 — ADR-0027
 
 - Draft work planned: `feat/s2-independent-scientific-assessments` stacked on still-draft PR #33 (`7fcd406189762e62ad2186f43f967b1dd4ec2661`). PR #33 stacks on #32; neither has merged. Do not interpret these commits as changes to `develop` or `main`.

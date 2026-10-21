@@ -2,7 +2,7 @@
 
 **AWF Neural Engine** is an engineering and machine-learning project for traceable academic text revision in Spanish and English. The goal is to preserve meaning, citations, evidence, and author intent while comparing pretrained editors, fine-tuned models, and explicit verification policies.
 
-**Status (2026-10-20):** PR #10–#31 are merged into `develop`; draft PR #32 adds source-bound dossier evidence links, and dependent draft PR #33 adds scoped Ed25519 authorization of exact review proposals. Both remain unmerged. `main` is untouched, Sprint 2 remains OPEN, and 0/168 mandatory historical rules are adjudicated. Neural editing, independent scientific review and training are not implemented.
+**Status (2026-10-20):** PR #10–#31 are merged into `develop` (`6888a8f44a33`). Draft PR #32 binds private dossier evidence; draft PR #33 authorizes signed rule proposals; draft PR #34 verifies a separate credential-signed scientific assessment as a *recorded opinion*, not an adjudication. All three PRs passed their own CI but remain unmerged in order. `main` is unchanged. Sprint 2 is OPEN with 0/168 MUST adjudicated and 16 DEFERRED_LAB in `EVAL_ONLY`. No neural editor, training authorization, verified rights or independently completed scientific adjudication.
 
 ## Start here
 
@@ -167,3 +167,5 @@ A separate `KNOWLEDGE_REVIEWER` role can sign the exact immutable snapshot of a 
 ## Independent scientific assessment receipts (S2 draft candidate)
 
 The optional Python application service `verify_independent_scientific_assessments` authenticates an actor-distinct, role-scoped, Ed25519-signed assessment following an already signed rule proposal. Assessment notes remain in the private ledger. Credential and event integrity do not prove research correctness or source rights. No historical rule is thereby adjudicated or usable for training. See [ADR-0027](docs/adr/0027-independent-scientific-assessment-receipts.md).
+
+Verified final [PR #34 CI](https://github.com/David-std/AWF/actions/runs/39531782917) at `34b192a3` (4/4); the corresponding authoritative [handoff section](docs/AGENT_HANDOFF.md) includes SHA, architecture, preserved limits, and next requirements. See [ADR-0027](docs/adr/0027-independent-scientific-assessment-receipts.md). No physical ASUS full-suite tests are claimed.
