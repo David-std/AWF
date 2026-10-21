@@ -3,6 +3,7 @@
 A rights declaration is a recorded owner claim, NOT independently verified rights.
 No training reader may open holdout; group IDs are sufficient to check segregation.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -78,9 +79,12 @@ def _validate_split(
     if set(spec) != {"file", "sha256", "group_ids"}:
         raise ValueError("unexpected split descriptor")
     groups = spec["group_ids"]
-    if (not isinstance(groups, list) or not groups or
-        any(not isinstance(x, str) or IDENTIFIER.fullmatch(x) is None for x in groups)
-        or len(groups) != len(set(groups))):
+    if (
+        not isinstance(groups, list)
+        or not groups
+        or any(not isinstance(x, str) or IDENTIFIER.fullmatch(x) is None for x in groups)
+        or len(groups) != len(set(groups))
+    ):
         raise ValueError("invalid or repeated group ID in split")
     declared = set(groups)
     if split == "holdout":
@@ -104,9 +108,13 @@ def _validate_split(
         for k in ("id", "group_id", "language", "prompt", "completion"):
             if not isinstance(row[k], str) or not row[k]:
                 raise ValueError(f"invalid sample field {k}")
-        if (IDENTIFIER.fullmatch(row["id"]) is None or row["id"] in unique_ids
-            or row["group_id"] not in declared or row["language"] not in {"es", "en"}
-            or max(len(row["prompt"]), len(row["completion"])) > _MAX_TEXT):
+        if (
+            IDENTIFIER.fullmatch(row["id"]) is None
+            or row["id"] in unique_ids
+            or row["group_id"] not in declared
+            or row["language"] not in {"es", "en"}
+            or max(len(row["prompt"]), len(row["completion"])) > _MAX_TEXT
+        ):
             raise ValueError("unsafe or duplicate training example")
         unique_ids.add(row["id"])
         found_groups.add(row["group_id"])
@@ -144,29 +152,36 @@ def load_training_dataset(
         raise ValueError("owner-authored training requires explicit authorization")
     rights = manifest["source_rights"]
     if not isinstance(rights, dict) or set(rights) != {
-        "origin", "license", "training_permitted", "owner_attestation"
+        "origin",
+        "license",
+        "training_permitted",
+        "owner_attestation",
     }:
         raise ValueError("invalid source-rights declaration")
-    if (rights["origin"] != role or rights["training_permitted"] is not True
+    if (
+        rights["origin"] != role
+        or rights["training_permitted"] is not True
         or rights["owner_attestation"] is not True
-        or not isinstance(rights["license"], str) or not rights["license"].strip()):
+        or not isinstance(rights["license"], str)
+        or not rights["license"].strip()
+    ):
         raise ValueError("training rights are not explicitly attested")
     descriptors = manifest["splits"]
-    if not isinstance(descriptors, dict) or set(descriptors) != {
-        "train", "validation", "holdout"
-    }:
+    if not isinstance(descriptors, dict) or set(descriptors) != {"train", "validation", "holdout"}:
         raise ValueError("train/validation/sealed holdout are mandatory")
     if any(not isinstance(x, dict) for x in descriptors.values()):
         raise ValueError("invalid split descriptor")
     folder = manifest_path.resolve().parent
     train, train_sha, a = _validate_split(folder, descriptors["train"], split="train")
-    validation, valid_sha, b = _validate_split(folder, descriptors["validation"], split="validation")
+    validation, valid_sha, b = _validate_split(
+        folder, descriptors["validation"], split="validation"
+    )
     _, holdout_sha, c = _validate_split(folder, descriptors["holdout"], split="holdout")
     if a & b or a & c or b & c:
         raise ValueError("group leakage across train/validation/holdout")
     if {row["id"] for row in train} & {row["id"] for row in validation}:
         raise ValueError("example identifier reused across train and validation")
-    if (len(train) < 2 or len(validation) < 2):
+    if len(train) < 2 or len(validation) < 2:
         raise ValueError("minimum of two training and two validation examples required")
     return TrainingDataset(
         role=role,

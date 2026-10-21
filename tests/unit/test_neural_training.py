@@ -30,8 +30,10 @@ def _rewrite(path: Path, object_value: dict) -> str:
 def test_generated_dataset_and_preflight_without_ml_import(tmp_path: Path) -> None:
     manifest, digest = _generated(tmp_path)
     dataset = load_training_dataset(
-        manifest, expected_sha256=digest,
-        allow_synthetic_smoke=True, owner_authorized=False,
+        manifest,
+        expected_sha256=digest,
+        allow_synthetic_smoke=True,
+        owner_authorized=False,
     )
     assert len(dataset.train) == 8
     assert len(dataset.validation) == 2
@@ -54,21 +56,19 @@ def test_training_defaults_to_opt_in(tmp_path: Path) -> None:
     manifest, digest = _generated(tmp_path)
     with pytest.raises(ValueError, match="explicit opt-in"):
         load_training_dataset(
-            manifest, expected_sha256=digest,
-            allow_synthetic_smoke=False, owner_authorized=True
+            manifest, expected_sha256=digest, allow_synthetic_smoke=False, owner_authorized=True
         )
-    assert main([
-        "--manifest", str(manifest), "--manifest-sha256", digest,
-        "--profile", str(PROFILE)
-    ]) == 2
+    assert (
+        main(["--manifest", str(manifest), "--manifest-sha256", digest, "--profile", str(PROFILE)])
+        == 2
+    )
 
 
 def test_manifest_external_hash_mismatch_rejected(tmp_path: Path) -> None:
     manifest, _ = _generated(tmp_path)
     with pytest.raises(ValueError, match="content hash mismatch"):
         load_training_dataset(
-            manifest, expected_sha256="0" * 64,
-            allow_synthetic_smoke=True, owner_authorized=False
+            manifest, expected_sha256="0" * 64, allow_synthetic_smoke=True, owner_authorized=False
         )
 
 
@@ -77,22 +77,21 @@ def test_split_tamper_is_rejected(tmp_path: Path) -> None:
     (manifest.parent / "train.jsonl").write_bytes(b"modified")
     with pytest.raises(ValueError, match="content hash mismatch"):
         load_training_dataset(
-            manifest, expected_sha256=digest,
-            allow_synthetic_smoke=True, owner_authorized=False,
+            manifest,
+            expected_sha256=digest,
+            allow_synthetic_smoke=True,
+            owner_authorized=False,
         )
 
 
 def test_group_leakage_across_holdout_rejected(tmp_path: Path) -> None:
     manifest, _ = _generated(tmp_path)
     payload = json.loads(manifest.read_text(encoding="utf-8"))
-    payload["splits"]["holdout"]["group_ids"].append(
-        payload["splits"]["train"]["group_ids"][0]
-    )
+    payload["splits"]["holdout"]["group_ids"].append(payload["splits"]["train"]["group_ids"][0])
     digest = _rewrite(manifest, payload)
     with pytest.raises(ValueError, match="group leakage"):
         load_training_dataset(
-            manifest, expected_sha256=digest,
-            allow_synthetic_smoke=True, owner_authorized=False
+            manifest, expected_sha256=digest, allow_synthetic_smoke=True, owner_authorized=False
         )
 
 
@@ -104,12 +103,16 @@ def test_owner_attestation_not_accepted_as_independent_review(tmp_path: Path) ->
     digest = _rewrite(manifest, payload)
     with pytest.raises(ValueError, match="owner-authored training requires"):
         load_training_dataset(
-            manifest, expected_sha256=digest,
-            allow_synthetic_smoke=True, owner_authorized=False,
+            manifest,
+            expected_sha256=digest,
+            allow_synthetic_smoke=True,
+            owner_authorized=False,
         )
     dataset = load_training_dataset(
-        manifest, expected_sha256=digest,
-        allow_synthetic_smoke=False, owner_authorized=True,
+        manifest,
+        expected_sha256=digest,
+        allow_synthetic_smoke=False,
+        owner_authorized=True,
     )
     assert dataset.independently_reviewed is False
     assert dataset.rights_claim["owner_attestation"] is True
@@ -122,8 +125,10 @@ def test_explicit_rights_assertion_must_not_be_missing(tmp_path: Path) -> None:
     digest = _rewrite(manifest, payload)
     with pytest.raises(ValueError, match="training rights"):
         load_training_dataset(
-            manifest, expected_sha256=digest,
-            allow_synthetic_smoke=True, owner_authorized=False,
+            manifest,
+            expected_sha256=digest,
+            allow_synthetic_smoke=True,
+            owner_authorized=False,
         )
 
 
@@ -134,8 +139,10 @@ def test_untrusted_relative_path_and_duplicate_id_rejected(tmp_path: Path) -> No
     digest = _rewrite(manifest, payload)
     with pytest.raises(ValueError, match="split path"):
         load_training_dataset(
-            manifest, expected_sha256=digest,
-            allow_synthetic_smoke=True, owner_authorized=False,
+            manifest,
+            expected_sha256=digest,
+            allow_synthetic_smoke=True,
+            owner_authorized=False,
         )
 
 
@@ -158,10 +165,17 @@ def test_cli_preflight_hides_training_text_and_creates_no_model(
 ) -> None:
     manifest, digest = _generated(tmp_path)
     monkeypatch.chdir(tmp_path)
-    code = main([
-        "--manifest", str(manifest), "--manifest-sha256", digest,
-        "--profile", str(PROFILE), "--allow-synthetic-smoke"
-    ])
+    code = main(
+        [
+            "--manifest",
+            str(manifest),
+            "--manifest-sha256",
+            digest,
+            "--profile",
+            str(PROFILE),
+            "--allow-synthetic-smoke",
+        ]
+    )
     captured = capsys.readouterr()
     assert code == 0
     assert json.loads(captured.out)["status"] == "PREFLIGHT_ONLY"
@@ -179,8 +193,7 @@ def test_symlink_manifest_denied(tmp_path: Path) -> None:
         pytest.skip("symlinks disabled")
     with pytest.raises(ValueError, match="non-symlink"):
         load_training_dataset(
-            symlink, expected_sha256=digest,
-            allow_synthetic_smoke=True, owner_authorized=False
+            symlink, expected_sha256=digest, allow_synthetic_smoke=True, owner_authorized=False
         )
 
 

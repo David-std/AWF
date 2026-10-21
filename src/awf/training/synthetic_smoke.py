@@ -3,6 +3,7 @@
 No third-party sources, legacy AWS rules or manuscript prose are copied.
 The generated private material does not establish semantic model quality.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -12,30 +13,66 @@ import sys
 from pathlib import Path
 
 _ORIGINALS: tuple[tuple[str, str, str], ...] = (
-    ("en", "The sample contained 18 observations in one group.",
-     "One group contained 18 observations."),
-    ("es", "La muestra estuvo conformada por 18 observaciones en un grupo.",
-     "Un grupo reunió 18 observaciones."),
-    ("en", "The experiment used two tests over four weeks.",
-     "Two tests were conducted over four weeks."),
-    ("es", "El experimento utilizó dos pruebas durante cuatro semanas.",
-     "Se realizaron dos pruebas durante cuatro semanas."),
-    ("en", "Only the first population was included in the evaluation.",
-     "The evaluation included only the first population."),
-    ("es", "Solo se consideró la primera población en la evaluación.",
-     "La evaluación consideró únicamente la primera población."),
-    ("en", "The findings remain limited to the selected period.",
-     "The findings apply only to the selected period."),
-    ("es", "Los hallazgos se limitan al periodo seleccionado.",
-     "Los resultados corresponden únicamente al periodo seleccionado."),
-    ("en", "Under condition A, the rate was 12 percent.",
-     "The rate was 12 percent under condition A."),
-    ("es", "Bajo la condición A, la tasa fue del 12 por ciento.",
-     "La tasa fue del 12 por ciento bajo la condición A."),
-    ("en", "The report did not examine the second condition.",
-     "The second condition was not examined in the report."),
-    ("es", "El informe no examinó la segunda condición.",
-     "La segunda condición no fue examinada en el informe."),
+    (
+        "en",
+        "The sample contained 18 observations in one group.",
+        "One group contained 18 observations.",
+    ),
+    (
+        "es",
+        "La muestra estuvo conformada por 18 observaciones en un grupo.",
+        "Un grupo reunió 18 observaciones.",
+    ),
+    (
+        "en",
+        "The experiment used two tests over four weeks.",
+        "Two tests were conducted over four weeks.",
+    ),
+    (
+        "es",
+        "El experimento utilizó dos pruebas durante cuatro semanas.",
+        "Se realizaron dos pruebas durante cuatro semanas.",
+    ),
+    (
+        "en",
+        "Only the first population was included in the evaluation.",
+        "The evaluation included only the first population.",
+    ),
+    (
+        "es",
+        "Solo se consideró la primera población en la evaluación.",
+        "La evaluación consideró únicamente la primera población.",
+    ),
+    (
+        "en",
+        "The findings remain limited to the selected period.",
+        "The findings apply only to the selected period.",
+    ),
+    (
+        "es",
+        "Los hallazgos se limitan al periodo seleccionado.",
+        "Los resultados corresponden únicamente al periodo seleccionado.",
+    ),
+    (
+        "en",
+        "Under condition A, the rate was 12 percent.",
+        "The rate was 12 percent under condition A.",
+    ),
+    (
+        "es",
+        "Bajo la condición A, la tasa fue del 12 por ciento.",
+        "La tasa fue del 12 por ciento bajo la condición A.",
+    ),
+    (
+        "en",
+        "The report did not examine the second condition.",
+        "The second condition was not examined in the report.",
+    ),
+    (
+        "es",
+        "El informe no examinó la segunda condición.",
+        "La segunda condición no fue examinada en el informe.",
+    ),
 )
 
 
@@ -54,13 +91,15 @@ def make_private_smoke_dataset(destination: Path) -> str:
         group_id = f"fictional_doc_{index:02d}"
         groups[split].append(group_id)
         if split != "holdout":
-            splits[split].append({
-                "id": f"fictional_pair_{index:02d}",
-                "group_id": group_id,
-                "language": language,
-                "prompt": f"Rewrite while preserving quantities and restrictions: {original}",
-                "completion": edited,
-            })
+            splits[split].append(
+                {
+                    "id": f"fictional_pair_{index:02d}",
+                    "group_id": group_id,
+                    "language": language,
+                    "prompt": f"Rewrite while preserving quantities and restrictions: {original}",
+                    "completion": edited,
+                }
+            )
     descriptors: dict[str, dict[str, object]] = {}
     for name in ("train", "validation"):
         filename = f"{name}.jsonl"
@@ -102,13 +141,18 @@ def main() -> int:
     args = parser.parse_args()
     try:
         digest = make_private_smoke_dataset(args.output)
-        print(json.dumps({
-            "status": "SYNTHETIC_SMOKE_CREATED",
-            "path": str(args.output / "manifest.json"),
-            "manifest_sha256": digest,
-            "source_rights_independently_verified": False,
-            "holdout_material_written": False,
-        }, sort_keys=True))
+        print(
+            json.dumps(
+                {
+                    "status": "SYNTHETIC_SMOKE_CREATED",
+                    "path": str(args.output / "manifest.json"),
+                    "manifest_sha256": digest,
+                    "source_rights_independently_verified": False,
+                    "holdout_material_written": False,
+                },
+                sort_keys=True,
+            )
+        )
         return 0
     except (OSError, ValueError) as exc:
         print(f"AWF_ERROR [SYNTHETIC_SETUP_FAILED] {type(exc).__name__}", file=sys.stderr)

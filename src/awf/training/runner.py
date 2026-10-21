@@ -3,6 +3,7 @@
 This runner only performs SFT on completion tokens; it is not a semantic judge.
 The sealed holdout is never loaded, read, or evaluated here.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -32,9 +33,18 @@ def load_profile(path: Path) -> dict[str, Any]:
         raise ValueError("profile must be a small regular file")
     profile = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(profile, dict) or set(profile) != {
-        "schema_version", "profile", "model_id", "model_revision",
-        "max_length", "steps", "learning_rate", "lora_r",
-        "lora_alpha", "lora_dropout", "gradient_accumulation_steps", "seed",
+        "schema_version",
+        "profile",
+        "model_id",
+        "model_revision",
+        "max_length",
+        "steps",
+        "learning_rate",
+        "lora_r",
+        "lora_alpha",
+        "lora_dropout",
+        "gradient_accumulation_steps",
+        "seed",
     }:
         raise ValueError("unexpected training profile schema")
     if profile["schema_version"] != "1.0.0" or profile["profile"] not in _ALLOWED_PROFILES:
@@ -42,8 +52,11 @@ def load_profile(path: Path) -> dict[str, Any]:
     if profile["model_id"] != BASE_MODEL or profile["model_revision"] != MODEL_REVISION:
         raise ValueError("training model must be bound to reviewed repository revision")
     for field, low, high in (
-        ("max_length", 64, 1024), ("steps", 1, 2500), ("lora_r", 2, 64),
-        ("lora_alpha", 2, 128), ("gradient_accumulation_steps", 1, 32),
+        ("max_length", 64, 1024),
+        ("steps", 1, 2500),
+        ("lora_r", 2, 64),
+        ("lora_alpha", 2, 128),
+        ("gradient_accumulation_steps", 1, 32),
         ("seed", 0, 2**32 - 1),
     ):
         value = profile[field]
@@ -51,8 +64,12 @@ def load_profile(path: Path) -> dict[str, Any]:
             raise ValueError(f"invalid {field} in training profile")
     rate = profile["learning_rate"]
     dropout = profile["lora_dropout"]
-    if (type(rate) not in {int, float} or not 1e-7 <= rate <= 0.001
-        or type(dropout) not in {int, float} or not 0 <= dropout <= 0.2):
+    if (
+        type(rate) not in {int, float}
+        or not 1e-7 <= rate <= 0.001
+        or type(dropout) not in {int, float}
+        or not 0 <= dropout <= 0.2
+    ):
         raise ValueError("invalid training optimization parameters")
     return profile
 
@@ -151,7 +168,8 @@ def run_training(
     if profile["profile"] == "colab_qlora":
         bnb = importlib.import_module("transformers").BitsAndBytesConfig
         model_opts["quantization_config"] = bnb(
-            load_in_4bit=True, bnb_4bit_quant_type="nf4",
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
             bnb_4bit_compute_dtype=torch.bfloat16 if use_bf16 else torch.float16,
             bnb_4bit_use_double_quant=True,
         )
@@ -167,29 +185,43 @@ def run_training(
     target.mkdir(mode=0o700)
     model = transformers.AutoModelForCausalLM.from_pretrained(BASE_MODEL, **model_opts)
     tokenizer = transformers.AutoTokenizer.from_pretrained(
-        BASE_MODEL, revision=MODEL_REVISION, trust_remote_code=False,
+        BASE_MODEL,
+        revision=MODEL_REVISION,
+        trust_remote_code=False,
     )
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     adapter = peft.LoraConfig(
-        r=profile["lora_r"], lora_alpha=profile["lora_alpha"],
+        r=profile["lora_r"],
+        lora_alpha=profile["lora_alpha"],
         lora_dropout=profile["lora_dropout"],
         target_modules=["q_proj", "v_proj"],
-        bias="none", task_type="CAUSAL_LM",
+        bias="none",
+        task_type="CAUSAL_LM",
     )
     train_data = datasets.Dataset.from_list(_dataset_view(dataset.train))
     validation_data = datasets.Dataset.from_list(_dataset_view(dataset.validation))
     options = trl.SFTConfig(
         output_dir=str(target / "checkpoints"),
-        max_steps=profile["steps"], learning_rate=profile["learning_rate"],
-        max_length=profile["max_length"], completion_only_loss=True,
-        assistant_only_loss=False, packing=False,
-        per_device_train_batch_size=1, per_device_eval_batch_size=1,
+        max_steps=profile["steps"],
+        learning_rate=profile["learning_rate"],
+        max_length=profile["max_length"],
+        completion_only_loss=True,
+        assistant_only_loss=False,
+        packing=False,
+        per_device_train_batch_size=1,
+        per_device_eval_batch_size=1,
         gradient_accumulation_steps=profile["gradient_accumulation_steps"],
-        gradient_checkpointing=True, fp16=not use_bf16, bf16=use_bf16,
-        seed=profile["seed"], data_seed=profile["seed"],
-        report_to="none", push_to_hub=False, save_strategy="no",
-        eval_strategy="no", logging_steps=1,
+        gradient_checkpointing=True,
+        fp16=not use_bf16,
+        bf16=use_bf16,
+        seed=profile["seed"],
+        data_seed=profile["seed"],
+        report_to="none",
+        push_to_hub=False,
+        save_strategy="no",
+        eval_strategy="no",
+        logging_steps=1,
         disable_tqdm=True,
     )
     trainer = trl.SFTTrainer(
@@ -215,10 +247,15 @@ def run_training(
         "gpu_memory_max_allocated_bytes": int(torch.cuda.max_memory_allocated(0)),
         "precision": "bf16" if use_bf16 else "fp16",
         "python_version": platform.python_version(),
-        "library_versions": _module_versions({
-            "torch": torch, "trl": trl, "peft": peft,
-            "transformers": transformers, "datasets": datasets,
-        }),
+        "library_versions": _module_versions(
+            {
+                "torch": torch,
+                "trl": trl,
+                "peft": peft,
+                "transformers": transformers,
+                "datasets": datasets,
+            }
+        ),
         "adapter_files_sha256": _hash_tree(adapter_dir),
         "training_output_private": True,
     }
@@ -226,7 +263,8 @@ def run_training(
         json.dumps(receipt, sort_keys=True, indent=2) + "\n", encoding="utf-8"
     )
     return {
-        **basic, "status": receipt["status"],
+        **basic,
+        "status": receipt["status"],
         "gradient_updates_observed": actual_steps,
         "receipt_path": str(target / "receipt.json"),
         "adapter_directory": str(adapter_dir),
@@ -244,13 +282,17 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         source = load_training_dataset(
-            args.manifest, expected_sha256=args.manifest_sha256,
+            args.manifest,
+            expected_sha256=args.manifest_sha256,
             allow_synthetic_smoke=args.allow_synthetic_smoke,
             owner_authorized=args.owner_authorized,
         )
         profile = load_profile(args.profile)
         result = run_training(
-            source, profile, workspace=Path(".awf") / "model-runs", execute=args.execute,
+            source,
+            profile,
+            workspace=Path(".awf") / "model-runs",
+            execute=args.execute,
         )
         print(json.dumps(result, sort_keys=True))
         return 0
