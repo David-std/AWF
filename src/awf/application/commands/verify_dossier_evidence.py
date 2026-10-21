@@ -12,8 +12,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from awf.application.ports import EvidenceStorePort
-from awf.domain.evidence import EvidenceIntegrityError, EvidenceKind
+from awf.application.ports import EvidenceStorePort, VerifiedEvidenceReaderPort
+from awf.domain.evidence import EvidenceIntegrityError, EvidenceKind, EvidenceRecord
 
 _EVENT = re.compile(r"event:([0-9a-f]{64})\Z")
 _DIGEST = re.compile(r"[0-9a-f]{64}\Z")
@@ -83,6 +83,41 @@ def _payload_matches(
     )
 
 
+
+def resolve_rule_support_event(
+    reader: VerifiedEvidenceReaderPort,
+    *,
+    reference: str,
+    run_id: str,
+    rule_id: str,
+    archive_sha256: str,
+    source_id: str,
+    requirement_sha256: str,
+    expected_head: str,
+) -> EvidenceRecord:
+    """Verify one source- and rule-bound support event within an existing snapshot."""
+    match = _EVENT.fullmatch(reference)
+    if match is None:
+        raise EvidenceIntegrityError("support reference must be an exact ledger event digest")
+    record, payload = reader.resolve_event(
+        event_digest=match.group(1), expected_head=expected_head
+    )
+    if (
+        record.kind != EvidenceKind.RULE_SUPPORT
+        or record.run_id != run_id
+        or record.subject_id != rule_id
+        or not _payload_matches(
+            payload,
+            source_sha256=archive_sha256,
+            source_id=source_id,
+            requirement_id=rule_id,
+            requirement_sha256=requirement_sha256,
+        )
+    ):
+        raise EvidenceIntegrityError("dossier event identity mismatch")
+    return record
+
+
 def verify_dossier_evidence_links(
     *,
     canonical_manifest: Mapping[str, Any],
@@ -141,27 +176,17 @@ def verify_dossier_evidence_links(
                     if not isinstance(ref, str):
                         bad_rules.add(rule_id)
                         continue
-                    match = _EVENT.fullmatch(ref)
-                    if match is None:
-                        bad_rules.add(rule_id)
-                        continue
                     try:
-                        record, payload = reader.resolve_event(
-                            event_digest=match.group(1), expected_head=expected_head
+                        resolve_rule_support_event(
+                            reader,
+                            reference=ref,
+                            run_id=run_id,
+                            rule_id=rule_id,
+                            archive_sha256=source_sha,
+                            source_id=source_id,
+                            requirement_sha256=sha,
+                            expected_head=expected_head,
                         )
-                        if (
-                            record.kind != EvidenceKind.RULE_SUPPORT
-                            or record.run_id != run_id
-                            or record.subject_id != rule_id
-                            or not _payload_matches(
-                                payload,
-                                source_sha256=source_sha,
-                                source_id=source_id,
-                                requirement_id=rule_id,
-                                requirement_sha256=sha,
-                            )
-                        ):
-                            raise EvidenceIntegrityError("dossier event identity mismatch")
                     except (EvidenceIntegrityError, ValueError):
                         bad_rules.add(rule_id)
                     else:
