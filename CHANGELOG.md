@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — S2 dossier evidence links
+
+- Add optional read-only binding of private dossier `evidence_ids` to source- and rule-scoped ledger events, with one verified SQLite snapshot and externally supplied head.
+- Reject missing/wrong scope, kind, run, source or rule SHA; retain all scientific-review and training restrictions.
+- Document ADR-0025 and PR #31 handoff corrections. Functional commit `5f10015` passed four-platform CI; this remains an unmerged PR and **not** a completed knowledge adjudication.
+
+
 ## Unreleased — signed authorization of durable critic sweeps (Sprint 2)
 
 - Extend the canonical Ed25519 reviewer-role contract with CRITIC, restricted to CRITIC_OBSERVATION ledger events and an externally SHA-pinned trust policy.

@@ -2,7 +2,7 @@
 
 **AWF Neural Engine** is an engineering and machine-learning project for traceable academic text revision in Spanish and English. The goal is to preserve meaning, citations, evidence, and author intent while comparing pretrained editors, fine-tuned models, and explicit verification policies.
 
-**Status (2026-10-20): S0/S1 and Sprint 2 infrastructure through PR #29 are integrated into `develop`; PR #30 introduces signed authorization of durable critic sweeps.** Synthetic replay profiling and atomic evidence batches are already integrated; the new transitions are not a scientific evaluator. `main` remains at its pre-integration baseline; Sprint 2 is still open. None of the 168 mandatory historic rules has been formally adjudicated. The neural editor, independent semantic verifier, training and external API are **not implemented**. This repository maintains research provenance without claiming detector performance.
+**Status (2026-10-20):** PR #10–#31 are merged into `develop` at `6888a8f44a3342c61e0d31dc93374ef44a21c174`; draft PR #32 proposes an optional, source-bound SQLite evidence-link gate and has passed its code CI. `main` remains untouched. Sprint 2 stays open with 0/168 mandatory historical rules adjudicated and 16 deferred laboratory rules reserved for evaluation. A neural editor, independently authorized scholarly adjudication, training, and external API are **not implemented**. Hash and event integrity do not prove authorship, research correctness, or reviewer authority.
 
 ## Start here
 
@@ -155,3 +155,7 @@ See [ADR-0018](docs/adr/0018-wal-aware-signed-backup-recovery.md) and
 [the operational guide](docs/VERIFIED_SNAPSHOTS_S2.md). There is no remote
 backup provider, scheduler, automatic cutover, proof of third-party custody
 or RPO/RTO commitment. A backup does not authorize scholarly claims.
+
+## Dossier evidence links — optional Sprint 2 gate
+
+[ADR-0025](docs/adr/0025-dossier-evidence-links.md) documents the opt-in `awf knowledge inspect-review --evidence-database ... --review-run-id ... --expected-head ...` integrity gate. It verifies stored event bytes, bound source/rule identity and one trusted ledger snapshot, without granting reviewer authority or scientific acceptance. See [usage](docs/DOSSIER_EVIDENCE_LINKS_S2.md).

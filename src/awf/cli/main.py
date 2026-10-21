@@ -34,6 +34,7 @@ from awf.application.commands.compile_knowledge import import_knowledge
 from awf.application.commands.ingest_document import ingest_document
 from awf.application.commands.prepare_review import prepare_review
 from awf.application.commands.verified_snapshot import create_verified_snapshot
+from awf.application.commands.verify_dossier_evidence import verify_dossier_evidence_links
 from awf.domain.checkpoints import SignedLedgerCheckpoint, parse_checkpoint_policy
 from awf.domain.evidence import EvidenceKind
 from awf.domain.reviewer_auth import (
@@ -97,6 +98,11 @@ def create_parser() -> argparse.ArgumentParser:
         "--require-documented",
         action="store_true",
         help="fail if any proposal is open, partial, conflicted or unsupported",
+    )
+    dossiers.add_argument("--evidence-database", type=Path, help="private SQLite evidence ledger")
+    dossiers.add_argument("--review-run-id", help="expected ledger run for supporting evidence")
+    dossiers.add_argument(
+        "--expected-head", help="independently retained 64-character ledger head digest"
     )
     evidence = commands.add_parser("evidence", help="private, transactional evidence ledger")
     actions = evidence.add_subparsers(dest="evidence_action")
@@ -289,17 +295,40 @@ def main(argv: Sequence[str] | None = None) -> int:
                     observed_manifest=observed,
                     observed_packets=actual_packets,
                 )
+                linking_options = (
+                    args.evidence_database,
+                    args.review_run_id,
+                    args.expected_head,
+                )
+                links_verified: bool | None = None
+                if any(option is not None for option in linking_options):
+                    if not all(option is not None for option in linking_options):
+                        raise ValueError(
+                            "evidence linking requires database, run ID and independently held head"
+                        )
+                    ledger = SQLiteEvidenceLedger(args.evidence_database)
+                    links = verify_dossier_evidence_links(
+                        canonical_manifest=canonical,
+                        canonical_packets=packets,
+                        observed_packets=actual_packets,
+                        store=ledger,
+                        run_id=args.review_run_id,
+                        expected_head=args.expected_head,
+                    )
+                    report["evidence_links"] = links.to_dict()
+                    links_verified = links.all_declared_links_verified
                 print(json.dumps(report, ensure_ascii=False))
                 counts = report["status_counts"]
                 if not isinstance(counts, dict):
                     raise ValueError("invalid dossier status counts")
                 documented = counts.get("PROPOSAL_DOCUMENTED", 0)
-                return (
-                    0
-                    if not args.require_documented or documented == report["requirements_count"]
-                    else 2
+                documented_pass = (
+                    not args.require_documented or documented == report["requirements_count"]
                 )
-            except (OSError, ValueError, RuntimeError, KeyError, TypeError) as exc:
+                if links_verified is not None:
+                    return 0 if documented_pass and links_verified else 2
+                return 0 if documented_pass else 2
+            except (OSError, ValueError, RuntimeError, KeyError, TypeError, sqlite3.Error) as exc:
                 print(f"AWF_ERROR [DOSSIER_INSPECTION_FAILED] {exc}", file=sys.stderr)
                 return 2
 
