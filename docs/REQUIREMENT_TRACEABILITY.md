@@ -182,7 +182,7 @@ Véanse [ADR-0015](adr/0015-durable-edit-and-finding-transitions.md) y
 - **Adversarial checks:** absent issuer authority, cross-source, partial source, explicit
   denial, revoked/expired grant, contradictory overlaps, missing/modified evidence,
   duplicate IDs, modified manifest hash and wrong source/fragment hash all fail closed.
-- **Status:** `IMPLEMENTED_PARTIAL_REVIEW_PENDING` on draft PR #35; the source-of-truth
+- **Status:** `IMPLEMENTED_PARTIAL_REVIEW_PENDING` on draft PR #35; code SHA `cd6c2c885efd1f54da5b9804a41c2a3cc314a5f2` passed [push CI 39540058673](https://github.com/David-std/AWF/actions/runs/39540058673) 4/4 (Ubuntu/Windows × Python 3.12/3.13), Ubuntu Python 3.12 440 pytest PASS and Pyright 0 errors; any subsequent documentation SHA needs its own CI. the source-of-truth
   and non-escalation controls are implemented but no independently qualified legal
   authority adapter or genuine source rights corpus is present. See
   [ADR-0028](adr/0028-source-rights-evidence-gate.md) and

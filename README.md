@@ -183,3 +183,5 @@ evidence and issuer scope before any conditional positive rights conclusion.
 `TRAIN_ALLOWED` never sets the separate system-level `training_authorized` flag.
 No ZIP or private evidence is committed. See [ADR-0028](docs/adr/0028-source-rights-evidence-gate.md)
 and [guide](docs/SOURCE_RIGHTS_GATE_S2.md).
+
+**PR #35 code verification:** `cd6c2c8` passed [push CI 39540058673](https://github.com/David-std/AWF/actions/runs/39540058673), 4/4 matrix jobs (Ubuntu/Windows × Python 3.12/3.13), 440 tests passed on Ubuntu 3.12 and Pyright 0 errors. This does not establish external legal authority or scientific acceptance.

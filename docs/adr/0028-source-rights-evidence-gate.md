@@ -31,3 +31,7 @@ This decision preserves the existing modular monolith and ports/adapters boundar
 ## Verification
 
 Tests use synthetic source bytes, fake external claims and fake authority; cover SHA mismatch, different-source claims, partial ranges, missing evidence, malicious owner, revocation, expiration, negative claims, unsupported operations, duplicates and conflicting scopes. CI matrix must validate locked Ruff 0.14.0/Pyright/pytest/build before declaring an implementation verified.
+
+## Implementation CI checkpoint
+
+The first fully formatted code snapshot `cd6c2c885efd1f54da5b9804a41c2a3cc314a5f2` completed [push workflow 39540058673](https://github.com/David-std/AWF/actions/runs/39540058673) successfully across all four combinations of Ubuntu/Windows and Python 3.12/3.13. Ubuntu 3.12 showed 440 passed tests, Pyright zero errors and Ruff lint/format + build success. A subsequent documentation-only commit requires independent checks; neither result establishes actual rights or reviewer competence.

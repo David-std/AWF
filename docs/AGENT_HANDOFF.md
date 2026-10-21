@@ -1,5 +1,10 @@
 # AWF — transferencia de Sprint 2
 
+## S2 PR #35 — rights evidence, implementation tested, legal authority deferred
+
+- Code SHA `cd6c2c885efd1f54da5b9804a41c2a3cc314a5f2`: [push CI run 39540058673](https://github.com/David-std/AWF/actions/runs/39540058673) SUCCESS, 4/4 Ubuntu/Windows × Python 3.12/3.13. Ubuntu Python 3.12 had **440 pytest PASS**, Pyright **0 errors/0 warnings**, Ruff and build pass. The documentation follow-up must be checked at its exact SHA separately.
+- Draft [PR #35](https://github.com/David-std/AWF/pull/35) targets `feat/s2-independent-scientific-assessments`. This engineering test is NOT an independent legal or scientific adjudication.
+
 ## S2 candidate PR #35 — rights evidence, conditional and independently verified
 
 - Branch `feat/s2-source-rights-provenance`, **based on draft PR #34 exact HEAD
