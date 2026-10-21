@@ -133,8 +133,11 @@ def verify_authorized_dossier_proposals(
         observed_manifest=observed_manifest,
         observed_packets=observed_packets,
     )
+    outcomes = audit.get("rules")
+    if not isinstance(outcomes, list) or any(not isinstance(item, dict) for item in outcomes):
+        raise EvidenceIntegrityError("invalid source-bound dossier inspection result")
     documented = {
-        str(item["id"]) for item in audit["rules"] if item["status"] == "PROPOSAL_DOCUMENTED"
+        str(item["id"]) for item in outcomes if item.get("status") == "PROPOSAL_DOCUMENTED"
     }
     if not documented or set(attestation_refs) != documented:
         return AuthorizationGateResult(
