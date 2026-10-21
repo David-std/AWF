@@ -1,5 +1,7 @@
 # AWF — transferencia de Sprint 2
 
+**Handoff prioritario actualizado:** [2026-10-21 — recuperación integral S2 / PR #39](handoffs/2026-10-21-S2-PR39-RECOVERY.md). El commit `8fa8e32da11afea222f27863d03a86cf54bc87fa` tuvo CI push 4/4 + PR 4/4 SUCCESS (482 pytest Ubuntu 3.12); la publicación de esta nota implica un SHA documental nuevo que debe comprobarse de forma independiente. Los encabezados anteriores con «CI pendiente» son historia, no el estado actual. La siguiente prioridad es evaluación empírica y ejecución instrumentada, NO nuevos quórums.
+
 ## S2 draft PR #39 — owner-governed agent review, code CI passed
 
 - **Code SHA:** `b72de165412759e62737a0c64afb3cdc276e675a`.
