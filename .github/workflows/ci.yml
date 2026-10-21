@@ -42,8 +42,6 @@ jobs:
         run: uv run --no-sync awf --version
       - name: Ruff lint
         run: uvx --from ruff==0.14.0 ruff check .
-      - name: Ruff format diff
-        run: uvx --from ruff==0.14.0 ruff format --diff .
       - name: Ruff format
         run: uvx --from ruff==0.14.0 ruff format --check .
       - name: Type check

@@ -80,8 +80,16 @@ class SyntheticExternalAuthority:
 
 
 def _check(
-    inventory, *, use=RightsUse.EVALUATE, start=0, end=10, source=DATA,
-    evidence=None, authority=None, now=50, policy=POLICY,
+    inventory,
+    *,
+    use=RightsUse.EVALUATE,
+    start=0,
+    end=10,
+    source=DATA,
+    evidence=None,
+    authority=None,
+    now=50,
+    policy=POLICY,
 ):
     return check_source_right(
         inventory,
@@ -106,15 +114,13 @@ def test_recorded_claim_never_self_authorizes() -> None:
 
 
 def test_explicit_deny_overrides_claimed_grant() -> None:
-    _, inventory = _inventory(_claim(), _claim(identifier="claim-2", start=3, end=6,
-                                                 kind="DENIAL"))
+    _, inventory = _inventory(_claim(), _claim(identifier="claim-2", start=3, end=6, kind="DENIAL"))
     out = _check(inventory, authority=SyntheticExternalAuthority())
     assert out.outcome == RightsOutcome.RESTRICTED
     assert not out.rights_scope_verified
 
 
-@pytest.mark.parametrize("change", [{"revoked": True}, {"start_time": 60},
-                                      {"end_time": 50}])
+@pytest.mark.parametrize("change", [{"revoked": True}, {"start_time": 60}, {"end_time": 50}])
 def test_revoked_or_ineffective_claims_fail_closed(change) -> None:
     _, inventory = _inventory(_claim(**change))
     assert _check(inventory, authority=SyntheticExternalAuthority()).outcome == (
@@ -135,7 +141,8 @@ def test_distinct_uses_are_never_inferred_from_license_name() -> None:
 def test_verified_evaluation_grant_remains_separate_from_training() -> None:
     _, inventory = _inventory(_claim())
     decision = _check(
-        inventory, evidence={sha256_bytes(EVIDENCE): EVIDENCE},
+        inventory,
+        evidence={sha256_bytes(EVIDENCE): EVIDENCE},
         authority=SyntheticExternalAuthority(),
     )
     assert decision.outcome == RightsOutcome.LICENSED_FOR_EVAL
@@ -147,7 +154,8 @@ def test_verified_evaluation_grant_remains_separate_from_training() -> None:
 def test_positive_training_scope_is_not_training_authorization() -> None:
     _, inventory = _inventory(_claim(uses=["EVALUATE", "TRAIN"]))
     decision = _check(
-        inventory, use=RightsUse.TRAIN,
+        inventory,
+        use=RightsUse.TRAIN,
         evidence={sha256_bytes(EVIDENCE): EVIDENCE},
         authority=SyntheticExternalAuthority(),
     )
@@ -166,8 +174,11 @@ def test_missing_external_evidence_is_unknown() -> None:
 def test_changed_evidence_bytes_are_rejected() -> None:
     _, inventory = _inventory(_claim())
     with pytest.raises(EvidenceIntegrityError, match="evidence bytes"):
-        _check(inventory, authority=SyntheticExternalAuthority(),
-               evidence={sha256_bytes(EVIDENCE): b"tampered"})
+        _check(
+            inventory,
+            authority=SyntheticExternalAuthority(),
+            evidence={sha256_bytes(EVIDENCE): b"tampered"},
+        )
 
 
 def test_altered_source_file_cannot_be_verified() -> None:
@@ -179,8 +190,11 @@ def test_altered_source_file_cannot_be_verified() -> None:
 def test_external_authority_must_not_accept_changed_owner() -> None:
     _, inventory = _inventory(_claim(owner="impostor"))
     with pytest.raises(EvidenceIntegrityError, match="rejects claim"):
-        _check(inventory, evidence={sha256_bytes(EVIDENCE): EVIDENCE},
-               authority=SyntheticExternalAuthority())
+        _check(
+            inventory,
+            evidence={sha256_bytes(EVIDENCE): EVIDENCE},
+            authority=SyntheticExternalAuthority(),
+        )
 
 
 def test_snapshot_hash_and_cross_source_fail() -> None:
@@ -188,8 +202,11 @@ def test_snapshot_hash_and_cross_source_fail() -> None:
     with pytest.raises(EvidenceIntegrityError, match="external trusted hash"):
         parse_source_rights(data, expected_sha256="f" * 64, expected_asset=ASSET)
     with pytest.raises(EvidenceIntegrityError, match="another source"):
-        parse_source_rights(data, expected_sha256=sha256_bytes(data),
-                            expected_asset=replace(ASSET, source_id="source-B"))
+        parse_source_rights(
+            data,
+            expected_sha256=sha256_bytes(data),
+            expected_asset=replace(ASSET, source_id="source-B"),
+        )
 
 
 def test_duplicate_ids_rejected_even_if_license_is_same() -> None:
@@ -206,8 +223,11 @@ def test_invalid_span_and_boolean_timestamps_rejected() -> None:
 
 def test_union_of_same_owner_permissions_can_cover_segment() -> None:
     _, inventory = _inventory(_claim(end=5), _claim(identifier="claim-2", start=5))
-    result = _check(inventory, authority=SyntheticExternalAuthority(),
-                    evidence={sha256_bytes(EVIDENCE): EVIDENCE})
+    result = _check(
+        inventory,
+        authority=SyntheticExternalAuthority(),
+        evidence={sha256_bytes(EVIDENCE): EVIDENCE},
+    )
     assert result.outcome == RightsOutcome.LICENSED_FOR_EVAL
     assert result.evidence_checked == 2
 
@@ -215,10 +235,12 @@ def test_union_of_same_owner_permissions_can_cover_segment() -> None:
 def test_noncanonical_or_duplicate_json_fields_are_rejected() -> None:
     raw, _ = _inventory(_claim())
     with pytest.raises(EvidenceIntegrityError):
-        parse_source_rights(raw.replace(b'"schema":1', b'"schema":1,"schema":1'),
-                            expected_sha256=sha256_bytes(raw.replace(
-                                b'"schema":1', b'"schema":1,"schema":1'
-                            )), expected_asset=ASSET)
+        parse_source_rights(
+            raw.replace(b'"schema":1', b'"schema":1,"schema":1'),
+            expected_sha256=sha256_bytes(raw.replace(b'"schema":1', b'"schema":1,"schema":1')),
+            expected_asset=ASSET,
+        )
+
 
 def test_conflicting_overlap_is_not_resolved_by_choosing_friendly_licence() -> None:
     _, inventory = _inventory(

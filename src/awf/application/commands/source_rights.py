@@ -25,9 +25,20 @@ from awf.domain.source_rights import (
 _SOURCE_FIELDS = frozenset({"source_id", "archive_sha256", "file_sha256", "size_bytes"})
 _CLAIM_FIELDS = frozenset(
     {
-        "claim_id", "start_byte", "end_byte", "kind", "uses", "owner_id",
-        "authority_id", "license_expression", "jurisdiction", "evidence_uri",
-        "evidence_sha256", "valid_from", "valid_until", "revoked",
+        "claim_id",
+        "start_byte",
+        "end_byte",
+        "kind",
+        "uses",
+        "owner_id",
+        "authority_id",
+        "license_expression",
+        "jurisdiction",
+        "evidence_uri",
+        "evidence_sha256",
+        "valid_from",
+        "valid_until",
+        "revoked",
     }
 )
 
@@ -57,7 +68,11 @@ def parse_source_rights(
     if sha256_bytes(data) != expected_sha256:
         raise EvidenceIntegrityError("rights inventory differs from external trusted hash")
     raw = strict_json(data)
-    if set(raw) != {"schema", "asset", "claims"} or type(raw["schema"]) is not int or raw["schema"] != 1:
+    if (
+        set(raw) != {"schema", "asset", "claims"}
+        or type(raw["schema"]) is not int
+        or raw["schema"] != 1
+    ):
         raise EvidenceIntegrityError("invalid rights inventory version")
     asset_data = raw["asset"]
     if not isinstance(asset_data, dict) or set(asset_data) != _SOURCE_FIELDS:
@@ -82,9 +97,7 @@ def parse_source_rights(
             raise EvidenceIntegrityError("invalid rights claim fields")
         row = cast(dict[str, object], obj)
         uses = row["uses"]
-        if not isinstance(uses, list) or not uses or len(uses) != len(set(
-            str(x) for x in uses
-        )):
+        if not isinstance(uses, list) or not uses or len(uses) != len(set(str(x) for x in uses)):
             raise EvidenceIntegrityError("empty or repeated usage rights")
         try:
             kind = RightsClaimKind(cast(str, row["kind"]))
@@ -158,12 +171,12 @@ def check_source_right(
         raise EvidenceIntegrityError("source bytes, segment or trusted time do not match")
 
     relevant = [
-        c for c in inventory.claims
+        c
+        for c in inventory.claims
         if c.start_byte < end_byte and c.end_byte > start_byte and use in c.uses
     ]
     if any(
-        c.kind == RightsClaimKind.DENIAL or c.revoked
-        or not c.valid_from <= now < c.valid_until
+        c.kind == RightsClaimKind.DENIAL or c.revoked or not c.valid_from <= now < c.valid_until
         for c in relevant
     ):
         return RightsDecision(use, RightsOutcome.RESTRICTED, "denial_or_invalid_grant", 0, False)
@@ -174,22 +187,29 @@ def check_source_right(
                 left.start_byte < right.end_byte
                 and right.start_byte < left.end_byte
                 and (left.owner_id, left.authority_id, left.license_expression, left.jurisdiction)
-                != (right.owner_id, right.authority_id, right.license_expression, right.jurisdiction)
+                != (
+                    right.owner_id,
+                    right.authority_id,
+                    right.license_expression,
+                    right.jurisdiction,
+                )
             ):
                 return RightsDecision(
                     use, RightsOutcome.UNKNOWN, "conflicting_overlapping_grants", 0, False
                 )
     intervals = [
         (max(c.start_byte, start_byte), min(c.end_byte, end_byte))
-        for c in relevant if c.kind == RightsClaimKind.GRANT_CLAIM
+        for c in relevant
+        if c.kind == RightsClaimKind.GRANT_CLAIM
     ]
     if not _covers(intervals, start_byte, end_byte):
         return RightsDecision(use, RightsOutcome.UNKNOWN, "uncovered_source_bytes", 0, False)
     if authority is None or expected_authority_policy_sha256 is None:
-        return RightsDecision(use, RightsOutcome.UNKNOWN, "external_authority_not_verified", 0, False)
-    if (
-        len(expected_authority_policy_sha256) != 64
-        or any(ch not in "0123456789abcdef" for ch in expected_authority_policy_sha256)
+        return RightsDecision(
+            use, RightsOutcome.UNKNOWN, "external_authority_not_verified", 0, False
+        )
+    if len(expected_authority_policy_sha256) != 64 or any(
+        ch not in "0123456789abcdef" for ch in expected_authority_policy_sha256
     ):
         raise EvidenceIntegrityError("externally pinned rights authority policy required")
     checked = 0
@@ -198,8 +218,13 @@ def check_source_right(
             continue
         evidence = evidence_by_sha256.get(claim.evidence_sha256)
         if evidence is None:
-            return RightsDecision(use, RightsOutcome.UNKNOWN, "missing_external_evidence", checked, False)
-        if not isinstance(evidence, bytes) or hashlib.sha256(evidence).hexdigest() != claim.evidence_sha256:
+            return RightsDecision(
+                use, RightsOutcome.UNKNOWN, "missing_external_evidence", checked, False
+            )
+        if (
+            not isinstance(evidence, bytes)
+            or hashlib.sha256(evidence).hexdigest() != claim.evidence_sha256
+        ):
             raise EvidenceIntegrityError("rights evidence bytes do not match claim digest")
         authority.verify(
             claim=claim,
