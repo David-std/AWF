@@ -148,3 +148,11 @@ Véanse [ADR-0015](adr/0015-durable-edit-and-finding-transitions.md) y
 - Garantía **LIMITADA A METADATOS**: `PROPOSAL_DOCUMENTED` no equivale a calidad científica ni `REVIEW_ATTESTED`. El estado sustantivo permanece `0/168 MUST` adjudicadas.
 - Evidencia: [CI 39510436138](https://github.com/David-std/AWF/actions/runs/39510436138) 4/4 plataformas/intérpretes, con 364 PASS en Ubuntu 3.12 sobre `be9df691`. La comprobación final del commit documental se registra separadamente.
 
+
+## AWF-R034 — Binding of private dossier evidence links (candidate after PR #31)
+
+- **Historical precondition:** AWF-R033 `inspect-review` checks immutable source fields before this independent opt-in gate; [ADR-0025](adr/0025-dossier-evidence-links.md).
+- **Candidate implementation:** `application/commands/verify_dossier_evidence.py`, `domain/evidence.py` `RULE_SUPPORT` kind, CLI optional `--evidence-database/--review-run-id/--expected-head`; [guide](DOSSIER_EVIDENCE_LINKS_S2.md).
+- **Acceptance:** actual stored SHA-bound event bytes in one verified snapshot; exact event kind/run/subject/source/rule SHA/purpose; invalid refs and stale head fail; old dossiers remain compatible when verification not requested; no private source in Git/stdout.
+- **Formal state:** `CANDIDATE_PENDING_CI` until checked against the SHA of the PR. Not `REVIEW_ATTESTED`, not reviewer identity verification, and 0/168 MUST still adjudicated.
+- **PR #31 final CI correction:** [39510767394](https://github.com/David-std/AWF/actions/runs/39510767394) (PR final), replacing the intermediate reference as a current milestone; historic CI links remain historical.

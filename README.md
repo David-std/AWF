@@ -155,3 +155,7 @@ See [ADR-0018](docs/adr/0018-wal-aware-signed-backup-recovery.md) and
 [the operational guide](docs/VERIFIED_SNAPSHOTS_S2.md). There is no remote
 backup provider, scheduler, automatic cutover, proof of third-party custody
 or RPO/RTO commitment. A backup does not authorize scholarly claims.
+
+## Dossier evidence links — optional Sprint 2 gate
+
+[ADR-0025](docs/adr/0025-dossier-evidence-links.md) documents the opt-in `awf knowledge inspect-review --evidence-database ... --review-run-id ... --expected-head ...` integrity gate. It verifies stored event bytes, bound source/rule identity and one trusted ledger snapshot, without granting reviewer authority or scientific acceptance. See [usage](docs/DOSSIER_EVIDENCE_LINKS_S2.md).
