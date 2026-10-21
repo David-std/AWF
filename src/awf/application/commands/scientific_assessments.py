@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from awf.application.commands.authorize_dossiers import (
     verify_authorized_dossier_proposals,
@@ -192,8 +192,11 @@ def verify_independent_scientific_assessments(
         observed_manifest=observed_manifest,
         observed_packets=observed_packets,
     )
+    outcomes = audit.get("rules")
+    if not isinstance(outcomes, list) or any(not isinstance(row, dict) for row in outcomes):
+        raise EvidenceIntegrityError("invalid audited scientific dossier records")
     documented = {
-        str(item["id"]) for item in audit["rules"] if item["status"] == "PROPOSAL_DOCUMENTED"
+        str(item["id"]) for item in outcomes if item.get("status") == "PROPOSAL_DOCUMENTED"
     }
     if not documented or set(assessment_refs) != documented:
         return ScientificAssessmentResult(
@@ -236,6 +239,10 @@ def verify_independent_scientific_assessments(
                         or value["schema"] != 1
                     ):
                         raise EvidenceIntegrityError("scientific assessment fields mismatch")
+                    if any(
+                        not isinstance(value[key], str) for key in _FIELDS - {"schema"}
+                    ):
+                        raise EvidenceIntegrityError("invalid scientific assessment field types")
                     if (
                         value["type"] != "independent_scientific_assessment"
                         or value["source_id"] != canonical_manifest["source_id"]
@@ -246,16 +253,16 @@ def verify_independent_scientific_assessments(
                     ):
                         raise EvidenceIntegrityError("scientific assessment source binding failed")
                     rebuilt = scientific_assessment_payload(
-                        source_id=value["source_id"],
-                        archive_sha256=value["archive_sha256"],
-                        requirement_id=value["requirement_id"],
-                        requirement_sha256=value["requirement_sha256"],
-                        proposal_ref=value["proposal_ref"],
-                        actor_id=value["assessment_actor_id"],
-                        verdict=value["verdict"],
-                        method_notes=value["method_notes"],
-                        evidence_analysis=value["evidence_analysis"],
-                        limitations=value["limitations"],
+                        source_id=cast(str, value["source_id"]),
+                        archive_sha256=cast(str, value["archive_sha256"]),
+                        requirement_id=cast(str, value["requirement_id"]),
+                        requirement_sha256=cast(str, value["requirement_sha256"]),
+                        proposal_ref=cast(str, value["proposal_ref"]),
+                        actor_id=cast(str, value["assessment_actor_id"]),
+                        verdict=cast(str, value["verdict"]),
+                        method_notes=cast(str, value["method_notes"]),
+                        evidence_analysis=cast(str, value["evidence_analysis"]),
+                        limitations=cast(str, value["limitations"]),
                     )
                     if rebuilt != assessment_bytes:
                         raise EvidenceIntegrityError("noncanonical scientific assessment")
