@@ -246,3 +246,16 @@ and [private API guide](docs/SCIENTIFIC_GOVERNANCE_S2.md).
 [PR CI 39623808300](https://github.com/David-std/AWF/actions/runs/39623808300)
 should be verified independently at the code SHA; this documentation
 follow-up requires another CI run on its own SHA.
+
+## Owner-governed AI review for EVAL_ONLY pilots (S2 draft PR #39)
+
+An AWF project owner may **authorize their own internal evaluation experiments**
+without an external institution, by signing an exact `OWNER_EVALUATION_DECISION`
+using the existing Ed25519 trust system. Two `AGENT_REVIEW_REPORT` records bind
+the same source/rule/task, claimed model runs and existing ledger source-support
+events. AWF verifies distinct agent/run labels, signatures and canonical hashes.
+The owner **may be the original proposer** because this mode does NOT claim an
+independent scientific adjudication, third-party qualification or publication
+review. No trained-model access, rights grant, historic rule disposition or
+`RATIFIED_PROCEDURAL` state follows. See [ADR-0032](docs/adr/0032-owner-governed-agent-evaluation.md)
+and [owner workflow](docs/OWNER_AGENT_REVIEW_S2.md).
