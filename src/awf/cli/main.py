@@ -326,10 +326,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             ):
                 if path.is_symlink():
                     raise ValueError("agent output directories cannot be symbolic links")
-            output, receipt = run_instrumented_agent(task, OllamaLocalAgent())
+            generated_bytes, receipt = run_instrumented_agent(task, OllamaLocalAgent())
             if receipt["execution_transport"] != "LOCAL_OLLAMA_HTTP":
                 raise ValueError("model transport is not a local HTTP execution")
-            digest = FileBlobStore(privacy_root / "blobs").put(output)
+            digest = FileBlobStore(privacy_root / "blobs").put(generated_bytes)
             if digest != receipt["result_sha256"]:
                 raise ValueError("stored candidate hash mismatch")
             destination = privacy_root / "receipts" / f"{uuid4().hex}.json"
