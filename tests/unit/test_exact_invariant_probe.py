@@ -9,7 +9,6 @@ import pytest
 
 from awf.cli.main import main
 from awf.verification.exact_checks import (
-    ProbeStatus,
     parse_contract,
     verify_exact_invariants,
 )
@@ -161,7 +160,10 @@ def test_cli_symlink_refused(tmp_path, capsys) -> None:
     original = tmp_path / "original.md"
     original.write_text(BASE, encoding="utf-8")
     link = tmp_path / "link.md"
-    link.symlink_to(original)
+    try:
+        link.symlink_to(original)
+    except OSError:
+        pytest.skip("symlink creation unavailable on this runner")
     candidate = tmp_path / "candidate.md"
     candidate.write_text(BASE, encoding="utf-8")
     policy = tmp_path / "contract.json"

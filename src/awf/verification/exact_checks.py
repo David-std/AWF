@@ -12,7 +12,6 @@ import re
 from collections import Counter
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import cast
 
 _HEX64 = re.compile(r"[0-9a-f]{64}\Z")
 _NUMBERS = re.compile(r"(?<![\w])\d+(?:[.,]\d+)*(?:[ \t]*%)?")
