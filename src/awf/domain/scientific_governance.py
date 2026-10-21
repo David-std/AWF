@@ -31,9 +31,7 @@ _TRANSITIONS = {
 }
 
 
-def next_governance_state(
-    before: GovernanceState, action: GovernanceAction
-) -> GovernanceState:
+def next_governance_state(before: GovernanceState, action: GovernanceAction) -> GovernanceState:
     """A reversible procedural decision, never a historic knowledge transition."""
     try:
         return _TRANSITIONS[(before, action)]

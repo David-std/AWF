@@ -1006,6 +1006,7 @@ def test_reconsideration_must_cite_new_evidence(tmp_path: Path):
             (first, (f"event:{record.digest}", f"event:{sig.digest}")),
         )
 
+
 GOVERNANCE_DOC = b"synthetic independently checked academic governor credentials"
 
 
@@ -1050,8 +1051,16 @@ class SyntheticGovernanceAuthority:
     """Only synthetic tests may claim governor qualifications and no conflicts."""
 
     def verify(
-        self, *, actor_id, excluded_actor_ids, rule_id, case_sha256,
-        decision_ref, evidence, governance_policy_sha256, at_time,
+        self,
+        *,
+        actor_id,
+        excluded_actor_ids,
+        rule_id,
+        case_sha256,
+        decision_ref,
+        evidence,
+        governance_policy_sha256,
+        at_time,
     ) -> None:
         if (
             not actor_id.startswith("governor-")
@@ -1072,17 +1081,10 @@ def _governance_scenario(tmp_path: Path):
     s, second, policy, case, arb = _arbitration_scenario(
         tmp_path, position=ArbitrationPosition.SUPPORT
     )
-    governors = {
-        f"governor-{i}": Ed25519PrivateKey.generate()
-        for i in range(6)
-    }
+    governors = {f"governor-{i}": Ed25519PrivateKey.generate() for i in range(6)}
     reviewer_policy = _governance_reviewer_policy(policy, governors)
-    policy_data = canonical_json_bytes(
-        {"schema": 1, "quorum": 2, "max_transitions": 5}
-    )
-    gov_policy = parse_governance_policy(
-        policy_data, expected_sha256=sha256_bytes(policy_data)
-    )
+    policy_data = canonical_json_bytes({"schema": 1, "quorum": 2, "max_transitions": 5})
+    gov_policy = parse_governance_policy(policy_data, expected_sha256=sha256_bytes(policy_data))
     s["governors"] = governors
     s["gov_policy"] = gov_policy
     s["second"] = second
@@ -1093,13 +1095,18 @@ def _governance_scenario(tmp_path: Path):
 
 
 def _governance_step(
-    s, *, voters, action=GovernanceAction.RATIFY,
-    before=GovernanceState.OPEN, previous=None, evidence_ref=None,
+    s,
+    *,
+    voters,
+    action=GovernanceAction.RATIFY,
+    before=GovernanceState.OPEN,
+    previous=None,
+    evidence_ref=None,
 ):
     if evidence_ref is None:
-        evidence_ref = s["observed"]["batch-001.json"]["rules"][0][
-            "review_template"
-        ]["evidence_ids"][0]
+        evidence_ref = s["observed"]["batch-001.json"]["rules"][0]["review_template"][
+            "evidence_ids"
+        ][0]
     record = s["store"].append(
         kind=EvidenceKind.SCIENTIFIC_GOVERNANCE,
         run_id=RUN,
@@ -1136,8 +1143,15 @@ def _governance_step(
 
 
 def _governance_check(
-    s, transitions, *, board=None, arbiter_qualified=True, board_evidence=None,
-    head=None, reviewer_policy=None, governance_policy=None,
+    s,
+    transitions,
+    *,
+    board=None,
+    arbiter_qualified=True,
+    board_evidence=None,
+    head=None,
+    reviewer_policy=None,
+    governance_policy=None,
 ):
     verifier = SyntheticQualificationAuthority() if arbiter_qualified else None
     context = ArbitrationContext(
@@ -1153,9 +1167,9 @@ def _governance_check(
         rule_id=RULE,
         arbitration_refs=(s["arb"],),
         qualification_bytes={"arbiter-d": QUAL_DOCUMENT} if verifier else {},
-        expected_qualification_sha256={
-            "arbiter-d": sha256_bytes(QUAL_DOCUMENT)
-        } if verifier else {},
+        expected_qualification_sha256={"arbiter-d": sha256_bytes(QUAL_DOCUMENT)}
+        if verifier
+        else {},
         qualification_policy_sha256=QUAL_POLICY,
         qualification_verifier=verifier,
         store=s["store"],
@@ -1173,8 +1187,7 @@ def _governance_check(
             actor = SignedReviewerClaim.from_bytes(raw).claim.actor_id
             actors.append(actor)
     evidence = (
-        {actor: GOVERNANCE_DOC for actor in actors}
-        if board_evidence is None else board_evidence
+        {actor: GOVERNANCE_DOC for actor in actors} if board_evidence is None else board_evidence
     )
     return verify_governance_register(
         context,
@@ -1203,7 +1216,9 @@ def test_governance_requires_independently_qualified_arbitration(tmp_path: Path)
     s = _governance_scenario(tmp_path)
     first = _governance_step(s, voters=("governor-0", "governor-1"))
     out = _governance_check(
-        s, (first,), board=SyntheticGovernanceAuthority(),
+        s,
+        (first,),
+        board=SyntheticGovernanceAuthority(),
         arbiter_qualified=False,
     )
     assert out.state == GovernanceState.OPEN
@@ -1214,7 +1229,9 @@ def test_governance_test_authority_projects_only_procedural_ratification(tmp_pat
     s = _governance_scenario(tmp_path)
     first = _governance_step(s, voters=("governor-0", "governor-1"))
     out = _governance_check(
-        s, (first,), board=SyntheticGovernanceAuthority(),
+        s,
+        (first,),
+        board=SyntheticGovernanceAuthority(),
     )
     assert out.state == GovernanceState.RATIFIED_PROCEDURAL
     assert out.applied_actions == 1
@@ -1229,31 +1246,41 @@ def test_governance_suspend_and_reopen_are_append_only(tmp_path: Path):
     first = _governance_step(s, voters=("governor-0", "governor-1"))
     fresh = s["store"].append(
         kind=EvidenceKind.RULE_SUPPORT,
-        run_id=RUN, subject_id=RULE,
+        run_id=RUN,
+        subject_id=RULE,
         content=b"synthetic new evidence justifying precautionary suspension",
     )
     second = _governance_step(
-        s, voters=("governor-2", "governor-3"),
+        s,
+        voters=("governor-2", "governor-3"),
         action=GovernanceAction.SUSPEND,
         before=GovernanceState.RATIFIED_PROCEDURAL,
-        previous=first[0], evidence_ref=f"event:{fresh.digest}",
+        previous=first[0],
+        evidence_ref=f"event:{fresh.digest}",
     )
     new = s["store"].append(
         kind=EvidenceKind.RULE_SUPPORT,
-        run_id=RUN, subject_id=RULE,
+        run_id=RUN,
+        subject_id=RULE,
         content=b"synthetic additional evidence for reopened independent review",
     )
     third = _governance_step(
-        s, voters=("governor-4", "governor-5"),
+        s,
+        voters=("governor-4", "governor-5"),
         action=GovernanceAction.REOPEN,
         before=GovernanceState.SUSPENDED,
-        previous=second[0], evidence_ref=f"event:{new.digest}",
+        previous=second[0],
+        evidence_ref=f"event:{new.digest}",
     )
     accepted = _governance_check(
-        s, (first, second), board=SyntheticGovernanceAuthority(),
+        s,
+        (first, second),
+        board=SyntheticGovernanceAuthority(),
     )
     reopened = _governance_check(
-        s, (first, second, third), board=SyntheticGovernanceAuthority(),
+        s,
+        (first, second, third),
+        board=SyntheticGovernanceAuthority(),
     )
     assert accepted.state == GovernanceState.SUSPENDED
     assert accepted.applied_actions == 2
@@ -1281,7 +1308,9 @@ def test_governance_authority_rejects_forged_qualification(tmp_path: Path):
     first = _governance_step(s, voters=("governor-0", "governor-1"))
     with pytest.raises(EvidenceIntegrityError, match="synthetic governance authority"):
         _governance_check(
-            s, (first,), board=SyntheticGovernanceAuthority(),
+            s,
+            (first,),
+            board=SyntheticGovernanceAuthority(),
             board_evidence={
                 "governor-0": GOVERNANCE_DOC,
                 "governor-1": b"forged qualification declaration",
@@ -1295,10 +1324,14 @@ def test_governance_revoked_approver_fails_closed(tmp_path: Path):
     revoked = ReviewerTrustPolicy(
         grants=tuple(
             ReviewerGrant(
-                actor_id=g.actor_id, key_id=g.key_id,
-                public_key_hex=g.public_key_hex, roles=g.roles,
-                runs=g.runs, subjects=g.subjects,
-                valid_from=g.valid_from, valid_until=g.valid_until,
+                actor_id=g.actor_id,
+                key_id=g.key_id,
+                public_key_hex=g.public_key_hex,
+                roles=g.roles,
+                runs=g.runs,
+                subjects=g.subjects,
+                valid_from=g.valid_from,
+                valid_until=g.valid_until,
                 revoked=g.actor_id == "governor-0" or g.revoked,
             )
             for g in s["reviewer_policy"].grants
@@ -1314,8 +1347,10 @@ def test_governance_stale_head_and_cross_source_fails_closed(tmp_path: Path):
     first = _governance_step(s, voters=("governor-0", "governor-1"))
     old_head = s["store"].verify().head_digest
     s["store"].append(
-        kind=EvidenceKind.RULE_SUPPORT, run_id=RUN,
-        subject_id=RULE, content=b"new event after externally pinned head",
+        kind=EvidenceKind.RULE_SUPPORT,
+        run_id=RUN,
+        subject_id=RULE,
+        content=b"new event after externally pinned head",
     )
     with pytest.raises(EvidenceIntegrityError, match="head"):
         _governance_check(s, (first,), head=old_head)
@@ -1324,14 +1359,14 @@ def test_governance_stale_head_and_cross_source_fails_closed(tmp_path: Path):
 def test_governance_suspension_requires_new_evidence_after_approval(tmp_path: Path):
     s = _governance_scenario(tmp_path)
     first = _governance_step(s, voters=("governor-0", "governor-1"))
-    old_support = s["observed"]["batch-001.json"]["rules"][0][
-        "review_template"
-    ]["evidence_ids"][0]
+    old_support = s["observed"]["batch-001.json"]["rules"][0]["review_template"]["evidence_ids"][0]
     second = _governance_step(
-        s, voters=("governor-2", "governor-3"),
+        s,
+        voters=("governor-2", "governor-3"),
         action=GovernanceAction.SUSPEND,
         before=GovernanceState.RATIFIED_PROCEDURAL,
-        previous=first[0], evidence_ref=old_support,
+        previous=first[0],
+        evidence_ref=old_support,
     )
     with pytest.raises(EvidenceIntegrityError, match="fresh evidence"):
         _governance_check(s, (first, second))
@@ -1341,8 +1376,10 @@ def test_governance_rejects_invalid_direct_state_jump(tmp_path: Path):
     s = _governance_scenario(tmp_path)
     with pytest.raises(EvidenceIntegrityError, match="invalid scientific governance state"):
         _governance_step(
-            s, voters=("governor-0", "governor-1"),
-            action=GovernanceAction.SUSPEND, before=GovernanceState.OPEN,
+            s,
+            voters=("governor-0", "governor-1"),
+            action=GovernanceAction.SUSPEND,
+            before=GovernanceState.OPEN,
         )
 
 
@@ -1358,18 +1395,23 @@ def test_governance_rejects_unpinned_or_wrong_policy(tmp_path: Path):
             ),
         )
 
+
 def test_governance_different_events_cannot_reuse_the_same_board_members(tmp_path: Path):
     s = _governance_scenario(tmp_path)
     first = _governance_step(s, voters=("governor-0", "governor-1"))
     fresh = s["store"].append(
-        kind=EvidenceKind.RULE_SUPPORT, run_id=RUN, subject_id=RULE,
+        kind=EvidenceKind.RULE_SUPPORT,
+        run_id=RUN,
+        subject_id=RULE,
         content=b"synthetic fresh support before governance suspension",
     )
     second = _governance_step(
-        s, voters=("governor-0", "governor-2"),
+        s,
+        voters=("governor-0", "governor-2"),
         action=GovernanceAction.SUSPEND,
         before=GovernanceState.RATIFIED_PROCEDURAL,
-        previous=first[0], evidence_ref=f"event:{fresh.digest}",
+        previous=first[0],
+        evidence_ref=f"event:{fresh.digest}",
     )
     with pytest.raises(EvidenceIntegrityError, match="duplicated or conflicted"):
         _governance_check(s, (first, second))

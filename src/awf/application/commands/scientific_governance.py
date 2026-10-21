@@ -35,10 +35,20 @@ _ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}\Z")
 _EVENT = re.compile(r"event:([a-f0-9]{64})\Z")
 _FIELDS = frozenset(
     {
-        "schema", "type", "source_id", "archive_sha256", "requirement_id",
-        "requirement_sha256", "case_sha256", "final_arbitration_ref",
-        "previous_decision_ref", "from_state", "action", "reason",
-        "support_refs", "governance_policy_sha256",
+        "schema",
+        "type",
+        "source_id",
+        "archive_sha256",
+        "requirement_id",
+        "requirement_sha256",
+        "case_sha256",
+        "final_arbitration_ref",
+        "previous_decision_ref",
+        "from_state",
+        "action",
+        "reason",
+        "support_refs",
+        "governance_policy_sha256",
     }
 )
 
@@ -121,7 +131,9 @@ def governance_transition_payload(
         or any(
             not isinstance(v, str) or _SHA.fullmatch(v) is None
             for v in (
-                archive_sha256, requirement_sha256, case_sha256,
+                archive_sha256,
+                requirement_sha256,
+                case_sha256,
                 governance_policy_sha256,
             )
         )
@@ -255,18 +267,21 @@ def verify_governance_register(
             (context.proposal_refs[context.rule_id], ReviewerRole.KNOWLEDGE_REVIEWER),
             (context.left_assessments[context.rule_id], ReviewerRole.SCIENTIFIC_REVIEWER),
             (context.right_assessments[context.rule_id], ReviewerRole.SCIENTIFIC_REVIEWER),
-            *(
-                (signed, ReviewerRole.SCIENTIFIC_ARBITER)
-                for signed in context.arbitration_refs
-            ),
+            *((signed, ReviewerRole.SCIENTIFIC_ARBITER) for signed in context.arbitration_refs),
         ]
         for (event_ref, signed_ref), role in prerequisites:
             excluded_actors.add(
                 verify_signed_review_event(
-                    store=reader, attestation_ref=signed_ref, target_ref=event_ref,
-                    expected_role=role, run_id=context.run_id, subject_id=context.rule_id,
-                    policy=context.reviewer_policy, verifier=context.verifier,
-                    now=context.now, expected_head=context.expected_head,
+                    store=reader,
+                    attestation_ref=signed_ref,
+                    target_ref=event_ref,
+                    expected_role=role,
+                    run_id=context.run_id,
+                    subject_id=context.rule_id,
+                    policy=context.reviewer_policy,
+                    verifier=context.verifier,
+                    now=context.now,
+                    expected_head=context.expected_head,
                 )
             )
             rec, _ = reader.resolve_event(
@@ -308,7 +323,8 @@ def verify_governance_register(
                 raise EvidenceIntegrityError("governance state/source/predecessor drift")
             action = GovernanceAction(cast(str, value["action"]))
             if action == GovernanceAction.RATIFY and result.latest_position not in {
-                ArbitrationPosition.SUPPORT, ArbitrationPosition.CONTEST
+                ArbitrationPosition.SUPPORT,
+                ArbitrationPosition.CONTEST,
             }:
                 raise EvidenceIntegrityError("unresolved arbitration cannot be ratified")
             evidence = cast(list[str], value["support_refs"])
@@ -351,7 +367,9 @@ def verify_governance_register(
                 signed_actors.add(actor)
                 max_sig = max(max_sig, signed_rec.sequence)
                 checked_actors[actor] = (
-                    event_ref, value["case_sha256"], tuple(sorted(excluded_actors))
+                    event_ref,
+                    value["case_sha256"],
+                    tuple(sorted(excluded_actors)),
                 )
             intended_state = next_governance_state(intended_state, action)
             previous_ref = event_ref
@@ -360,8 +378,12 @@ def verify_governance_register(
     all_actors = set(checked_actors)
     if authority is None or not result.procedure_verified or not transitions:
         return GovernanceResult(
-            context.rule_id, len(transitions), 0, GovernanceState.OPEN,
-            False, result.independently_qualified,
+            context.rule_id,
+            len(transitions),
+            0,
+            GovernanceState.OPEN,
+            False,
+            result.independently_qualified,
         )
     if set(authority_evidence) != all_actors:
         raise EvidenceIntegrityError("externally verified governance actors inventory mismatch")
@@ -386,6 +408,10 @@ def verify_governance_register(
             at_time=context.now,
         )
     return GovernanceResult(
-        context.rule_id, len(transitions), len(transitions), intended_state,
-        True, result.independently_qualified,
+        context.rule_id,
+        len(transitions),
+        len(transitions),
+        intended_state,
+        True,
+        result.independently_qualified,
     )
