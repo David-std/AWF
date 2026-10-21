@@ -18,6 +18,19 @@ classifiers = [
     "Topic :: Text Processing",
 ]
 
+# Optional GPU training environment; core CI does not install these packages.
+# Record concrete installed versions and checkpoint hashes in each private run.
+[project.optional-dependencies]
+train-smoke = [
+    "torch>=2.5,<3",
+    "transformers>=4.56,<6",
+    "datasets>=3,<6",
+    "peft>=0.17,<1",
+    "trl>=0.23,<2",
+    "accelerate>=1,<2",
+    "safetensors>=0.5,<1",
+]
+
 [project.scripts]
 awf = "awf.cli.main:run"
 
