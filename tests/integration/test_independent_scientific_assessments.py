@@ -18,13 +18,20 @@ from awf.application.commands.scientific_assessments import (
     scientific_assessment_payload,
     verify_independent_scientific_assessments,
 )
+from awf.application.commands.scientific_disagreements import (
+    disagreement_case_payload,
+    verify_disagreement_protocol,
+)
 from awf.domain.evidence import EvidenceIntegrityError, EvidenceKind, sha256_bytes
 from awf.domain.reviewer_auth import (
     ReviewerClaim,
+    ReviewerGrant,
     ReviewerRole,
+    ReviewerTrustPolicy,
     SignedReviewerClaim,
     parse_trust_policy,
 )
+from awf.domain.scientific_disagreements import ComparisonStatus, ProposedNextAction
 from awf.domain.signed_documents import canonical_json_bytes
 
 RUN = "science-run-001"
@@ -89,7 +96,7 @@ def _attest(store, *, key, actor, key_id, role, target, policy):
     )
 
 
-def scenario(tmp_path: Path):
+def scenario(tmp_path: Path, *, verdict: str = "INCONCLUSIVE"):
     store = SQLiteEvidenceLedger(tmp_path / "ledger.sqlite")
     store.initialize()
     proposer_key = Ed25519PrivateKey.generate()
@@ -172,7 +179,7 @@ def scenario(tmp_path: Path):
             requirement_sha256=RULE_SHA,
             proposal_ref=f"event:{proposal.digest}",
             actor_id="scientist-b",
-            verdict="INCONCLUSIVE",
+            verdict=verdict,
             method_notes="Review limitations of a synthetic benchmark and the rule scope.",
             evidence_analysis="Inspect primary source links and potential contradicting cases.",
             limitations="No human scientific review was actually carried out.",
@@ -325,3 +332,243 @@ def test_assessment_payload_requires_substantive_fields():
     ):
         with pytest.raises(EvidenceIntegrityError):
             scientific_assessment_payload(**(fields | bad))
+
+
+def _second_scientist(s, *, verdict: str = "CONTEST", same_actor: bool = False, revoked=False):
+    """Synthetic independent signer and source-bound second assessment."""
+    second_key = s["scientist_key"] if same_actor else Ed25519PrivateKey.generate()
+    actor = "scientist-b" if same_actor else "scientist-c"
+    key_id = "scientist-key" if same_actor else "scientist-c-key"
+    grants = list(s["policy"].grants)
+    if not same_actor:
+        grant = ReviewerGrant(
+            actor_id=actor,
+            key_id=key_id,
+            public_key_hex=_public(second_key),
+            roles=frozenset({ReviewerRole.SCIENTIFIC_REVIEWER}),
+            runs=frozenset({RUN}),
+            subjects=frozenset({RULE}),
+            valid_from=NOW - 100,
+            valid_until=NOW + 100,
+            revoked=revoked,
+        )
+        grants.append(grant)
+    raw_policy = canonical_json_bytes(
+        {
+            "schema": 1,
+            "grants": [
+                {
+                    "actor_id": g.actor_id,
+                    "key_id": g.key_id,
+                    "public_key_hex": g.public_key_hex,
+                    "roles": sorted(role.value for role in g.roles),
+                    "runs": sorted(g.runs),
+                    "subjects": sorted(g.subjects),
+                    "valid_from": g.valid_from,
+                    "valid_until": g.valid_until,
+                    "revoked": g.revoked,
+                }
+                for g in grants
+            ],
+        }
+    )
+    policy = parse_trust_policy(raw_policy, expected_sha256=sha256_bytes(raw_policy))
+    proposal_ref, _ = s["proposal_refs"][RULE]
+    event = s["store"].append(
+        kind=EvidenceKind.SCIENTIFIC_RULE_ASSESSMENT,
+        run_id=RUN,
+        subject_id=RULE,
+        content=scientific_assessment_payload(
+            source_id="aws-3.19.1",
+            archive_sha256=SOURCE,
+            requirement_id=RULE,
+            requirement_sha256=RULE_SHA,
+            proposal_ref=proposal_ref,
+            actor_id=actor,
+            verdict=verdict,
+            method_notes="An independent synthetic assessment compared repeatability.",
+            evidence_analysis="A second evaluator inspected method and negative cases.",
+            limitations="This is simulated and not independent real-world research.",
+        ),
+    )
+    signature = _attest(
+        s["store"],
+        key=second_key,
+        actor=actor,
+        key_id=key_id,
+        role=ReviewerRole.SCIENTIFIC_REVIEWER,
+        target=event,
+        policy=policy,
+    )
+    return (f"event:{event.digest}", f"event:{signature.digest}"), policy, signature.digest
+
+
+def _dispute_case(s, second):
+    return disagreement_case_payload(
+        source_id="aws-3.19.1",
+        archive_sha256=SOURCE,
+        requirement_id=RULE,
+        requirement_sha256=RULE_SHA,
+        proposal_ref=s["proposal_refs"][RULE][0],
+        left_assessment_ref=s["assessment_refs"][RULE][0],
+        right_assessment_ref=second[0],
+        claim_in_dispute="The reported outcome cannot be inferred from the source data.",
+        evidence_gaps="Reproduce with primary data and a preregistered negative control.",
+        methodological_divergence="Reviewers assign different evidentiary weight to controls.",
+        proposed_next_action=ProposedNextAction.REPLICATE_EXPERIMENT,
+    )
+
+
+def _dispute_check(s, second, policy, head, *, cases=None, case_pins=None, expected_head=None):
+    return verify_disagreement_protocol(
+        canonical_manifest=s["manifest"],
+        canonical_packets=s["original"],
+        observed_manifest=s["manifest"],
+        observed_packets=s["observed"],
+        proposal_refs=s["proposal_refs"],
+        left_assessments=s["assessment_refs"],
+        right_assessments={RULE: second},
+        case_bytes={} if cases is None else cases,
+        expected_case_sha256={} if case_pins is None else case_pins,
+        store=s["store"],
+        run_id=RUN,
+        expected_head=head if expected_head is None else expected_head,
+        policy=policy,
+        verifier=Ed25519ReviewerVerifier(),
+        now=NOW,
+    )
+
+
+def test_signed_disagreement_generates_only_a_non_adjudicating_case(tmp_path: Path):
+    s = scenario(tmp_path, verdict="SUPPORT")
+    second, policy, head = _second_scientist(s, verdict="CONTEST")
+    case = _dispute_case(s, second)
+    result = _dispute_check(
+        s,
+        second,
+        policy,
+        head,
+        cases={RULE: case},
+        case_pins={RULE: sha256_bytes(case)},
+    )
+    assert result.checked == 1
+    assert result.comparisons == ((RULE, ComparisonStatus.DIVERGENT),)
+    assert result.case_rule_ids == (RULE,)
+    assert result.missing_case_rule_ids == ()
+    assert result.evidence_links_verified
+    report = result.to_dict()
+    assert report["scientific_adjudications"] == 0
+    assert report["training_authorized"] is False
+    assert report["source_rights_verified"] is False
+    assert "negative control" not in str(report)
+
+
+def test_missing_disagreement_case_keeps_protocol_open(tmp_path: Path):
+    s = scenario(tmp_path, verdict="SUPPORT")
+    second, policy, head = _second_scientist(s, verdict="CONTEST")
+    result = _dispute_check(s, second, policy, head)
+    assert not result.evidence_links_verified
+    assert result.missing_case_rule_ids == (RULE,)
+    assert result.scientific_adjudications == 0
+
+
+def test_agreeing_reviewers_still_do_not_adjudicate(tmp_path: Path):
+    s = scenario(tmp_path, verdict="SUPPORT")
+    second, policy, head = _second_scientist(s, verdict="SUPPORT")
+    result = _dispute_check(s, second, policy, head)
+    assert result.comparisons == ((RULE, ComparisonStatus.CONCORDANT_SUPPORT),)
+    assert result.evidence_links_verified
+    assert result.scientific_adjudications == 0
+
+
+def test_inconclusive_review_is_not_counted_as_agreement(tmp_path: Path):
+    s = scenario(tmp_path)
+    second, policy, head = _second_scientist(s, verdict="SUPPORT")
+    result = _dispute_check(s, second, policy, head)
+    assert result.comparisons == ((RULE, ComparisonStatus.INCONCLUSIVE),)
+    assert result.missing_case_rule_ids == (RULE,)
+
+
+def test_same_signed_actor_cannot_review_twice(tmp_path: Path):
+    s = scenario(tmp_path, verdict="SUPPORT")
+    second, policy, head = _second_scientist(s, same_actor=True)
+    with pytest.raises(EvidenceIntegrityError, match="self-comparison"):
+        _dispute_check(s, second, policy, head)
+
+
+def test_revoked_second_scientist_rejected(tmp_path: Path):
+    s = scenario(tmp_path, verdict="SUPPORT")
+    # Sign while authorized; revoke only at verification.
+    second, policy, head = _second_scientist(s)
+    revoked = ReviewerTrustPolicy(
+        grants=tuple(
+            ReviewerGrant(
+                actor_id=g.actor_id,
+                key_id=g.key_id,
+                public_key_hex=g.public_key_hex,
+                roles=g.roles,
+                runs=g.runs,
+                subjects=g.subjects,
+                valid_from=g.valid_from,
+                valid_until=g.valid_until,
+                revoked=True if g.actor_id == "scientist-c" else g.revoked,
+            )
+            for g in policy.grants
+        ),
+        policy_sha256=policy.policy_sha256,
+    )
+    with pytest.raises(EvidenceIntegrityError, match="prerequisite"):
+        _dispute_check(s, second, revoked, head)
+
+
+def test_disagreement_case_swapping_or_tampering_is_rejected(tmp_path: Path):
+    s = scenario(tmp_path, verdict="SUPPORT")
+    second, policy, head = _second_scientist(s)
+    case = _dispute_case(s, second)
+    with pytest.raises(EvidenceIntegrityError, match="external SHA"):
+        _dispute_check(
+            s,
+            second,
+            policy,
+            head,
+            cases={RULE: case + b"tampered"},
+            case_pins={RULE: sha256_bytes(case)},
+        )
+    changed = case.replace(second[0].encode(), ("event:" + "f" * 64).encode())
+    with pytest.raises(EvidenceIntegrityError, match="source/events"):
+        _dispute_check(
+            s,
+            second,
+            policy,
+            head,
+            cases={RULE: changed},
+            case_pins={RULE: sha256_bytes(changed)},
+        )
+
+
+def test_stale_ledger_head_blocks_comparison(tmp_path: Path):
+    s = scenario(tmp_path, verdict="SUPPORT")
+    second, policy, head = _second_scientist(s)
+    s["store"].append(
+        kind=EvidenceKind.RULE_SUPPORT,
+        run_id=RUN,
+        subject_id=RULE,
+        content=b"later evidence invalidates pinned head",
+    )
+    with pytest.raises(EvidenceIntegrityError, match="head"):
+        _dispute_check(s, second, policy, head)
+
+
+def test_unapproved_extra_case_is_rejected(tmp_path: Path):
+    s = scenario(tmp_path, verdict="SUPPORT")
+    second, policy, head = _second_scientist(s, verdict="SUPPORT")
+    case = _dispute_case(s, second)
+    with pytest.raises(EvidenceIntegrityError, match="extra"):
+        _dispute_check(
+            s,
+            second,
+            policy,
+            head,
+            cases={RULE: case},
+            case_pins={RULE: sha256_bytes(case)},
+        )

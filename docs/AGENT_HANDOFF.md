@@ -1,5 +1,41 @@
 # AWF — transferencia de Sprint 2
 
+## S2 draft PR #36 — scientific disagreement protocol (CI-verified engineering slice)
+
+- **Code SHA:** `55f1c03a1904148e7c7360da4a2dd05ee695f49b`.
+  GitHub Actions [push 39542413641](https://github.com/David-std/AWF/actions/runs/39542413641)
+  and [PR 39542418761](https://github.com/David-std/AWF/actions/runs/39542418761):
+  **both SUCCESS 4/4**, Ubuntu/Windows × Python 3.12/3.13.
+- Ubuntu Python 3.12: **449 pytest PASS**, Pyright **0 errors/0 warnings**,
+  Ruff check/format and build PASS. The follow-up documentation SHA must
+  be revalidated independently. This is not a run on the ASUS PC and is
+  not legal or scientific adjudication.
+- Draft [PR #36](https://github.com/David-std/AWF/pull/36) remains stacked on
+  draft #35; no merge, source publication or disposition transition.
+
+- Branch `feat/s2-scientific-disagreement-protocol` starts exactly from draft PR #35
+  HEAD `895e9a39fc8415e41263a5dfafdba7ef10247275`, itself stacked on #34 → #33 → #32 → `develop`.
+- Domain types `scientific_disagreements.py`; application service `scientific_disagreements.py`
+  verifies **two separate signed assessments** with existing PR #34 credential/source gates.
+  An additional verified ledger snapshot compares actor IDs, exact original proposal/event
+  refs and signed verdicts at the same independently pinned ledger head.
+- Cases `DIVERGENT` and `INCONCLUSIVE` require a separate private, canonical,
+  externally SHA-pinned plan (issue, evidence gaps, methodological divergence, action).
+  Missing plans remain open. `CONCORDANT_SUPPORT` is not scientific adjudication.
+- **Never change** the historic registry, `REVIEW_ATTESTED`, source rights, model/training
+  eligibility or any of the 168 still-unadjudicated MUST rules through this service.
+  The 16 DEFERRED_LAB are EVAL_ONLY. Private notes, keys and historic ZIP stay local.
+- Reuses PR #34 signatures; no new role, signing event or ML judge is added. Actual
+  independent human identity, a qualified arbiter, panel deliberation, legal authority,
+  appeals and final adjudication remain deferred.
+- Scientific methodology references: PRISMA 2020 and JBI evidence-synthesis guidance
+  about independent dual review, documenting disagreements and potential third reviewer.
+  These are design analogies, **not validation of AWF**.
+- Code/tests/ADR will be checked against the exact final SHA by CI; do not label PASS
+  from previous PR #35 CI until the new GitHub Actions run completes.
+
+## Earlier handoff material
+
 ## S2 PR #35 — rights evidence, implementation tested, legal authority deferred
 
 - Code SHA `cd6c2c885efd1f54da5b9804a41c2a3cc314a5f2`: [push CI run 39540058673](https://github.com/David-std/AWF/actions/runs/39540058673) SUCCESS, 4/4 Ubuntu/Windows × Python 3.12/3.13. Ubuntu Python 3.12 had **440 pytest PASS**, Pyright **0 errors/0 warnings**, Ruff and build pass. The documentation follow-up must be checked at its exact SHA separately.

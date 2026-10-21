@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — independent scientific disagreement triage (S2 draft PR #36)
+
+- Compare two existing PR #34 credential-authenticated scientific assessments of
+  the same exact proposal under one externally pinned ledger head and policy.
+- Classify agreement, disagreement and uncertainty separately. Require externally
+  SHA-pinned private case plans with evidence gaps and possible human follow-up.
+- Forbid same-actor comparison and changed proposal/source, missing inventory,
+  altered case data and stale head; no silent scientific adjudication or training.
+- ADR-0029, AWF-R038 and synthetic real-Ed25519 adversarial tests.
+
 ## Unreleased — source-specific rights evidence boundary (S2 draft PR #35)
 
 - Add canonical SHA-pinned rights inventories for a source file and byte spans with

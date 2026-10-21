@@ -189,3 +189,28 @@ Véanse [ADR-0015](adr/0015-durable-edit-and-finding-transitions.md) y
   [source rights guide](SOURCE_RIGHTS_GATE_S2.md).
 - **Non-result:** still 0/168 MUST adjudicated, all 16 DEFERRED_LAB EVAL_ONLY;
   no new review attestation or permission to train.
+
+## AWF-R038 — Independent scientific disagreement triage (stacked PR #36)
+
+- **Dependency:** draft PR #35 (rights/provenance) based on #34 assessment receipts.
+- **Service:** authenticated paired assessments of each `PROPOSAL_DOCUMENTED` rule,
+  signed by distinct authorized actor IDs under the same externally pinned ledger
+  head, policy and run; compares `SUPPORT/CONTEST/INCONCLUSIVE` conservatively.
+- **Additional case contract:** only disputed/inconclusive rules require independent
+  SHA-pinned private dockets recording a substantive scientific question,
+  evidence gaps, methodological differences and a proposed next action.
+- **Negative gates:** same signer, same event, swapped/missing references, changed
+  source/proposal, extra docket, tampered canonical case, expired/revoked role,
+  untrusted/stale head. No language model or claimed expertise automatically verifies truth.
+- **Current state:** `PROTOTYPED_TESTED_CI_PENDING_INDEPENDENT_REVIEW` in draft PR #36.
+  Code SHA `55f1c03a1904148e7c7360da4a2dd05ee695f49b` passed
+  [push CI 39542413641](https://github.com/David-std/AWF/actions/runs/39542413641)
+  and [PR CI 39542418761](https://github.com/David-std/AWF/actions/runs/39542418761),
+  4/4 Ubuntu/Windows × Python 3.12/3.13; Ubuntu 3.12 449 tests passed, Pyright zero errors.
+  A documentation follow-up requires its own CI. Tests and final
+  CI must be recorded only after their actual execution. All outcomes leave
+  `scientific_adjudications=0`, `training_authorized=false`,
+  `review_attestation_authorized=false`, `source_rights_verified=false`.
+- **Next step:** independent panel governance, signed resolution decisions
+  and a reversible formal state transition, as separate increments once actual
+  human-review/authority criteria and independent evidence standards are agreed.
