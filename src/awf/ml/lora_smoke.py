@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import hashlib
 import importlib
-import json
 import math
 import re
 from dataclasses import dataclass
@@ -59,22 +58,24 @@ def prepare_smoke_run(
     """Read locally and produce a no-text, no-trust-escalation preflight."""
     data = load_synthetic_smoke_dataset(dataset_path, expected_sha256)
     report = data.summary()
-    report.update({
-        "model_id": plan.model_id,
-        "model_revision_requested": plan.revision,
-        "seed": plan.seed,
-        "max_steps": plan.max_steps,
-        "max_length": plan.max_length,
-        "lora_rank": plan.rank,
-        "lora_alpha": plan.alpha,
-        "learning_rate": plan.learning_rate,
-        "loss_scope": "COMPLETION_ONLY",
-        "model_training_executed": False,
-        "model_weights_independently_verified": False,
-        "dataset_rights_independently_verified": False,
-        "scientific_validation": "NOT_PERFORMED",
-        "promotion": "DENIED",
-    })
+    report.update(
+        {
+            "model_id": plan.model_id,
+            "model_revision_requested": plan.revision,
+            "seed": plan.seed,
+            "max_steps": plan.max_steps,
+            "max_length": plan.max_length,
+            "lora_rank": plan.rank,
+            "lora_alpha": plan.alpha,
+            "learning_rate": plan.learning_rate,
+            "loss_scope": "COMPLETION_ONLY",
+            "model_training_executed": False,
+            "model_weights_independently_verified": False,
+            "dataset_rights_independently_verified": False,
+            "scientific_validation": "NOT_PERFORMED",
+            "promotion": "DENIED",
+        }
+    )
     return data, report
 
 
@@ -86,11 +87,13 @@ def _artifact_hashes(root: Path) -> list[dict[str, Any]]:
         if file.is_file():
             if file.stat().st_size > 1024 * 1024 * 1024:
                 raise ValueError("unexpected oversized adapter artifact")
-            items.append({
-                "name": file.relative_to(root).as_posix(),
-                "sha256": hashlib.sha256(file.read_bytes()).hexdigest(),
-                "bytes": file.stat().st_size,
-            })
+            items.append(
+                {
+                    "name": file.relative_to(root).as_posix(),
+                    "sha256": hashlib.sha256(file.read_bytes()).hexdigest(),
+                    "bytes": file.stat().st_size,
+                }
+            )
     return items
 
 
@@ -138,10 +141,9 @@ def train_synthetic_lora(
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     output_root.mkdir(parents=True, exist_ok=False)
-    train_data = datasets.Dataset.from_list([
-        {"prompt": sample.prompt, "completion": sample.completion}
-        for sample in dataset.train
-    ])
+    train_data = datasets.Dataset.from_list(
+        [{"prompt": sample.prompt, "completion": sample.completion} for sample in dataset.train]
+    )
     # Evaluation examples stay outside the optimizer and checkpoint loss.
     adapter_config = peft.LoraConfig(
         r=plan.rank,
@@ -187,21 +189,25 @@ def train_synthetic_lora(
         raise ValueError("no LoRA weights produced by trainer")
     output = dict(preflight)
     loss = getattr(result, "training_loss", None)
-    output.update({
-        "model_training_executed": True,
-        "training_loss": float(loss) if loss is not None and math.isfinite(float(loss)) else None,
-        "adapter_files": artifacts,
-        "adapter_output_relative": ".awf/ml/smoke/adapter",
-        "torch_version": str(torch.__version__),
-        "transformers_version": str(transformers.__version__),
-        "peft_version": str(peft.__version__),
-        "trl_version": str(trl.__version__),
-        "cuda_name": str(torch.cuda.get_device_name(0)),
-        "training_examples": len(dataset.train),
-        "holdout_examples_not_used_for_optimizer": len(dataset.evaluation),
-        "model_weights_independently_verified": False,
-        "academic_quality_verified": False,
-        "training_scope": "SYNTHETIC_SMOKE_ONLY",
-        "promotion": "DENIED",
-    })
+    output.update(
+        {
+            "model_training_executed": True,
+            "training_loss": float(loss)
+            if loss is not None and math.isfinite(float(loss))
+            else None,
+            "adapter_files": artifacts,
+            "adapter_output_relative": ".awf/ml/smoke/adapter",
+            "torch_version": str(torch.__version__),
+            "transformers_version": str(transformers.__version__),
+            "peft_version": str(peft.__version__),
+            "trl_version": str(trl.__version__),
+            "cuda_name": str(torch.cuda.get_device_name(0)),
+            "training_examples": len(dataset.train),
+            "holdout_examples_not_used_for_optimizer": len(dataset.evaluation),
+            "model_weights_independently_verified": False,
+            "academic_quality_verified": False,
+            "training_scope": "SYNTHETIC_SMOKE_ONLY",
+            "promotion": "DENIED",
+        }
+    )
     return output

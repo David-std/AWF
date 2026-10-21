@@ -43,9 +43,11 @@ class SmokeDataset:
             "dataset_sha256": self.source_sha256,
             "train_count": len(self.train),
             "evaluation_count": len(self.evaluation),
-            "language_counts": dict(sorted(Counter(
-                example.language for example in (*self.train, *self.evaluation)
-            ).items())),
+            "language_counts": dict(
+                sorted(
+                    Counter(example.language for example in (*self.train, *self.evaluation)).items()
+                )
+            ),
             "group_isolation_verified": True,
             "input_provenance_independently_verified": False,
             "rights_independently_verified": False,
@@ -80,9 +82,11 @@ def load_synthetic_smoke_dataset(path: Path, expected_sha256: str) -> SmokeDatas
         source = json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ValueError("invalid UTF-8 dataset JSON") from exc
-    if not isinstance(source, dict) or set(source) != {
-        "schema_version", "dataset_role", "examples"
-    } or source["schema_version"] != "1.0.0":
+    if (
+        not isinstance(source, dict)
+        or set(source) != {"schema_version", "dataset_role", "examples"}
+        or source["schema_version"] != "1.0.0"
+    ):
         raise ValueError("unsupported smoke dataset schema")
     if source["dataset_role"] != "LOCAL_SYNTHETIC_SMOKE_ONLY":
         raise ValueError("dataset role cannot authorize academic/real training")
@@ -95,8 +99,13 @@ def load_synthetic_smoke_dataset(path: Path, expected_sha256: str) -> SmokeDatas
     pairs: set[str] = set()
     for row in items:
         if not isinstance(row, dict) or set(row) != {
-            "example_id", "source_group_id", "language", "split",
-            "prompt", "completion", "annotation_provenance"
+            "example_id",
+            "source_group_id",
+            "language",
+            "split",
+            "prompt",
+            "completion",
+            "annotation_provenance",
         }:
             raise ValueError("unexpected training example keys")
         identity = _bounded_text(row["example_id"], "ID")
@@ -118,9 +127,9 @@ def load_synthetic_smoke_dataset(path: Path, expected_sha256: str) -> SmokeDatas
         prompt = _bounded_text(row["prompt"], "prompt")
         completion = _bounded_text(row["completion"], "completion")
         # Block exact normalized duplicate examples across *all* splits.
-        fingerprint = hashlib.sha256((
-            prompt.casefold().strip() + "\x00" + completion.casefold().strip()
-        ).encode("utf-8")).hexdigest()
+        fingerprint = hashlib.sha256(
+            (prompt.casefold().strip() + "\x00" + completion.casefold().strip()).encode("utf-8")
+        ).hexdigest()
         if fingerprint in pairs:
             raise ValueError("duplicate prompt/completion across dataset")
         pairs.add(fingerprint)

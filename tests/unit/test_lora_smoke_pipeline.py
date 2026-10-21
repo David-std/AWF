@@ -7,10 +7,10 @@ import json
 from pathlib import Path
 
 import pytest
-
-from awf.cli.main import main
 from awf.ml.lora_smoke import LoRASmokePlan, prepare_smoke_run, train_synthetic_lora
 from awf.ml.smoke_dataset import load_synthetic_smoke_dataset
+
+from awf.cli.main import main
 
 
 def _item(number: int, split: str) -> dict[str, str]:
@@ -142,8 +142,9 @@ def test_invalid_training_plan_fails_closed(overrides: dict[str, object]):
 def test_training_refuses_unapproved_output_directory_before_model_import(tmp_path):
     path, sha = _write(tmp_path, _fixture())
     with pytest.raises(ValueError, match="restricted to"):
-        train_synthetic_lora(path, expected_sha256=sha, plan=LoRASmokePlan(),
-                             output_root=tmp_path / "public-weights")
+        train_synthetic_lora(
+            path, expected_sha256=sha, plan=LoRASmokePlan(), output_root=tmp_path / "public-weights"
+        )
 
 
 def test_cli_is_dry_run_by_default_without_ml_deps(tmp_path: Path, capsys):
@@ -161,8 +162,9 @@ def test_cli_training_opt_in_rejected_when_dataset_invalid(tmp_path: Path, monke
     source = _fixture()
     source["dataset_role"] = "REVIEWED_GOLD"
     path, sha = _write(tmp_path, source)
-    assert main(["ml-smoke", str(path), "--expected-sha256", sha,
-                 "--allow-synthetic-training"]) == 2
+    assert (
+        main(["ml-smoke", str(path), "--expected-sha256", sha, "--allow-synthetic-training"]) == 2
+    )
     assert "AWF_ERROR" in capsys.readouterr().err
     assert not (tmp_path / ".awf").exists()
 
