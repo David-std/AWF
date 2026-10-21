@@ -8,6 +8,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
 from awf.adapters.persistence.sqlite_evidence import SQLiteEvidenceLedger
 from awf.adapters.security.ed25519_reviewer import Ed25519ReviewerVerifier
 from awf.application.commands.authorize_dossiers import (
@@ -24,8 +27,6 @@ from awf.domain.reviewer_auth import (
     parse_trust_policy,
 )
 from awf.domain.signed_documents import canonical_json_bytes
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 RUN = "research-run-a"
 RULE = "DSR-001"
