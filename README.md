@@ -169,3 +169,19 @@ A separate `KNOWLEDGE_REVIEWER` role can sign the exact immutable snapshot of a 
 The optional Python application service `verify_independent_scientific_assessments` authenticates an actor-distinct, role-scoped, Ed25519-signed assessment following an already signed rule proposal. Assessment notes remain in the private ledger. Credential and event integrity do not prove research correctness or source rights. No historical rule is thereby adjudicated or usable for training. See [ADR-0027](docs/adr/0027-independent-scientific-assessment-receipts.md).
 
 Verified final [PR #34 CI](https://github.com/David-std/AWF/actions/runs/39531782917) at `34b192a3` (4/4); the corresponding authoritative [handoff section](docs/AGENT_HANDOFF.md) includes SHA, architecture, preserved limits, and next requirements. See [ADR-0027](docs/adr/0027-independent-scientific-assessment-receipts.md). No physical ASUS full-suite tests are claimed.
+
+## Source-specific rights/provenance gate (S2 stacked draft PR #35)
+
+A private, canonical source-rights inventory distinguishes READ, EVALUATE, TRANSFORM,
+REDISTRIBUTE and TRAIN for exact source files and byte segments. `parse_source_rights`
+requires an independently retained expected SHA-256 and exact archive/file identity.
+`check_source_right` fails closed on denial, revocation, expired or contradictory
+grants, incomplete scope, missing original bytes or evidence. The **default** is
+`UNKNOWN`: no implementation of a real legal authority verifier is included in
+this PR. A future externally trusted rights authority must verify underlying
+evidence and issuer scope before any conditional positive rights conclusion.
+`TRAIN_ALLOWED` never sets the separate system-level `training_authorized` flag.
+No ZIP or private evidence is committed. See [ADR-0028](docs/adr/0028-source-rights-evidence-gate.md)
+and [guide](docs/SOURCE_RIGHTS_GATE_S2.md).
+
+**PR #35 code verification:** `cd6c2c8` passed [push CI 39540058673](https://github.com/David-std/AWF/actions/runs/39540058673), 4/4 matrix jobs (Ubuntu/Windows × Python 3.12/3.13), 440 tests passed on Ubuntu 3.12 and Pyright 0 errors. This does not establish external legal authority or scientific acceptance.

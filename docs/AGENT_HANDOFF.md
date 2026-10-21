@@ -1,5 +1,33 @@
 # AWF — transferencia de Sprint 2
 
+## S2 PR #35 — rights evidence, implementation tested, legal authority deferred
+
+- Code SHA `cd6c2c885efd1f54da5b9804a41c2a3cc314a5f2`: [push CI run 39540058673](https://github.com/David-std/AWF/actions/runs/39540058673) SUCCESS, 4/4 Ubuntu/Windows × Python 3.12/3.13. Ubuntu Python 3.12 had **440 pytest PASS**, Pyright **0 errors/0 warnings**, Ruff and build pass. The documentation follow-up must be checked at its exact SHA separately.
+- Draft [PR #35](https://github.com/David-std/AWF/pull/35) targets `feat/s2-independent-scientific-assessments`. This engineering test is NOT an independent legal or scientific adjudication.
+
+## S2 candidate PR #35 — rights evidence, conditional and independently verified
+
+- Branch `feat/s2-source-rights-provenance`, **based on draft PR #34 exact HEAD
+  `1c8f729e75e9fdcb1a6e9054854baabdad8f8f24`**. PR #32, #33 and #34 remain
+  in order; do not retarget to main or develop without coordinated stack review.
+- Implements `domain/source_rights.py` and `application/commands/source_rights.py`.
+  Exact source + segment bytes, a canonical externally pinned rights inventory, per-act
+  scope, changes/revocation/expiry, evidence hash and an **independent rights verifier**
+  are necessary for positive permissions. No rights-issuer adapter exists; ordinary
+  use returns UNKNOWN. Denials and conflicting overlapping grants block.
+- `TRAIN_ALLOWED` is *only* a conditional rights-scope conclusion when an externally
+  trusted authority is injected, and `training_authorized` remains FALSE. No right
+  arises from SPDX names, a CC deed, DOI, public repository or user possession alone.
+- No private source files, licences, grants, reviewer notes, keys or AWS ZIP are added
+  to git/CI. Uses test-only simulated byte strings and an in-memory fake verifier.
+- Remaining: real independent rights authority, verifiable legal chain of title, policy
+  revocation infrastructure, separate adjudication of scientific disagreements and
+  full review of 168 MUST. No signature role is added in this slice.
+- CI evidence for **exact final SHA** must be appended after the latest CI completes;
+  never infer PASS from older PRs. See ADR-0028 and SOURCE_RIGHTS_GATE_S2.
+
+## Earlier authoritative handoff and PR #34 baseline
+
 ## Authoritative continuation after the PR #34 final CI (2026-10-20; verify again before changes)
 
 - **Repository state verified:** `develop=6888a8f44a3342c61e0d31dc93374ef44a21c174`, `main=a902135b80e96eea17ebb9c229eed065077e809d`. No merge of draft [PR #32](https://github.com/David-std/AWF/pull/32), [PR #33](https://github.com/David-std/AWF/pull/33), or [PR #34](https://github.com/David-std/AWF/pull/34). PR stack: develop → #32 (head `e6846eff`) → #33 (head `7fcd4061`) → #34 (head `34b192a32efd0841a6149d93493d3aa1b19147b3`).

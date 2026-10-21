@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — source-specific rights evidence boundary (S2 draft PR #35)
+
+- Add canonical SHA-pinned rights inventories for a source file and byte spans with
+  explicit per-purpose use rights, denial, expiry, revocation, ownership and evidence IDs.
+- Fail closed on contradictory grants, partial/unknown coverage, altered bytes,
+  missing evidence and absence of a separately trusted external rights authority.
+- No automated licence inference, rule adjudication, redistribution or model training.
+  Synthetic adversarial tests and ADR-0028 describe the limits.
+
 ## Unreleased — independent scientific assessment receipts (S2 candidate)
 
 - Propose a separately granted SCIENTIFIC_REVIEWER role and signed per-rule SCIENTIFIC_RULE_ASSESSMENT event verified after the exact authenticated proposal.
