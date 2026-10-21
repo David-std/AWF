@@ -1,5 +1,48 @@
 # AWF — transferencia de Sprint 2
 
+**Handoff prioritario actualizado:** [2026-10-21 — recuperación integral S2 / PR #39](handoffs/2026-10-21-S2-PR39-RECOVERY.md). El commit `8fa8e32da11afea222f27863d03a86cf54bc87fa` tuvo CI push 4/4 + PR 4/4 SUCCESS (482 pytest Ubuntu 3.12); la publicación de esta nota implica un SHA documental nuevo que debe comprobarse de forma independiente. Los encabezados anteriores con «CI pendiente» son historia, no el estado actual. La siguiente prioridad es evaluación empírica y ejecución instrumentada, NO nuevos quórums.
+
+## S2 draft PR #39 — owner-governed agent review, code CI passed
+
+- **Code SHA:** `b72de165412759e62737a0c64afb3cdc276e675a`.
+  [Push 39630505998](https://github.com/David-std/AWF/actions/runs/39630505998)
+  and [PR 39630513081](https://github.com/David-std/AWF/actions/runs/39630513081)
+  each **SUCCESS 4/4** (Ubuntu/Windows × Python 3.12/3.13). Ubuntu 3.12:
+  **482 tests PASS**, Pyright **0 errors/0 warnings**, Ruff and build PASS.
+  This is an engineering receipt, not an evaluation of an actual LLM run.
+- A documentation reconciliation follows this code SHA. Record its independent
+  CI at its exact final SHA, keep the PR **DRAFT** for code/security review,
+  and DO NOT merge/retarget the stack blindly.
+
+## S2 draft PR #39 — project-owner EVAL_ONLY AI review (under test)
+
+- New branch `feat/s2-owner-agent-review` from PR #38 exact HEAD
+  `ad666a630749f6cbe4264f2d4cf7a506cd4098df`. Stack PR #32 → #33 →
+  #34 → #35 → #36 → #37 → #38 → #39; keep all drafts and do not merge out
+  of order.
+- **Owner authority is first-party project governance**, not a claim to
+  independent academic peer review. The owner may also propose a historical
+  rule; a signed `PROJECT_OWNER` decision only permits `EVAL_ONLY` pilot
+  experiments after two distinct recorded agent reviews, not knowledge
+  acceptance or scientific adjudication.
+- Files: `src/awf/domain/owner_agent_review.py`,
+  `src/awf/application/commands/owner_agent_review.py`,
+  `tests/integration/test_owner_agent_review.py`; two new event kinds
+  `AGENT_REVIEW_REPORT`, `OWNER_EVALUATION_DECISION` use the existing
+  Ed25519 `ReviewerRole.PROJECT_OWNER` attestation mechanism.
+- Security boundary: independently pinned canonical source/archive/rule/task
+  SHA, trust policy SHA and ledger head; exact source support event refs,
+  distinct claimed agent IDs and execution IDs, exact owner signer grant.
+  Reports can *claim* a model or task execution but cannot prove that an
+  AI service actually ran; do not mark semantic fidelity or human
+  independence PASS by model vote. Outputs do not authorize training,
+  source rights or historical MUST acceptance.
+- **Critical next milestone:** original rule-by-rule source audit and
+  executable checks, followed by blind, held-out agent experiments.
+  The 168 historical MUST remain unadjudicated, 16 DEFERRED_LAB EVAL_ONLY.
+- ADR-0032 and docs/OWNER_AGENT_REVIEW_S2.md contain the ownership rationale.
+  New CI run on branch and PR #39 must be recorded by SHA *after completion*.
+
 ## S2 PR #38 — reversible governance quorum, code checkpoint
 
 - **Draft PR:** [#38](https://github.com/David-std/AWF/pull/38),

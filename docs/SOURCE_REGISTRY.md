@@ -85,3 +85,18 @@ rights to research sources, or adjudicate a scientific truth claim.
 
 These are **design rationale**, not evidence of a real independent custodian
 or experimental proof that a specific historical AWS rule is correct.
+
+## Empirical limits on autonomous AI scientific reviewing (PR #39)
+
+- [Sebo & Wang, *Bias and Reliability of AI-Based Peer Review* (2026)](https://doi.org/10.1007/s11606-026-10806-8):
+  50 medical abstracts, two models, 800 evaluations; high repeatability in a
+  controlled setting but limited direct proof of correctness against humans.
+- [Scoping review: AI in scholarly peer review (2026)](https://doi.org/10.1016/j.ijmedinf.2026.106418):
+  summarizes 189 works; autonomous reviewer evaluation still faces biases,
+  incomplete domain reasoning, privacy and governance concerns.
+- [NIST AI 600-1 (2024)](https://doi.org/10.6028/NIST.AI.600-1):
+  measure variance, bias and construct validity in AI testing.
+
+These references motivate model-run instrumentation, blinded controls and
+human owner accountability. They do **not** establish that using AI rather
+than a third-party reviewer guarantees more objective decisions.

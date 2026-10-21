@@ -284,3 +284,38 @@ Véanse [ADR-0015](adr/0015-durable-edit-and-finding-transitions.md) y
   [PR CI 39623808300](https://github.com/David-std/AWF/actions/runs/39623808300)
   and subsequent documentation SHA need independent validation.
   See [ADR-0031](adr/0031-scientific-governance-register.md).
+
+## AWF-R041 — Owner-governed two-agent review for evaluation-only pilots
+
+- **Intent:** avoid a compulsory outside academic authority for a privately owned
+  ML engineering experiment, without defeating external certification contracts
+  in PR #35–#38.
+- **Status:** ENGINEERING_TESTED_CI_PASS_REVIEW_PENDING (draft PR #39).
+- **Scope:** the existing Ed25519 reviewer infrastructure authenticates
+  `PROJECT_OWNER` over `OWNER_EVALUATION_DECISION` (may also be a
+  `KNOWLEDGE_REVIEWER` proposer). Agent reports are distinct
+  `AGENT_REVIEW_REPORT` ledger events with task/requirement/source
+  binding, model/execution *claims*, verdict, reason, limitations and
+  independently resolvable RULE_SUPPORT references.
+- **Allowed:** owner sign-off to conduct an **EVAL_ONLY pilot**.
+- **Not allowed:** no formal scientific adjudication; no rights,
+  training, rule-disposition or externally independent governance status.
+  Signature ≠ independence; distinct agent run IDs ≠ proven model execution.
+- **Tests:** source/task mismatch, duplicated reviewer, forged owner actor,
+  changed policy, stale head, swapped source references, owner dual role,
+  disagreement preserved and negative decisions.
+- **Next task:** map historical 184 rules to source-linked tests and
+  instrumented agent runs with independently checked outputs.
+  See [ADR-0032](adr/0032-owner-governed-agent-evaluation.md).
+
+### AWF-R041 engineering checkpoint
+
+- Code commit `b72de165412759e62737a0c64afb3cdc276e675a`
+  passed [push CI 39630505998](https://github.com/David-std/AWF/actions/runs/39630505998)
+  and [PR CI 39630513081](https://github.com/David-std/AWF/actions/runs/39630513081):
+  **4/4 matrix jobs each**, Ubuntu/Windows × Python 3.12/3.13.
+  Ubuntu Python 3.12: 482 pytest PASS and Pyright 0 errors/0 warnings.
+- Scope remains **EVAL_ONLY on otherwise authorized datasets**. No actual
+  model execution was performed in CI, no human scientific independence was
+  asserted, and no source-rights or training permission was granted.
+- Final documentation SHA must receive its own separate CI receipt.

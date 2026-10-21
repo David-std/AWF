@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased — project-owner AI agent review (S2 draft PR #39)
+
+- Introduce a separate **OWNER-GOVERNED / EVAL_ONLY** workflow with two
+  source-and-task-bound agent report records and a scoped project-owner decision
+  signed using the existing Ed25519 reviewer contract.
+- Permit the owner to be a rule proposer without claiming independent scientific
+  expertise; agent IDs are not proof of separately executed AI models.
+- Preserve all formal scientific governance and source-rights gates from PR #35–#38,
+  no automatic approval of historical requirements or model training.
+- ADR-0032, AWF-R041, private operator guide and security tests.
+
 ## Unreleased — reversible scientific governance and independent quorum (S2 draft PR #38)
 
 - Add canonical SHA-pinned governance policies, a distinct `GOVERNANCE_APPROVER`
