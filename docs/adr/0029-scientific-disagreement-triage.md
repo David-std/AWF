@@ -41,3 +41,7 @@ A genuine final adjudication protocol requires separate independent identity/qua
 ## Verification
 
 Only synthetic private ledger events and cryptographic keys are used in tests. Required outcomes include two distinct real Ed25519 credentials, positive/negative consensus, opposing verdicts, inconclusive, absent docket, modified externally pinned bytes, reordered/mismatched references, revoked reviewers and stale chain head. Run the locked Ubuntu/Windows × Python 3.12/3.13 pipeline and report actual SHA-specific results. Keep PR draft until independent review and source-rights design assessment.
+
+## Verified engineering checkpoint
+
+The code SHA `55f1c03a1904148e7c7360da4a2dd05ee695f49b` completed [push CI 39542413641](https://github.com/David-std/AWF/actions/runs/39542413641) and [PR CI 39542418761](https://github.com/David-std/AWF/actions/runs/39542418761), each 4/4 SUCCESS on Ubuntu/Windows × Python 3.12/3.13. Ubuntu Python 3.12 recorded 449 pytest PASS, Pyright 0 errors/0 warnings, Ruff lint/format and package build PASS. This describes a source-controlled engineering baseline, not a reviewed research outcome. A final documentation commit must be checked at its own exact SHA.

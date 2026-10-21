@@ -197,3 +197,5 @@ action. It does not perform a third-party scientific adjudication, accept a rule
 grant source rights or enable model training. No extra signature role or key
 system is introduced. See [ADR-0029](docs/adr/0029-scientific-disagreement-triage.md)
 and [private guide](docs/SCIENTIFIC_DISAGREEMENTS_S2.md).
+
+**PR #36 code CI checkpoint:** `55f1c03`, both [push 39542413641](https://github.com/David-std/AWF/actions/runs/39542413641) and [PR 39542418761](https://github.com/David-std/AWF/actions/runs/39542418761) SUCCESS (4/4 each); Ubuntu 3.12 449 tests PASS, Pyright zero errors. This proves an engineering test outcome only, never human scientific independence or final adjudication.

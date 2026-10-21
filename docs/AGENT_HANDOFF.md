@@ -1,6 +1,17 @@
 # AWF — transferencia de Sprint 2
 
-## S2 draft PR #36 — scientific disagreement protocol (candidate, CI pending)
+## S2 draft PR #36 — scientific disagreement protocol (CI-verified engineering slice)
+
+- **Code SHA:** `55f1c03a1904148e7c7360da4a2dd05ee695f49b`.
+  GitHub Actions [push 39542413641](https://github.com/David-std/AWF/actions/runs/39542413641)
+  and [PR 39542418761](https://github.com/David-std/AWF/actions/runs/39542418761):
+  **both SUCCESS 4/4**, Ubuntu/Windows × Python 3.12/3.13.
+- Ubuntu Python 3.12: **449 pytest PASS**, Pyright **0 errors/0 warnings**,
+  Ruff check/format and build PASS. The follow-up documentation SHA must
+  be revalidated independently. This is not a run on the ASUS PC and is
+  not legal or scientific adjudication.
+- Draft [PR #36](https://github.com/David-std/AWF/pull/36) remains stacked on
+  draft #35; no merge, source publication or disposition transition.
 
 - Branch `feat/s2-scientific-disagreement-protocol` starts exactly from draft PR #35
   HEAD `895e9a39fc8415e41263a5dfafdba7ef10247275`, itself stacked on #34 → #33 → #32 → `develop`.
