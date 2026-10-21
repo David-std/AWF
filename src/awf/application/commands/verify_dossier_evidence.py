@@ -161,9 +161,7 @@ def verify_dossier_evidence_links(
                                 requirement_sha256=sha,
                             )
                         ):
-                            raise EvidenceIntegrityError(
-                                "dossier event identity mismatch"
-                            )
+                            raise EvidenceIntegrityError("dossier event identity mismatch")
                     except (EvidenceIntegrityError, ValueError):
                         bad_rules.add(rule_id)
                     else:

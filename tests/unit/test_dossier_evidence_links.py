@@ -10,7 +10,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from awf.adapters.persistence.sqlite_evidence import SQLiteEvidenceLedger
 from awf.application.commands.verify_dossier_evidence import (
     verify_dossier_evidence_links,
@@ -131,9 +130,7 @@ def check(
 def test_valid_link_is_structural_and_never_attested(tmp_path: Path) -> None:
     store = ledger(tmp_path)
     record = append(store)
-    result, inspection = check(
-        store, f"event:{record.digest}", expected_head=record.digest
-    )
+    result, inspection = check(store, f"event:{record.digest}", expected_head=record.digest)
     assert result.all_declared_links_verified
     assert result.referenced_events == result.verified_events == 1
     assert result.affected_rule_ids == ()
@@ -191,9 +188,7 @@ def test_cross_scope_or_wrong_payload_never_passes(
     payload: bytes | None,
 ) -> None:
     store = ledger(tmp_path)
-    record = append(
-        store, kind=event_kind, run_id=event_run, subject_id=subject, content=payload
-    )
+    record = append(store, kind=event_kind, run_id=event_run, subject_id=subject, content=payload)
     result, _ = check(store, f"event:{record.digest}", expected_head=record.digest)
     assert result.verified_events == 0
     assert result.affected_rule_ids == (RULE_ID,)
@@ -204,9 +199,7 @@ def test_cross_scope_or_wrong_payload_never_passes(
     "ref",
     ["sha256:" + "f" * 64, "event:" + "f" * 64, "http://example.test", "event:bad"],
 )
-def test_unresolved_or_non_event_references_fail_closed(
-    tmp_path: Path, ref: str
-) -> None:
+def test_unresolved_or_non_event_references_fail_closed(tmp_path: Path, ref: str) -> None:
     store = ledger(tmp_path)
     head = append(store).digest
     result, _ = check(store, ref, expected_head=head)
