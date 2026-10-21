@@ -32,3 +32,15 @@ This PR is a credential- and source-bound procedural record pipeline only. It do
 ## Verification
 
 Synthetic SQLite event chain, authentic test Ed25519 signatures, adversarial role promotion, revoked key, bounded chain, new evidence chronology, tampering and externally pinned fake qualification authority. Run locked Ruff/Pyright/pytest/build on Linux/Windows Python 3.12/3.13; record final SHA after CI, not before.
+
+## Verified implementation checkpoint
+
+The code snapshot `0205780d2f5e0139db2ed6db3585e58efdd79f40`
+completed [push CI 39544667960](https://github.com/David-std/AWF/actions/runs/39544667960)
+and [PR CI 39544672301](https://github.com/David-std/AWF/actions/runs/39544672301),
+both SUCCESS across Ubuntu/Windows × Python 3.12/3.13 (4/4 each).
+Ubuntu Python 3.12 recorded 459 pytest PASS, Pyright 0 errors/0 warnings,
+Ruff 0.14 lint/format and package build success. A later documentation
+commit must be checked at its own exact SHA. These tests use test-only
+Ed25519 signers and a fake qualification authority; they do not certify
+natural-person identity, professional competence or scientific correctness.

@@ -213,3 +213,10 @@ return `procedure_verified=false`. Even with a synthetic verifier in tests,
 `scientific_adjudications=0` and all training/right/disposition
 authorizations stay false. See [ADR-0030](docs/adr/0030-third-party-scientific-arbitration.md)
 and the [private API guide](docs/SCIENTIFIC_ARBITRATION_S2.md).
+
+**PR #37 engineering checkpoint:** `0205780d` passed both
+[push CI 39544667960](https://github.com/David-std/AWF/actions/runs/39544667960)
+and [PR CI 39544672301](https://github.com/David-std/AWF/actions/runs/39544672301),
+4/4 matrix jobs each. Ubuntu Python 3.12 recorded 459 pytest PASS and
+Pyright 0 errors/0 warnings. Engineering verification is not a scientific
+adjudication or qualification of an actual human arbitrator.

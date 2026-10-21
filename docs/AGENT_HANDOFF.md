@@ -1,5 +1,21 @@
 # AWF — transferencia de Sprint 2
 
+## S2 draft PR #37 — signed arbitration records and appeals, CI-verified code
+
+- **Code SHA:** `0205780d2f5e0139db2ed6db3585e58efdd79f40`, [push
+  39544667960](https://github.com/David-std/AWF/actions/runs/39544667960)
+  and [PR 39544672301](https://github.com/David-std/AWF/actions/runs/39544672301)
+  completed **SUCCESS 4/4 EACH** (Ubuntu/Windows × Python 3.12/3.13).
+- Ubuntu Python 3.12: **459 tests PASS**, Pyright zero errors/warnings,
+  Ruff lint and formatting, and package build passed. This is a
+  synthetic-engineering verification, not a human-reviewed arbitration.
+- **Next technical gate:** verify CI at the next exact documentation commit;
+  keep draft PR #37 stacked on draft #36, with the private corpus uncommitted.
+- **Open external dependencies:** genuine subject-specific arbitrator
+  competence, human identity, independence and COI verification; separately
+  governed scientific acceptance/appeal authority, actual rights evidence.
+  Do not interpret `procedure_verified` as a formal ruling or permit training.
+
 ## S2 candidate PR #37 — third-party arbitration and reconsideration
 
 - Branch `feat/s2-third-party-arbitration` from draft PR #36 HEAD
