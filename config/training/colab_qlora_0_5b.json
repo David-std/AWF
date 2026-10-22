@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "profile": "colab_qlora",
+  "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+  "model_revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+  "max_length": 512,
+  "steps": 80,
+  "learning_rate": 0.0002,
+  "lora_r": 8,
+  "lora_alpha": 16,
+  "lora_dropout": 0.05,
+  "gradient_accumulation_steps": 4,
+  "seed": 42
+}
