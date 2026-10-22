@@ -164,9 +164,7 @@ def run_paired_inference(
             conversation, tokenize=True, add_generation_prompt=True, return_tensors="pt"
         )
         ids = (
-            tokens["input_ids"]
-            if isinstance(tokens, dict) or hasattr(tokens, "keys")
-            else tokens
+            tokens["input_ids"] if isinstance(tokens, dict) or hasattr(tokens, "keys") else tokens
         ).to("cuda")
         with torch.inference_mode():
             generated = model.generate(
