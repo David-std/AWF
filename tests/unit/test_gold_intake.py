@@ -20,8 +20,8 @@ def _case(id_, split, author, source, language="es"):
         "split": split,
         "risk_families": ["negation", "quantity"],
         "blind_conditions": ["A", "B"],
-        "original_sha256": "a" * 64,
-        "source_evidence_sha256": "b" * 64,
+        "original_sha256": hashlib.sha256(id_.encode()).hexdigest(),
+        "source_evidence_sha256": hashlib.sha256(source.encode()).hexdigest(),
         "rights_evidence_sha256": "c" * 64,
         "rights_basis": "SYNTHETIC_FIXTURE",
     }
@@ -86,9 +86,27 @@ def test_diagnostic_counts_never_promote_scientific_gold():
 def test_disagreement_is_unknown_and_not_majority_vote():
     rows = _reviews()
     rows["annotations"][0]["label"] = "PRESERVED"
+    rows["annotations"][1]["label"] = "PRESERVED"
+    rows["annotations"][4]["label"] = "PRESERVED"
     result = audit_candidate_gold(_manifest(), review=rows)
     assert result["review_coverage"]["discordant_double_reviews"] == 1
     assert result["paired_discordance"]["unknown_pair"] == 1
+
+
+def test_confirmed_drift_takes_precedence_over_other_unknown():
+    rows = _reviews()
+    rows["annotations"][0]["label"] = "PRESERVED"
+    report = audit_candidate_gold(_manifest(), review=rows)
+    assert report["review_coverage"]["discordant_double_reviews"] == 1
+    assert report["paired_discordance"]["condition_a_only_drift"] == 1
+
+
+@pytest.mark.parametrize("field", ["original_sha256", "source_evidence_sha256"])
+def test_content_hash_leakage_rejected(field):
+    manifest = _manifest()
+    manifest["cases"][1][field] = manifest["cases"][0][field]
+    with pytest.raises(ValueError, match="leakage"):
+        audit_candidate_gold(manifest)
 
 
 def test_missing_review_is_unknown():

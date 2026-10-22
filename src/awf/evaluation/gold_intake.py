@@ -165,7 +165,13 @@ def _validate_manifest(manifest: dict[str, Any]) -> tuple[list[dict[str, Any]], 
             raise ValueError("duplicate candidate-gold case identity")
         ids.add(identity)
         cases_by_id[identity] = case
-        for dimension in ("document_group", "author_group", "source_group"):
+        for dimension in (
+            "document_group",
+            "author_group",
+            "source_group",
+            "original_sha256",
+            "source_evidence_sha256",
+        ):
             key = (dimension, case[dimension])
             previous = across_splits.setdefault(key, case["split"])
             if previous != case["split"]:
@@ -252,7 +258,10 @@ def _validate_reviews(
 def _case_status(
     case: dict[str, Any], condition: str, assessed: dict[tuple[str, str, str], str]
 ) -> str:
-    states = [assessed.get((case["case_id"], condition, family), "UNKNOWN") for family in case["risk_families"]]
+    states = [
+        assessed.get((case["case_id"], condition, family), "UNKNOWN")
+        for family in case["risk_families"]
+    ]
     if "DRIFT" in states:
         return "DRIFT"
     if "UNKNOWN" in states:
@@ -270,9 +279,7 @@ def audit_candidate_gold(
         review_summary = {
             "distinct_declared_reviewer_ids": 0,
             "missing_double_reviews": sum(
-                2 * len(case["risk_families"])
-                for case in cases
-                if case["split"] != "test_sealed"
+                2 * len(case["risk_families"]) for case in cases if case["split"] != "test_sealed"
             ),
             "discordant_double_reviews": 0,
             "concordant_unknowns": 0,
@@ -310,7 +317,9 @@ def audit_candidate_gold(
         "dataset_role": role,
         "split_counts": dict(sorted(counts.items())),
         "development_language_counts": dict(sorted(languages.items())),
-        "blind_condition_counts": {key: dict(sorted(count.items())) for key, count in by_condition.items()},
+        "blind_condition_counts": {
+            key: dict(sorted(count.items())) for key, count in by_condition.items()
+        },
         "paired_discordance": dict(sorted(outcomes.items())),
         "review_coverage": review_summary,
         "split_group_overlap_observed": False,
