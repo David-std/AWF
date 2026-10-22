@@ -160,6 +160,24 @@ def test_duplicate_json_keys_and_modified_bytes_rejected(tmp_path):
         _read_pinned(path, "0" * 64, max_size=1000)
 
 
+def test_cli_pinned_manifest_returns_only_metadata(tmp_path, monkeypatch, capsys):
+    from awf.evaluation.gold_intake import main
+
+    path = tmp_path / "synthetic_candidate.json"
+    raw = json.dumps(_manifest(), sort_keys=True).encode()
+    path.write_bytes(raw)
+    pin = hashlib.sha256(raw).hexdigest()
+    monkeypatch.setattr(
+        "sys.argv",
+        ["awf-gold-intake", "--manifest", str(path), "--manifest-sha256", pin],
+    )
+    assert main() == 0
+    receipt = json.loads(capsys.readouterr().out)
+    assert receipt["manifest_sha256"] == pin
+    assert receipt["independent_gold_verified"] is False
+    assert receipt["paired_discordance"] == {"unknown_pair": 1}
+
+
 def test_no_prose_or_annotator_ids_exported():
     report = audit_candidate_gold(_manifest(), review=_reviews())
     output = json.dumps(report)
