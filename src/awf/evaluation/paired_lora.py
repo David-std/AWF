@@ -160,8 +160,13 @@ def run_paired_inference(
             {"role": "system", "content": _SYSTEM},
             {"role": "user", "content": prompt},
         ]
-        ids = tokenizer.apply_chat_template(
+        tokens = tokenizer.apply_chat_template(
             conversation, tokenize=True, add_generation_prompt=True, return_tensors="pt"
+        )
+        ids = (
+            tokens["input_ids"]
+            if isinstance(tokens, dict) or hasattr(tokens, "keys")
+            else tokens
         ).to("cuda")
         with torch.inference_mode():
             generated = model.generate(
