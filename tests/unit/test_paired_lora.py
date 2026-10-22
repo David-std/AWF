@@ -74,5 +74,3 @@ def test_nontext_model_output_is_not_silently_accepted():
             receipt_sha256="b" * 64,
             adapter_sha256="c" * 64,
         )
-
-[executed on device: ASUS_ROG_STRIX (bcac3264-47b8-4fdf-a812-627721938b2b)]

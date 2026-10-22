@@ -243,5 +243,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-
-[executed on device: ASUS_ROG_STRIX (bcac3264-47b8-4fdf-a812-627721938b2b)]
