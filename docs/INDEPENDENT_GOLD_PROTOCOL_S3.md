@@ -50,3 +50,7 @@ Define the study sample size/precision and stop criteria in a pre-registered eva
 - Two fictional validation cases underwent genuine local inference on pinned Qwen2.5-0.5B-Instruct and the PEFT LoRA adapter, **one output changed**, one unchanged, zero substantive labels.
 - No source-grounded third-party reviewed case has been admitted; no annotator or gold labels were fabricated. Existing training validation was not exposed to the optimizer, but it is a development fixture and not a blind independent holdout.
 - The separate fictitious placeholder remains sealed. `independent_gold_verified=false`, `semantic_equivalence_verified=false` and `model_quality_certified=false`.
+
+## Engineering increment: PR #47 candidate intake (not independent gold)
+
+A standalone [metadata-only diagnostic](GOLD_INTAKE_S3.md) now checks SHA-pinned manifest and optional blinded annotations, grouped isolation including source/content hashes, and missing or conflicting two-reviewer opinions. It never reads the sealed test split or source text, does **not** independently verify rights or reviewer identity, and always returns `independent_gold_verified=false` and `document_acceptance=NEEDS_REVIEW`. The [external reviewer instructions](GOLD_REVIEWER_INSTRUCTIONS_S3.md) specify the work that remains outside the software: access to source evidence, authorized use, blinded genuine expert judgement and independent adjudication. This is engineering readiness, not a new scholarly finding.
