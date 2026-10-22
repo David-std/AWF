@@ -33,9 +33,7 @@ def _sha(text: str) -> str:
 
 
 def _json_bytes(record: dict[str, Any]) -> bytes:
-    return (json.dumps(record, ensure_ascii=False, sort_keys=True, indent=2) + "\n").encode(
-        "utf-8"
-    )
+    return (json.dumps(record, ensure_ascii=False, sort_keys=True, indent=2) + "\n").encode("utf-8")
 
 
 def make_paired_diagnostic(
@@ -100,9 +98,7 @@ def make_paired_diagnostic(
         "decoding": {"do_sample": False, "max_new_tokens": _MAX_NEW_TOKENS},
         "case_count": len(cases),
         "changed_output_count": sum(not c["identical_output"] for c in cases),
-        "empty_output_count": sum(
-            int(c["base_empty"]) + int(c["adapter_empty"]) for c in cases
-        ),
+        "empty_output_count": sum(int(c["base_empty"]) + int(c["adapter_empty"]) for c in cases),
         "cases": cases,
         "validation_used_in_training": False,
         "validation_available_during_training": True,
@@ -140,9 +136,7 @@ def run_paired_inference(
     )
     if dataset.role != "SYNTHETIC_SMOKE":
         raise ValueError("only synthetic validation data are permitted in this pilot")
-    verified = verify_saved_adapter(
-        run_directory, expected_receipt_sha256=receipt_sha256
-    )
+    verified = verify_saved_adapter(run_directory, expected_receipt_sha256=receipt_sha256)
     if not verified["base_revision_saved_in_adapter_config"]:
         raise ValueError("adapter missing its pinned base revision")
     torch = importlib.import_module("torch")
@@ -178,16 +172,12 @@ def run_paired_inference(
             )
         return str(tokenizer.decode(generated[0][ids.shape[1] :], skip_special_tokens=True))
 
-    base_results = {
-        row["id"]: generate(base, row["prompt"]) for row in dataset.validation
-    }
+    base_results = {row["id"]: generate(base, row["prompt"]) for row in dataset.validation}
     adapter = peft.PeftModel.from_pretrained(
         base, str(run_directory / "adapter"), is_trainable=False
     )
     adapter.eval()
-    adapter_results = {
-        row["id"]: generate(adapter, row["prompt"]) for row in dataset.validation
-    }
+    adapter_results = {row["id"]: generate(adapter, row["prompt"]) for row in dataset.validation}
 
     def produce(which: str, prompt: str) -> str:
         # The prompt-to-ID mapping is unique in this immutable synthetic source.
@@ -215,7 +205,9 @@ def run_paired_inference(
         raise
     return {
         "status": summary["status"],
-        "receipt_sha256": hashlib.sha256((output_directory / "receipt.json").read_bytes()).hexdigest(),
+        "receipt_sha256": hashlib.sha256(
+            (output_directory / "receipt.json").read_bytes()
+        ).hexdigest(),
         "case_count": summary["case_count"],
         "changed_output_count": summary["changed_output_count"],
         "output_directory": str(output_directory),
@@ -251,3 +243,5 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
+[executed on device: ASUS_ROG_STRIX (bcac3264-47b8-4fdf-a812-627721938b2b)]

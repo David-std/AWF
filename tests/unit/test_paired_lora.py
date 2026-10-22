@@ -45,9 +45,9 @@ def test_pairing_preserves_provenance_and_does_not_claim_quality():
     assert report["semantic_equivalence_verified"] is False
     assert report["document_acceptance"] == "NEEDS_REVIEW"
     assert report["cases"][0]["semantic_status"] == "NOT_ASSESSED"
-    assert report["cases"][0]["base_output_sha256"] == hashlib.sha256(
-        b"El total es 12."
-    ).hexdigest()
+    assert (
+        report["cases"][0]["base_output_sha256"] == hashlib.sha256(b"El total es 12.").hexdigest()
+    )
     dumped = json.dumps(report, ensure_ascii=False)
     assert "El total" not in dumped and "Transforma" not in dumped
     assert "El total es 12." in json.dumps(private, ensure_ascii=False)
@@ -74,3 +74,5 @@ def test_nontext_model_output_is_not_silently_accepted():
             receipt_sha256="b" * 64,
             adapter_sha256="c" * 64,
         )
+
+[executed on device: ASUS_ROG_STRIX (bcac3264-47b8-4fdf-a812-627721938b2b)]
