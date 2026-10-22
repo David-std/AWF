@@ -169,6 +169,7 @@ def run_paired_inference(
         with torch.inference_mode():
             generated = model.generate(
                 ids,
+                attention_mask=torch.ones_like(ids),
                 do_sample=False,
                 max_new_tokens=_MAX_NEW_TOKENS,
                 pad_token_id=tokenizer.eos_token_id,
